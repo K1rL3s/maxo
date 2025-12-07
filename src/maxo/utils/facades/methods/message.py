@@ -210,7 +210,7 @@ class MessageMethodsFacade(BaseMethodsFacade, ABC):
                     attachments.append(ImageAttachmentRequest.factory(token=token))
                 case _:
                     logger.warning("Received unknown attachment type: %s", type_)
-        
+
         return attachments
 
     async def _upload_media(self, media: InputFile) -> tuple[UploadType, str]:

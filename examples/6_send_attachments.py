@@ -1,15 +1,13 @@
-import asyncio
+import logging
 import os
 
-from maxo.bot import MaxoBot
-from maxo.dispatcher import Dispatcher
-from maxo.types import MessageCreated
+from maxo import Bot, Dispatcher
+from maxo.routing.updates import MessageCreated
 from maxo.utils.facades import MessageCreatedFacade
+from maxo.utils.long_polling import LongPolling
 from maxo.utils.upload_media import FSInputFile
 
-# Initialize bot and dispatcher
-bot = MaxoBot(token=os.getenv("BOT_TOKEN"))
-dispatcher = Dispatcher(bot)
+dispatcher = Dispatcher()
 
 
 @dispatcher.message_created()
@@ -17,21 +15,22 @@ async def attachments_handler(
     update: MessageCreated,
     facade: MessageCreatedFacade,
 ) -> None:
-    # Example of sending multiple attachments
-    # Ensure these files exist in examples/files/ directory
-    await facade.send_message(
-        media=[
-            FSInputFile.image(path="examples/files/image.png"),
-            FSInputFile.video(path="examples/files/video.mp4"),
-            FSInputFile.audio(path="examples/files/audio.mp3"),
-            FSInputFile.file(path="examples/files/document.txt"),
-        ]
-    )
+    # maxo.errors.api.MaxBotBadRequestError:
+    # ('proto.payload', 'Must be only one file attachment in message')
+    for file in (
+        FSInputFile.image(path="./files/watermelon.jpg"),
+        FSInputFile.file(path="files/watermelon.txt"),
+        FSInputFile.audio(path="./files/watermelon.mp3"),
+        FSInputFile.video(path="./files/watermelon.mp4"),
+    ):
+        await facade.send_message(media=(file,))
 
 
-async def main():
-    await dispatcher.start_polling()
+def main() -> None:
+    logging.basicConfig(level=logging.INFO)
+    bot = Bot(token=os.environ["TOKEN"])
+    LongPolling(dispatcher).run(bot)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
