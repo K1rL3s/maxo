@@ -27,13 +27,11 @@ class Color(Enum):
     BLUE = "blue"
 
 
-@dataclasses.dataclass
 class MyPayload(Payload, prefix="test"):
     foo: str
     bar: int
 
 
-@dataclasses.dataclass
 class FullPayload(Payload, prefix="full"):
     int_field: int
     str_field: str
@@ -47,13 +45,11 @@ class FullPayload(Payload, prefix="full"):
     default_field: int = 42
 
 
-@dataclasses.dataclass
 class OptionalPayload(Payload, prefix="opt"):
     optional_int: int | None
     optional_with_default: str | None = "default"
 
 
-@dataclasses.dataclass
 class SimplePayload(Payload, prefix="simple"):
     name: str
     age: int
@@ -61,7 +57,6 @@ class SimplePayload(Payload, prefix="simple"):
 
 class TestPayload:
     def test_bool_encoding(self) -> None:
-        @dataclasses.dataclass
         class BoolPayload(Payload, prefix="bool"):
             flag: bool
 
@@ -76,7 +71,6 @@ class TestPayload:
     def test_uuid_hex_encoding(self) -> None:
         uuid_val = UUID("123e4567-e89b-12d3-a456-426614174000")
 
-        @dataclasses.dataclass
         class UuidPayload(Payload, prefix="uuid"):
             id: UUID
 
@@ -88,7 +82,6 @@ class TestPayload:
         assert isinstance(unpacked.id, UUID)
 
     def test_enum_encoding(self) -> None:
-        @dataclasses.dataclass
         class EnumPayload(Payload, prefix="enum"):
             color: Color
 
@@ -143,7 +136,7 @@ class TestPayload:
             )
 
     def test_separator_in_value(self) -> None:
-        @dataclasses.dataclass
+
         class BadPayload(Payload, prefix="bad"):
             field: str
 
@@ -153,19 +146,17 @@ class TestPayload:
     def test_separator_in_prefix_forbidden(self) -> None:
         with pytest.raises(ValueError, match="can not be used inside prefix"):
 
-            @dataclasses.dataclass
             class InvalidPrefix(Payload, prefix="bad:prefix"):
                 field: str
 
     def test_no_prefix_given(self) -> None:
         with pytest.raises(ValueError, match="prefix required"):
 
-            @dataclasses.dataclass
             class NoPrefix(Payload):
                 field: str
 
     def test_custom_separator(self) -> None:
-        @dataclasses.dataclass
+
         class CustomSep(Payload, prefix="custom", sep="|"):
             a: int
             b: str
@@ -180,7 +171,6 @@ class TestPayload:
     def test_too_long_payload(self) -> None:
         long_str = "a" * 2000
 
-        @dataclasses.dataclass
         class LongPayload(Payload, prefix="long"):
             data: str
 
@@ -188,7 +178,7 @@ class TestPayload:
             LongPayload(data=long_str).pack()
 
     def test_unsupported_type_in_pack(self) -> None:
-        @dataclasses.dataclass
+
         class UnsupportedPayload(Payload, prefix="uns"):
             data: list[int]
 
@@ -196,7 +186,7 @@ class TestPayload:
             UnsupportedPayload(data=[1, 2, 3]).pack()
 
     def test_nullable_check_helper(self) -> None:
-        @dataclasses.dataclass
+
         class TestNullable(Payload, prefix="test"):
             required: float
             optional: int | None = None
@@ -284,7 +274,7 @@ class TestPayload:
         assert MyPayload(foo="test", bar=42).pack() == "test:test:42"
 
     def test_pack_uuid(self) -> None:
-        @dataclasses.dataclass
+
         class MyPayloadWithUUID(Payload, prefix="test"):
             foo: str
             bar: UUID
@@ -297,7 +287,7 @@ class TestPayload:
         assert callback.pack() == "test:test:123e4567e89b12d3a456426655440000"
 
     def test_pack_optional(self) -> None:
-        @dataclasses.dataclass
+
         class MyPayload1(Payload, prefix="test1"):
             foo: str
             bar: int | None = None
@@ -305,7 +295,6 @@ class TestPayload:
         assert MyPayload1(foo="spam").pack() == "test1:spam:"
         assert MyPayload1(foo="spam", bar=42).pack() == "test1:spam:42"
 
-        @dataclasses.dataclass(kw_only=True)
         class MyPayload2(Payload, prefix="test2"):
             foo: str | None = None
             bar: int
@@ -313,7 +302,6 @@ class TestPayload:
         assert MyPayload2(bar=42).pack() == "test2::42"
         assert MyPayload2(foo="spam", bar=42).pack() == "test2:spam:42"
 
-        @dataclasses.dataclass(kw_only=True)
         class MyPayload3(Payload, prefix="test3"):
             foo: str | None = "experiment"
             bar: int
@@ -334,7 +322,6 @@ class TestPayload:
         with pytest.raises(ValueError):
             assert MyPayload.unpack("test:test:")
 
-        @dataclasses.dataclass
         class MyPayload1(Payload, prefix="test1"):
             foo: str
             bar: int | None = None
@@ -342,7 +329,6 @@ class TestPayload:
         assert MyPayload1.unpack("test1:spam:") == MyPayload1(foo="spam")
         assert MyPayload1.unpack("test1:spam:42") == MyPayload1(foo="spam", bar=42)
 
-        @dataclasses.dataclass(kw_only=True)
         class MyPayload2(Payload, prefix="test2"):
             foo: str | None = None
             bar: int
@@ -350,7 +336,6 @@ class TestPayload:
         assert MyPayload2.unpack("test2::42") == MyPayload2(bar=42)
         assert MyPayload2.unpack("test2:spam:42") == MyPayload2(foo="spam", bar=42)
 
-        @dataclasses.dataclass(kw_only=True)
         class MyPayload3(Payload, prefix="test3"):
             foo: str | None = "experiment"
             bar: int
@@ -358,7 +343,6 @@ class TestPayload:
         assert MyPayload3.unpack("test3:experiment:42") == MyPayload3(bar=42)
         assert MyPayload3.unpack("test3:spam:42") == MyPayload3(foo="spam", bar=42)
 
-        @dataclasses.dataclass
         class MyPayload4(Payload, prefix="test4"):
             foo: str | None = ""
             bar: str | None = None
@@ -377,7 +361,6 @@ class TestPayload:
     def test_unpack_optional_wo_default(self, hint):
         """Test Payload without default optional."""
 
-        @dataclasses.dataclass
         class TgData(Payload, prefix="tg"):
             chat_id: int
             thread_id: hint
@@ -387,7 +370,6 @@ class TestPayload:
     def test_unpack_optional_wo_default_union_type(self) -> None:
         """Test Payload without default optional."""
 
-        @dataclasses.dataclass
         class TgData(Payload, prefix="tg"):
             chat_id: int
             thread_id: int | None

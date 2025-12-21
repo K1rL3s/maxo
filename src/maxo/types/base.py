@@ -12,13 +12,15 @@ class _MaxoTypeMetaClass(type):
         name: str,
         bases: tuple[Any, ...],
         namespace: dict[str, Any],
+        slots: bool = True,
+        **kwargs: Any,
     ) -> Any:
-        class_ = super().__new__(cls, name, bases, namespace)
+        class_ = super().__new__(cls, name, bases, namespace, **kwargs)
         if "__slots__" in namespace:
             return class_
 
         return dataclass(
-            slots=True,
+            slots=slots,
             frozen=False,
             kw_only=True,
         )(class_)

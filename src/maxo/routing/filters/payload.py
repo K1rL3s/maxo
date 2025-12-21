@@ -11,6 +11,7 @@ from maxo import Ctx
 from maxo.routing.filters import BaseFilter
 from maxo.routing.interfaces import Filter
 from maxo.routing.updates import MessageCallback
+from maxo.types import MaxoType
 
 T = TypeVar("T", bound="Payload")
 
@@ -24,13 +25,20 @@ class PayloadException(Exception):
     pass
 
 
-# TODO: MaxoType
-@dataclasses.dataclass
-class Payload:
+class Payload(MaxoType, slots=False):
     __separator__: ClassVar[str]
     __prefix__: ClassVar[str]
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
+        if (
+            getattr(cls, "__separator__", None) is not None
+            and getattr(cls, "__prefix__", None) is not None
+        ):
+            # https://github.com/K1rL3s/maxo/issues/22
+            # Уверен, можно лучше
+            super().__init_subclass__(**kwargs)
+            return
+
         if "prefix" not in kwargs:
             raise ValueError(
                 f"prefix required, usage example: "
