@@ -1,4 +1,5 @@
 from collections.abc import Mapping, MutableMapping, MutableSequence
+from functools import partial
 from typing import Any
 
 from maxo.routing.ctx import Ctx
@@ -147,10 +148,13 @@ class Router(BaseRouter):
             return await self.trigger_child(ctx)
 
         chain_middlewares = observer.middleware.outer.wrap_middlewares(
-            observer.handler_lookup,
+            partial(self._trigger, observer=observer),
         )
+        return await chain_middlewares(ctx)
+
+    async def _trigger(self, ctx: Ctx, *, observer: Observer) -> Any:
         try:
-            result = await chain_middlewares(ctx)
+            result = await observer.handler_lookup(ctx)
         except SkipHandler:
             result = UNHANDLED
 

@@ -6,8 +6,10 @@ import pytest
 from maxo.enums import ChatType
 from maxo.routing.ctx import Ctx
 from maxo.routing.dispatcher import Dispatcher
+from maxo.routing.filters import AlwaysFalseFilter, AlwaysTrueFilter
 from maxo.routing.routers.simple import Router
 from maxo.routing.sentinels import UNHANDLED
+from maxo.routing.signals import BeforeStartup
 from maxo.routing.signals.update import Update
 from maxo.routing.updates.message_created import MessageCreated
 from maxo.types import Message, Recipient, User
@@ -30,7 +32,7 @@ class MockBot:
 
 @pytest.mark.asyncio
 async def test_middleware_execution_order():
-    router = Router()
+    dp = Dispatcher()
 
     async def handler(update, ctx) -> Any:
         ctx["execution_order"].append("handler")
@@ -60,9 +62,9 @@ async def test_middleware_execution_order():
         ctx["execution_order"].append("inner_middleware_2_post")
         return result
 
-    router.message_created.handler(handler)
-    router.message_created.middleware.outer.add(outer_middleware_1, outer_middleware_2)
-    router.message_created.middleware.inner.add(inner_middleware_1, inner_middleware_2)
+    dp.message_created.handler(handler)
+    dp.message_created.middleware.outer.add(outer_middleware_1, outer_middleware_2)
+    dp.message_created.middleware.inner.add(inner_middleware_1, inner_middleware_2)
 
     update = MessageCreated(
         message=Message(
@@ -80,7 +82,8 @@ async def test_middleware_execution_order():
     ctx = Ctx({"execution_order": [], "update": update, "bot": MockBot()})
     ctx["ctx"] = ctx
 
-    result = await router.trigger(ctx)
+    await dp.feed_signal(BeforeStartup())
+    result = await dp.trigger(ctx)
 
     assert result == "OK"
     assert ctx["execution_order"] == [
@@ -98,7 +101,7 @@ async def test_middleware_execution_order():
 
 @pytest.mark.asyncio
 async def test_middleware_execution_before_observer_filter():
-    router = Dispatcher()
+    dp = Dispatcher()
 
     async def update_filter(update, ctx) -> Literal[False]:
         ctx["execution_order"].append("filter")
@@ -114,9 +117,9 @@ async def test_middleware_execution_before_observer_filter():
         ctx["execution_order"].append("outer_middleware_1_post")
         return result
 
-    router.message_created.filter(update_filter)
-    router.message_created.handler(handler)
-    router.message_created.middleware.outer.add(outer_middleware_1)
+    dp.message_created.filter(update_filter)
+    dp.message_created.handler(handler)
+    dp.message_created.middleware.outer.add(outer_middleware_1)
 
     update = MessageCreated(
         message=Message(
@@ -134,7 +137,8 @@ async def test_middleware_execution_before_observer_filter():
     ctx = Ctx({"execution_order": [], "update": update, "bot": MockBot()})
     ctx["ctx"] = ctx
 
-    result = await router.trigger(ctx)
+    await dp.feed_signal(BeforeStartup())
+    result = await dp.trigger(ctx)
 
     assert result is UNHANDLED
     assert ctx["execution_order"] == [
@@ -146,7 +150,7 @@ async def test_middleware_execution_before_observer_filter():
 
 @pytest.mark.asyncio
 async def test_filter_on_update():
-    router = Dispatcher()
+    dp = Dispatcher()
 
     async def update_filter(update, ctx) -> Literal[False]:
         ctx["execution_order"].append("filter")
@@ -155,8 +159,8 @@ async def test_filter_on_update():
     async def handler(update, ctx) -> Any:
         return "OK"
 
-    router.update.filter(update_filter)
-    router.message_created.handler(handler)
+    dp.update.filter(update_filter)
+    dp.message_created.handler(handler)
 
     update = Update(
         update=MessageCreated(
@@ -176,9 +180,55 @@ async def test_filter_on_update():
     ctx = Ctx({"execution_order": [], "update": update, "bot": MockBot()})
     ctx["ctx"] = ctx
 
-    result = await router.trigger(ctx)
+    await dp.feed_signal(BeforeStartup())
+    result = await dp.trigger(ctx)
 
     assert result == UNHANDLED
     assert ctx["execution_order"] == [
         "filter",
     ]
+
+
+@pytest.mark.asyncio
+async def test_one_call_per_event() -> None:
+    async def outer_middleware(update, ctx, next) -> Any:
+        ctx["calls"] += 1
+        return await next(ctx)
+
+    dp = Dispatcher()
+    dp.message_created.middleware.outer(outer_middleware)
+
+    router1 = Router("1")
+    router2 = Router("2")
+    router3 = Router("3")
+
+    dp.include(router1, router2, router3)
+
+    @dp.message_created(AlwaysFalseFilter())
+    @router1.message_created(AlwaysFalseFilter())
+    @router2.message_created(AlwaysFalseFilter())
+    @router3.message_created(AlwaysTrueFilter())
+    async def handler(_: Any, ctx: Ctx) -> None:
+        ctx["calls"] += 1_000_000
+
+    update = MessageCreated(
+        message=Message(
+            recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=1),
+            timestamp=datetime.now(),
+            sender=User(
+                user_id=1,
+                first_name="Test",
+                is_bot=False,
+                last_activity_time=datetime.now(),
+            ),
+        ),
+        timestamp=datetime.now(),
+    )
+    ctx = Ctx({"update": update, "bot": MockBot(), "calls": 0})
+    ctx["ctx"] = ctx
+
+    await dp.feed_signal(BeforeStartup())
+    result = await dp.trigger(ctx)
+
+    assert result is None
+    assert ctx["calls"] == 1_000_001
