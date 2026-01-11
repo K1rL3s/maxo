@@ -91,8 +91,10 @@ def setup_dishka(
     )
 
     if auto_inject:
-        callback = partial(inject_router, router=dispatcher)
-        dispatcher.before_startup.handler(callback)
+        def _auto_inject(**_kwargs: Any) -> None:
+            inject_router(dispatcher)
+
+        dispatcher.before_startup.handler(_auto_inject)
 
 
 def inject_router(router: BaseRouter) -> None:
