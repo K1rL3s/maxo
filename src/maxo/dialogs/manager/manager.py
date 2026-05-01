@@ -79,6 +79,8 @@ class ManagerImpl(DialogManager):
         self._registry = registry
         self._router = router
         self._getter = getter
+        self._defer_show: bool = False
+        self._pending_show: bool = False
 
     @property
     def show_mode(self) -> ShowMode:
