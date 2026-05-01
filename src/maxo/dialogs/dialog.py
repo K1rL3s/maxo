@@ -170,6 +170,7 @@ class Dialog(Router, DialogProtocol):
         window = await self._current_window(dialog_manager)
         impl = cast(ManagerImpl, dialog_manager)
         impl._defer_show = True  # noqa: SLF001
+        pending = False
         try:
             try:
                 processed = await window.process_callback(
@@ -179,11 +180,13 @@ class Dialog(Router, DialogProtocol):
                 )
             except CancelEventProcessing:
                 processed = False
+            pending = impl._pending_show  # noqa: SLF001
         finally:
+            # Сброс в finally чтобы исключение из process_callback не оставило
+            # _pending_show=True для следующего callback на том же ManagerImpl
             impl._defer_show = False  # noqa: SLF001
+            impl._pending_show = False  # noqa: SLF001
 
-        pending = impl._pending_show  # noqa: SLF001
-        impl._pending_show = False  # noqa: SLF001
         need_refresh = self._need_refresh(processed, old_context, dialog_manager)
 
         tasks: list[Awaitable[Any]] = [dialog_manager.answer_callback()]
