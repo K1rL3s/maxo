@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 from collections.abc import Awaitable, Callable
 from logging import getLogger
@@ -5,6 +6,7 @@ from typing import (
     Any,
     ParamSpec,
     TypeVar,
+    cast,
 )
 
 from maxo import Router
@@ -25,6 +27,7 @@ from maxo.routing.updates import MessageCallback, MessageCreated
 from maxo.types.update_context import UpdateContext
 
 from .context.intent_filter import IntentFilter
+from .manager.manager import ManagerImpl
 from .utils import remove_intent_id
 from .widgets.data import PreviewAwareGetter
 from .widgets.utils import GetterVariant, ensure_data_getter
@@ -165,17 +168,28 @@ class Dialog(Router, DialogProtocol):
         cleaned_event = dataclasses.replace(callback, callback=cleaned_callback)
 
         window = await self._current_window(dialog_manager)
+        impl = cast(ManagerImpl, dialog_manager)
+        impl._defer_show = True  # noqa: SLF001
         try:
-            processed = await window.process_callback(
-                cleaned_event,
-                self,
-                dialog_manager,
-            )
-        except CancelEventProcessing:
-            processed = False
-        if self._need_refresh(processed, old_context, dialog_manager):
-            await dialog_manager.show()
-        await dialog_manager.answer_callback()
+            try:
+                processed = await window.process_callback(
+                    cleaned_event,
+                    self,
+                    dialog_manager,
+                )
+            except CancelEventProcessing:
+                processed = False
+        finally:
+            impl._defer_show = False  # noqa: SLF001
+
+        pending = impl._pending_show  # noqa: SLF001
+        impl._pending_show = False  # noqa: SLF001
+        need_refresh = self._need_refresh(processed, old_context, dialog_manager)
+
+        tasks: list[Awaitable[Any]] = [dialog_manager.answer_callback()]
+        if need_refresh or pending:
+            tasks.append(dialog_manager.show())
+        await asyncio.gather(*tasks)
 
     def _need_refresh(
         self,
