@@ -1,6 +1,10 @@
 Начало работы
 =============
 
+.. meta::
+   :description: Установка maxo через uv, poetry или pip и быстрый старт: эхо-бот, обработка команд и клавиатуры. Async-фреймворк для ботов MAX (max.ru) на Python 3.12+.
+   :keywords: maxo установка, max.ru бот python, эхо-бот max, быстрый старт maxo, pip install maxo, uv add maxo
+
 Установка
 ---------
 
@@ -56,17 +60,16 @@
           import os
 
           from maxo import Bot, Dispatcher
-          from maxo.routing.updates.message_created import MessageCreated
-          from maxo.utils.facades.updates.message_created import MessageCreatedFacade
+          from maxo.routing.updates import MessageCreated
           from maxo.transport.long_polling import LongPolling
 
           bot = Bot(os.environ["TOKEN"])
           dispatcher = Dispatcher()
 
           @dispatcher.message_created()
-          async def echo_handler(update: MessageCreated, facade: MessageCreatedFacade) -> None:
+          async def echo_handler(update: MessageCreated) -> None:
               text = update.message.body.text or "Текста нет"
-              await facade.answer_text(text)
+              await update.answer_text(text)
 
           logging.basicConfig(level=logging.INFO)
           LongPolling(dispatcher).run(bot)
@@ -81,8 +84,7 @@
 
           from maxo import Bot, Dispatcher, Router
           from maxo.routing.filters import CommandStart
-          from maxo.routing.updates.message_created import MessageCreated
-          from maxo.utils.facades import MessageCreatedFacade
+          from maxo.routing.updates import MessageCreated
           from maxo.transport.long_polling import LongPolling
 
           bot = Bot(os.environ["TOKEN"])
@@ -90,8 +92,8 @@
 
           @router.message_created(CommandStart())
           # или @router.message_created(Command("start"))
-          async def start_handler(update: MessageCreated, facade: MessageCreatedFacade) -> None:
-              await facade.answer_text("Привет! Я бот")
+          async def start_handler(update: MessageCreated) -> None:
+              await update.answer_text("Привет! Я бот")
 
           def main():
               logging.basicConfig(level=logging.INFO)
@@ -115,19 +117,15 @@
           from maxo import Bot, Dispatcher, Router
           from maxo.integrations.magic_filter import MagicFilter
           from maxo.routing.filters import CommandStart
-          from maxo.routing.updates import MessageCreated, MessageCallback
-          from maxo.utils.builders import KeyboardBuilder
-          from maxo.utils.facades import MessageCallbackFacade, MessageCreatedFacade
+          from maxo.routing.updates import MessageCallback, MessageCreated
           from maxo.transport.long_polling import LongPolling
+          from maxo.utils.builders import KeyboardBuilder
 
           bot = Bot(os.environ["TOKEN"])
           router = Router()
 
           @router.message_created(CommandStart())
-          async def start_handler(
-              update: MessageCreated,
-              facade: MessageCreatedFacade,
-          ) -> None:
+          async def start_handler(message: MessageCreated) -> None:
               keyboard = (
                   KeyboardBuilder()
                   .add_callback(
@@ -136,20 +134,19 @@
                   )
                   .build()
               )
-              await facade.answer_text(
+              await message.answer_text(
                   "Это сообщение с клавиатурой:",
                   keyboard=keyboard,
               )
 
           @router.message_callback(MagicFilter(F.payload == "my_callback"))
           async def button_handler(
-              update: MessageCallback,
-              facade: MessageCallbackFacade,
+              callback: MessageCallback,
               bot: Bot,
           ) -> None:
-              await facade.callback_answer("Вы нажали на кнопку!")
+              await callback.callback_answer("Вы нажали на кнопку!")
               await bot.send_message(
-                  user_id=update.user.user_id,
+                  user_id=callback.user.user_id,
                   text="Вы нажали на кнопку!",
               )
 

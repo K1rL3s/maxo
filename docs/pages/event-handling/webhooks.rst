@@ -49,7 +49,6 @@ Webhooks
             from maxo.enums import TextFormat
             from maxo.routing.updates import MessageCreated
             from maxo.routing.utils import collect_used_updates
-            from maxo.utils.facades import MessageCreatedFacade
             from maxo.transport.webhook.adapters.aiohttp.adapter import AiohttpWebAdapter
             from maxo.transport.webhook.engines import SimpleEngine, WebhookEngine
             from maxo.transport.webhook.routing import StaticRouting
@@ -60,8 +59,8 @@ Webhooks
 
 
             @dp.message_created()
-            async def echo_handler(message: MessageCreated, facade: MessageCreatedFacade) -> None:
-                await facade.answer_text(
+            async def echo_handler(message: MessageCreated) -> None:
+                await message.answer_text(
                     text=message.message.body.html_text,
                     format=TextFormat.HTML,
                 )
@@ -106,7 +105,6 @@ Webhooks
             from maxo.enums import TextFormat
             from maxo.routing.updates import MessageCreated
             from maxo.routing.utils import collect_used_updates
-            from maxo.utils.facades import MessageCreatedFacade
             from maxo.transport.webhook.adapters.fastapi.adapter import FastApiWebAdapter
             from maxo.transport.webhook.engines import SimpleEngine, WebhookEngine
             from maxo.transport.webhook.routing import StaticRouting
@@ -117,8 +115,8 @@ Webhooks
 
 
             @dp.message_created()
-            async def echo_handler(message: MessageCreated, facade: MessageCreatedFacade) -> None:
-                await facade.answer_text(
+            async def echo_handler(message: MessageCreated) -> None:
+                await message.answer_text(
                     text=message.message.body.html_text,
                     format=TextFormat.HTML,
                 )
@@ -155,7 +153,6 @@ Webhooks
 
             logging.basicConfig(level=logging.DEBUG)
             app = main()
-
             # TOKEN=f9LHod fastapi dev ./examples/webhook_fastapi.py
 
 Обработка в фоне

@@ -1,8 +1,7 @@
 import warnings
 from collections.abc import Sequence
-from logging import getLogger
 
-from maxo import Bot
+from maxo import Bot, loggers
 from maxo.dialogs.api.entities import MediaAttachment, NewMessage, OldMessage, ShowMode
 from maxo.dialogs.api.protocols import (
     MediaIdStorageProtocol,
@@ -13,6 +12,7 @@ from maxo.dialogs.manager.attachment_facade import DialogAttachmentsFacade
 from maxo.enums import AttachmentType, UploadType
 from maxo.errors import MaxBotApiError, MaxBotBadRequestError
 from maxo.omit import Omitted
+from maxo.routing.mixins import MediaInput
 from maxo.types import (
     AttachmentsRequests,
     AudioAttachmentRequest,
@@ -25,10 +25,7 @@ from maxo.types import (
     PhotoAttachmentRequest,
     VideoAttachmentRequest,
 )
-from maxo.utils.facades.methods.attachments import MediaInput
 from maxo.utils.upload_media import FSInputFile, InputFile
-
-logger = getLogger(__name__)
 
 SEND_METHODS = {
     AttachmentType.AUDIO: "send_audio",
@@ -70,7 +67,7 @@ class MessageManager(MessageManagerProtocol):
             )
         except MaxBotApiError as e:
             if _INVALID_QUERY_ID_MSG in e.message.lower():
-                logger.warning("Cannot answer callback: %s", e)
+                loggers.dialogs.warning("Cannot answer callback: %s", e)
             else:
                 raise
 
@@ -112,10 +109,10 @@ class MessageManager(MessageManagerProtocol):
         old_message: OldMessage | None,
     ) -> OldMessage:
         if new_message.show_mode is ShowMode.NO_UPDATE:
-            logger.debug("ShowMode is NO_UPDATE, skipping show")
+            loggers.dialogs.debug("ShowMode is NO_UPDATE, skipping show")
             raise MessageNotModified("ShowMode is NO_UPDATE")
         if old_message and new_message.show_mode is ShowMode.DELETE_AND_SEND:
-            logger.debug(
+            loggers.dialogs.debug(
                 "Delete and send new message, because: mode=%s",
                 new_message.show_mode,
             )
@@ -123,7 +120,7 @@ class MessageManager(MessageManagerProtocol):
             sent_message = await self.send_message(bot, new_message)
             return _combine(new_message, sent_message)
         if not old_message or new_message.show_mode is ShowMode.SEND:
-            logger.debug(
+            loggers.dialogs.debug(
                 "Send new message, because: mode=%s, has old_message=%s",
                 new_message.show_mode,
                 bool(old_message),
@@ -133,7 +130,7 @@ class MessageManager(MessageManagerProtocol):
             return _combine(new_message, sent_message)
 
         if not self._message_changed(new_message, old_message):
-            logger.debug("Message dit not change")
+            loggers.dialogs.debug("Message did not change")
             # nothing changed: text, keyboard or media
             return old_message
 
@@ -150,29 +147,30 @@ class MessageManager(MessageManagerProtocol):
         bot: Bot,
         show_mode: ShowMode,
         old_message: OldMessage | None,
-    ) -> Message | None:
+    ) -> None:
         if show_mode is ShowMode.NO_UPDATE:
-            return None
+            return
         if show_mode is ShowMode.DELETE_AND_SEND and old_message:
-            return await self.remove_message_safe(bot, old_message, None)
-        return await self._remove_kbd(bot, old_message, None)
+            await self.remove_message_safe(bot, old_message, None)
+            return
+        await self._remove_kbd(bot, old_message, None)
 
     async def _remove_kbd(
         self,
         bot: Bot,
         old_message: OldMessage | None,
         new_message: NewMessage | None,
-    ) -> Message | None:
-        return await self.remove_inline_kbd(bot, old_message)
+    ) -> None:
+        await self.remove_inline_kbd(bot, old_message)
 
     async def remove_inline_kbd(
         self,
         bot: Bot,
         old_message: OldMessage | None,
-    ) -> Message | None:
+    ) -> None:
         if not old_message or old_message.keyboard is None:
-            return None
-        logger.debug("remove_inline_kbd in %s", old_message.recipient)
+            return
+        loggers.dialogs.debug("remove_inline_kbd in %s", old_message.recipient)
         try:
             new_attachments = [
                 attach.to_request()
@@ -183,25 +181,23 @@ class MessageManager(MessageManagerProtocol):
                 message_id=old_message.message_id,
                 attachments=new_attachments,
             )
-            return await bot.get_message_by_id(message_id=old_message.message_id)
         except MaxBotBadRequestError as err:
             if "message is not modified" in err.message:
-                pass  # nothing to remove
-            elif (
+                return  # клавиатуры уже не было
+            if (
                 "message can't be edited" in err.message
                 or "message to edit not found" in err.message
                 or "MESSAGE_ID_INVALID" in err.message
             ):
-                pass
-            else:
-                raise
+                return
+            raise
 
     async def remove_message_safe(
         self,
         bot: Bot,
         old_message: OldMessage,
         new_message: NewMessage | None,
-    ) -> Message | None:
+    ) -> None:
         try:
             await bot.delete_message(
                 message_id=old_message.message_id,
@@ -213,8 +209,6 @@ class MessageManager(MessageManagerProtocol):
                 await self._remove_kbd(bot, old_message, new_message)
             else:
                 raise
-
-        return None
 
     async def edit_message_safe(
         self,

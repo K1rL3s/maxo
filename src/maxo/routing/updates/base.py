@@ -10,6 +10,14 @@ class BaseUpdate(MaxoType):
 
 
 class MaxUpdate(BaseUpdate):
+    """
+    Базовый класс для всех апдейтов из Макса.
+
+    У всех апдейтов есть тип (`type`, `update_type`) и время (`timestamp`).
+    Фасад (`facade`) объединяет методы для работы с апдейтом,
+    например, отправить сообщение или ответить на колбэк.
+    """
+
     type: ClassVar[UpdateType]
     timestamp: datetime
 

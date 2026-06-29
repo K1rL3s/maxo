@@ -7,7 +7,7 @@ from maxo.types.uploaded_info import UploadedInfo
 
 class FileAttachmentRequest(AttachmentRequest):
     """
-    Запрос на прикрепление файла к сообщению. ДОЛЖЕН быть единственным вложением в сообщении
+    Запрос на прикрепление файла к сообщению. Должен быть единственным вложением в сообщении
 
     Args:
         payload:

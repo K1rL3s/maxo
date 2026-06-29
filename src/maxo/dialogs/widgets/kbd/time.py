@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from datetime import time
-from typing import Protocol
+from typing import Any, Protocol
 
 from maxo.dialogs import ChatEvent, DialogManager, DialogProtocol
 from maxo.dialogs.api.internal import RawKeyboard, TextWidget
@@ -117,7 +117,7 @@ class TimeSelect(Keyboard):
 
     async def _render_keyboard(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
         rows = []
@@ -172,7 +172,7 @@ class TimeSelect(Keyboard):
     async def _render_button(
         self,
         *,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
         is_selected: bool,
         value: int,

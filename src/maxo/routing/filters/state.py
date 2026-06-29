@@ -6,14 +6,13 @@ from maxo.fsm.state import State, StatesGroup, any_state
 from maxo.routing.filters import BaseFilter
 from maxo.routing.middlewares.fsm_context import RAW_STATE_KEY
 
+StateType = str | None | State | StatesGroup | type[StatesGroup]
+
 
 class StateFilter(BaseFilter[Any]):
     __slots__ = ("_states",)
 
-    def __init__(
-        self,
-        *states: State | StatesGroup | type[StatesGroup] | None | str,
-    ) -> None:
+    def __init__(self, *states: StateType) -> None:
         self._states = states
 
     async def __call__(self, update: Any, ctx: Ctx) -> bool:

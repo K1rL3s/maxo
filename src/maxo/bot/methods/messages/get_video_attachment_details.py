@@ -5,14 +5,15 @@ from maxo.types.video_attachment_details import VideoAttachmentDetails
 
 class GetVideoAttachmentDetails(MaxoMethod[VideoAttachmentDetails]):
     """
-    Получить информацио о видео
+    Получить информацию о видео
 
-    Возвращает подробную информацию о прикреплённом видео. URL-адреса воспроизведения и дополнительные метаданные
+    Возвращает подробную информацию о прикреплённом видео, URL-адреса воспроизведения и дополнительные метаданные
 
-    Пример запроса:
+    #### Пример запроса:
     ```bash
     curl -X GET "https://platform-api.max.ru/videos/{video_token}" \
       -H "Authorization: {access_token}"
+    ```
 
     Args:
         video_token: Токен видео-вложения

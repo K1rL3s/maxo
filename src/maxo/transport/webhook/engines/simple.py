@@ -1,6 +1,7 @@
 from typing import Any
 
 from maxo import Bot, Dispatcher
+from maxo.omit import Omittable, Omitted
 from maxo.routing.signals import (
     AfterShutdown,
     AfterStartup,
@@ -52,10 +53,10 @@ class SimpleEngine(WebhookEngine):
     async def set_webhook(
         self,
         *,
-        update_types: list[str] | None = None,
+        update_types: Omittable[list[str]] = Omitted(),
     ) -> Bot:
         """Set the webhook for the Bot instance."""
-        secret_token = None
+        secret_token: Omittable[str] = Omitted()
         if self.security is not None:
             secret_token = await self.security.get_secret_token(bot=self.bot)
 

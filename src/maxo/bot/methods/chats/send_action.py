@@ -10,7 +10,7 @@ class SendAction(MaxoMethod[SimpleQueryResult]):
 
     Позволяет отправлять в групповой чат такие действия бота, как например: «набор текста» или «отправка фото»
 
-    Пример запроса:
+    #### Пример запроса:
     ```bash
     curl -X POST "https://platform-api.max.ru/chats/{chatId}/actions" \
       -H "Authorization: {access_token}" \

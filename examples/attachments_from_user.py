@@ -6,7 +6,6 @@ from maxo.enums import AttachmentType
 from maxo.routing.filters import BaseFilter
 from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
-from maxo.utils.facades import MessageCreatedFacade
 
 bot = Bot(os.environ["TOKEN"])
 dp = Dispatcher()
@@ -29,103 +28,76 @@ class AttachmentFilter(BaseFilter[MessageCreated]):
 
 
 @dp.message_created(AttachmentFilter(AttachmentType.AUDIO))
-async def audio_handler(
-    update: MessageCreated,
-    facade: MessageCreatedFacade,
-) -> None:
-    await facade.answer_text("Получил голосовое сообщение")
-    await facade.send_message(
+async def audio_handler(update: MessageCreated) -> None:
+    await update.answer_text("Получил голосовое сообщение")
+    await update.send_message(
         media=[update.message.body.audio.to_request()],
     )
 
 
 @dp.message_created(AttachmentFilter(AttachmentType.CONTACT))
-async def contact_handler(
-    update: MessageCreated,
-    facade: MessageCreatedFacade,
-) -> None:
-    await facade.answer_text("Получил сообщение с контактом")
-    await facade.bot.send_message(
-        chat_id=facade.chat_id,
+async def contact_handler(update: MessageCreated) -> None:
+    await update.answer_text("Получил сообщение с контактом")
+    await update.bot.send_message(
+        chat_id=update.chat_id,
         attachments=[update.message.body.contact],
     )
 
 
 @dp.message_created(AttachmentFilter(AttachmentType.FILE))
-async def file_handler(
-    update: MessageCreated,
-    facade: MessageCreatedFacade,
-) -> None:
-    await facade.answer_text("Получил сообщение с файлом")
-    await facade.send_message(
+async def file_handler(update: MessageCreated) -> None:
+    await update.answer_text("Получил сообщение с файлом")
+    await update.send_message(
         media=[update.message.body.file.to_request()],
     )
 
 
 @dp.message_created(AttachmentFilter(AttachmentType.IMAGE))
-async def image_handler(
-    update: MessageCreated,
-    facade: MessageCreatedFacade,
-) -> None:
-    await facade.answer_text("Получил сообщение с изображениями")
-    await facade.send_message(
+async def image_handler(update: MessageCreated) -> None:
+    await update.answer_text("Получил сообщение с изображениями")
+    await update.send_message(
         media=[photo.to_request() for photo in update.message.body.photo],
     )
 
 
 @dp.message_created(AttachmentFilter(AttachmentType.LOCATION))
-async def location_handler(
-    update: MessageCreated,
-    facade: MessageCreatedFacade,
-) -> None:
-    await facade.answer_text("Получил сообщение с геопозицией")
-    await facade.bot.send_message(
-        chat_id=facade.chat_id,
+async def location_handler(update: MessageCreated) -> None:
+    await update.answer_text("Получил сообщение с геопозицией")
+    await update.bot.send_message(
+        chat_id=update.chat_id,
         attachments=[update.message.body.location],
     )
 
 
 @dp.message_created(AttachmentFilter(AttachmentType.SHARE))
-async def share_handler(
-    update: MessageCreated,
-    facade: MessageCreatedFacade,
-) -> None:
-    await facade.answer_text("Получил сообщение с предпросмотром ссылки")
-    await facade.bot.send_message(
-        chat_id=facade.chat_id,
+async def share_handler(update: MessageCreated) -> None:
+    await update.answer_text("Получил сообщение с предпросмотром ссылки")
+    await update.bot.send_message(
+        chat_id=update.chat_id,
         attachments=[update.message.body.share],
     )
 
 
 @dp.message_created(AttachmentFilter(AttachmentType.STICKER))
-async def sticker_handler(
-    update: MessageCreated,
-    facade: MessageCreatedFacade,
-) -> None:
-    await facade.answer_text("Получил сообщение с стикером")
-    await facade.bot.send_message(
-        chat_id=facade.chat_id,
+async def sticker_handler(update: MessageCreated) -> None:
+    await update.answer_text("Получил сообщение со стикером")
+    await update.bot.send_message(
+        chat_id=update.chat_id,
         attachments=[update.message.body.sticker],
     )
 
 
 @dp.message_created(AttachmentFilter(AttachmentType.VIDEO))
-async def video_handler(
-    update: MessageCreated,
-    facade: MessageCreatedFacade,
-) -> None:
-    await facade.answer_text("Получил сообщение с видео")
-    await facade.send_message(
+async def video_handler(update: MessageCreated) -> None:
+    await update.answer_text("Получил сообщение с видео")
+    await update.send_message(
         media=[video.to_request() for video in update.message.body.video],
     )
 
 
 @dp.message_created(AttachmentFilter(AttachmentType.TEXT))
-async def text_handler(
-    update: MessageCreated,
-    facade: MessageCreatedFacade,
-) -> None:
-    await facade.answer_text("Получил простое текстовое сообщение")
+async def text_handler(update: MessageCreated) -> None:
+    await update.answer_text("Получил простое текстовое сообщение")
 
 
 def main() -> None:

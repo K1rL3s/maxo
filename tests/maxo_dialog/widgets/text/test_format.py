@@ -1,10 +1,7 @@
-import pytest
-
 from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.text import Format
 
 
-@pytest.mark.asyncio
 async def test_render_format(mock_manager: DialogManager) -> None:
     format_widget = Format("Hello, {name}!")
 

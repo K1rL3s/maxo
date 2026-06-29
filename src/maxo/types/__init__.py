@@ -9,7 +9,7 @@ from .attachments import (
 )
 from .audio_attachment import AudioAttachment
 from .audio_attachment_request import AudioAttachmentRequest
-from .base import MaxoType
+from .base import BaseMaxoType, BotMixin, MaxoType
 from .bot_command import BotCommand
 from .bot_info import BotInfo
 from .button import Button
@@ -67,6 +67,7 @@ from .photo_attachment_payload import PhotoAttachmentPayload
 from .photo_attachment_request import PhotoAttachmentRequest
 from .photo_attachment_request_payload import PhotoAttachmentRequestPayload
 from .photo_token import PhotoToken
+from .quote_markup import QuoteMarkup
 from .recipient import Recipient
 from .request_contact_button import RequestContactButton
 from .request_geo_location_button import RequestGeoLocationButton
@@ -104,8 +105,10 @@ __all__ = (
     "AttachmentsRequests",
     "AudioAttachment",
     "AudioAttachmentRequest",
+    "BaseMaxoType",
     "BotCommand",
     "BotInfo",
+    "BotMixin",
     "Button",
     "Callback",
     "CallbackButton",
@@ -162,6 +165,7 @@ __all__ = (
     "PhotoAttachmentRequest",
     "PhotoAttachmentRequestPayload",
     "PhotoToken",
+    "QuoteMarkup",
     "Recipient",
     "RequestContactButton",
     "RequestGeoLocationButton",

@@ -84,7 +84,6 @@ def second_client(dp: Dispatcher) -> BotClient:
     return BotClient(dp, chat_id=-1, user_id=2, chat_type=ChatType.CHAT)
 
 
-@pytest.mark.asyncio
 async def test_second_user(
     dp: Dispatcher,
     client: BotClient,
@@ -105,7 +104,6 @@ async def test_second_user(
     assert not message_manager.sent_messages
 
 
-@pytest.mark.asyncio
 async def test_change_settings(
     dp: Dispatcher,
     client: BotClient,
@@ -144,7 +142,6 @@ async def test_change_settings(
     assert not message_manager.sent_messages
 
 
-@pytest.mark.asyncio
 async def test_change_settings_bg(
     dp: Dispatcher,
     client: BotClient,
@@ -183,7 +180,6 @@ async def test_change_settings_bg(
     assert not message_manager.sent_messages
 
 
-@pytest.mark.asyncio
 async def test_same_user(
     dp: Dispatcher,
     client: BotClient,
@@ -208,7 +204,6 @@ async def test_same_user(
     assert first_message.body.text == "stub"
 
 
-@pytest.mark.asyncio
 async def test_shared_stack(
     dp: Dispatcher,
     client: BotClient,

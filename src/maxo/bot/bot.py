@@ -2,11 +2,14 @@ import json
 import pathlib
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from types import TracebackType
 from typing import Any, BinaryIO, Self, TypeVar
 
 from adaptix import Retort
 from aiohttp import ClientTimeout
 from unihttp.bind_method import bind_method
+from unihttp.clients.base import BaseAsyncClient
+from unihttp.method import BaseMethod, ResponseType
 from unihttp.middlewares import AsyncMiddleware
 
 from maxo import loggers
@@ -55,13 +58,13 @@ from maxo.bot.state import (
     RunningBotState,
 )
 from maxo.errors import MaxBotApiError
-from maxo.serialization import create_retort
+from maxo.serialization import create_retort_with_bot
 from maxo.types import AttachmentPayload, MaxoType
 
 _MethodResultT = TypeVar("_MethodResultT", bound=MaxoType)
 
 
-class Bot:
+class Bot(BaseAsyncClient):
     __slots__ = (
         "_defaults",
         "_json_dumps",
@@ -90,9 +93,13 @@ class Bot:
         self._json_dumps = json_dumps
         self._json_loads = json_loads
 
-        self._retort = create_retort(defaults=self._defaults, warming_up=warming_up)
+        self._retort = create_retort_with_bot(
+            bot=self,
+            defaults=self._defaults,
+            warming_up=warming_up,
+        )
 
-        self._state = EmptyBotState()
+        self._state: BotState = EmptyBotState()
 
     @property
     def state(self) -> BotState:
@@ -109,6 +116,15 @@ class Bot:
     @property
     def token(self) -> str:
         return self._token
+
+    @asynccontextmanager
+    async def context(self, auto_close: bool = True) -> AsyncIterator[Self]:
+        try:
+            await self.start()
+            yield self
+        finally:
+            if auto_close:
+                await self.close()
 
     async def start(self) -> None:
         if self.state.started:
@@ -127,19 +143,17 @@ class Bot:
         info = await self.get_my_info()
         self._state = RunningBotState(info=info, api_client=api_client)
 
-    @asynccontextmanager
-    async def context(self, auto_close: bool = True) -> AsyncIterator[Self]:
-        try:
-            await self.start()
-            yield self
-        finally:
-            if auto_close:
-                await self.close()
+    async def close(self) -> None:
+        if self.state.closed or not self.state.started:
+            return
+
+        await self.state.api_client.close()
+        self._state = ClosedBotState()
 
     async def call_method(
         self,
-        method: MaxoMethod[_MethodResultT],
-    ) -> _MethodResultT:
+        method: BaseMethod[ResponseType],
+    ) -> ResponseType:
         return await self.state.api_client.call_method(method)
 
     async def silent_call_method(self, method: MaxoMethod[_MethodResultT]) -> None:
@@ -152,12 +166,17 @@ class Bot:
             # For debugging here is added logging.
             loggers.bot.error("Failed to make answer: %s: %s", e.__class__.__name__, e)
 
-    async def close(self) -> None:
-        if self.state.closed or not self.state.started:
-            return
+    async def __aenter__(self) -> Self:
+        await self.start()
+        return self
 
-        await self.state.api_client.close()
-        self._state = ClosedBotState()
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        await self.close()
 
     async def download(
         self,

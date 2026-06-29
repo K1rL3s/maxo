@@ -8,8 +8,8 @@ from typing import (
 )
 
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
-from maxo.dialogs.tools.filter_object import FilterObject
 from maxo.dialogs.widgets.common import ManagedWidget
+from maxo.dialogs.widgets.filter_object import FilterObject
 from maxo.dialogs.widgets.widget_event import (
     WidgetEventProcessor,
     ensure_event_processor,

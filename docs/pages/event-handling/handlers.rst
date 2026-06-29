@@ -10,16 +10,15 @@
 
 .. code-block:: python
 
-    from maxo.routing.filters import Command, CommandStart
-    from maxo.routing.updates.message_created import MessageCreated
     from maxo.routing.ctx import Ctx
-    from maxo.utils.facades import MessageCreatedFacade
+    from maxo.routing.filters import Command, CommandStart
+    from maxo.routing.updates import MessageCreated
 
     # Оба варианта эквивалентны:
     @router.message_created(CommandStart())
     # или
     # @router.message_created(Command("start"))
-    async def my_handler(update: MessageCreated, ctx: Ctx, facade: MessageCreatedFacade):
+    async def my_handler(update: MessageCreated, ctx: Ctx):
         ...
 
 Аргументы
@@ -35,16 +34,11 @@
 .. code-block:: python
 
     from maxo.routing.ctx import Ctx
-    from maxo.utils.facades import MessageCreatedFacade
-    from maxo.routing.updates.message_created import MessageCreated
+    from maxo.routing.updates import MessageCreated
 
     @router.message_created()
-    async def echo(
-        update: MessageCreated,
-        ctx: Ctx,
-        facade: MessageCreatedFacade,
-    ):
-        await facade.answer_text(update.message.body.text)
+    async def echo(update: MessageCreated, ctx: Ctx):
+        await update.answer_text(update.message.body.text or "Текста нет")
 
 Dependency Injection (DI)
 -------------------------
@@ -56,17 +50,24 @@ Dependency Injection (DI)
 
 .. code-block:: python
 
-    from maxo.routing.filters import BaseFilter
-    from maxo.routing.updates.message_created import MessageCreated
+    from maxo import Bot
     from maxo.routing.ctx import Ctx
-    from maxo.utils.facades import MessageCreatedFacade
+    from maxo.routing.facades import MessageCreatedFacade
+    from maxo.routing.filters import BaseFilter
+    from maxo.routing.updates import MessageCreated
+
 
     # Пример фильтра, который возвращает данные пользователя
     class UserFilter(BaseFilter[MessageCreated]):
-        async def __call__(self, update: MessageCreated, ctx: Ctx) -> dict | bool:
-            user = await get_user_from_db(update.message.sender.user_id)
+        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+            sender = update.message.sender
+            if sender is None:
+                return False
+
+            user = await get_user_from_db(sender.user_id)
             if user:
-                ctx["user"] = user # Передаем user в обработчик
+                ctx["user"] = user  # Передаем user в обработчик
+                return True
             return False
 
     @router.message_created(UserFilter())

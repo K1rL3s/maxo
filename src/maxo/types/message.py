@@ -1,7 +1,9 @@
 from datetime import datetime
+from typing import Self
 
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
+from maxo.routing.mixins import MessageMethodsFacade
 from maxo.types.base import MaxoType
 from maxo.types.linked_message import LinkedMessage
 from maxo.types.message_body import MessageBody
@@ -11,7 +13,7 @@ from maxo.types.user import User
 from maxo.utils.link import id_to_message_url
 
 
-class Message(MaxoType):
+class Message(MaxoType, MessageMethodsFacade):
     """
     Сообщение в чате
 
@@ -40,6 +42,11 @@ class Message(MaxoType):
     """Статистика сообщения. Возвращается только для постов в каналах"""
     url: Omittable[str | None] = Omitted()
     """Публичная ссылка на пост в канале. Отсутствует для диалогов и групповых чатов"""
+
+    # Для MessageMethodsFacade
+    @property
+    def message(self) -> Self:
+        return self
 
     @property
     def unsafe_link(self) -> LinkedMessage:

@@ -1,3 +1,5 @@
+from typing import TypeAlias
+
 from . import DialogCleared, DialogMuted, DialogRemoved, DialogUnmuted
 from .bot_added_to_chat import BotAddedToChat
 from .bot_removed_from_chat import BotRemovedFromChat
@@ -11,7 +13,7 @@ from .message_removed import MessageRemoved
 from .user_added_to_chat import UserAddedToChat
 from .user_removed_from_chat import UserRemovedFromChat
 
-Updates = (
+Updates: TypeAlias = (
     BotAddedToChat
     | BotRemovedFromChat
     | BotStarted

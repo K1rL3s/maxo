@@ -1,12 +1,12 @@
 from abc import abstractmethod
-from typing import Protocol
+from typing import Any, Protocol
 
 from maxo.dialogs.api.entities import ChatEvent
-from maxo.dialogs.api.internal import RawKeyboard
+from maxo.dialogs.api.internal import RawKeyboard, TextWidget
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.widgets.common import ManagedWidget, WhenCondition
 from maxo.dialogs.widgets.kbd.base import Keyboard
-from maxo.dialogs.widgets.text import Const, Format, Text
+from maxo.dialogs.widgets.text import Const, Format
 from maxo.dialogs.widgets.widget_event import (
     WidgetEventProcessor,
     ensure_event_processor,
@@ -44,9 +44,9 @@ class Counter(Keyboard):
     def __init__(
         self,
         id: str,
-        plus: Text | None = PLUS_TEXT,
-        minus: Text | None = MINUS_TEXT,
-        text: Text | None = DEFAULT_COUNTER_TEXT,
+        plus: TextWidget | None = PLUS_TEXT,
+        minus: TextWidget | None = MINUS_TEXT,
+        text: TextWidget | None = DEFAULT_COUNTER_TEXT,
         min_value: float = 0,
         max_value: float = 999999,
         increment: float = 1,
@@ -103,7 +103,7 @@ class Counter(Keyboard):
 
     async def _render_keyboard(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
         row = []

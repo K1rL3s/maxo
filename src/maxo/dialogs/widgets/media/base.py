@@ -1,5 +1,5 @@
 import itertools
-from typing import Self
+from typing import Any, Self
 
 from maxo.dialogs.api.entities import MediaAttachment
 from maxo.dialogs.api.internal import MediaWidget
@@ -20,7 +20,7 @@ class Media(Whenable, BaseWidget, MediaWidget):
     @add_exception_note
     async def render_media(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> list[MediaAttachment]:
         if not self.is_(data, manager):
@@ -29,7 +29,7 @@ class Media(Whenable, BaseWidget, MediaWidget):
 
     async def _render_media(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> list[MediaAttachment]:
         return []
@@ -68,11 +68,11 @@ class MultiMedia(Media):
 
     async def _render_media(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> list[MediaAttachment]:
-        medias = [await m.render_media(data, manager) for m in self.media]
-        return list(itertools.chain(*medias))
+        media = [await m.render_media(data, manager) for m in self.media]
+        return list(itertools.chain(*media))
 
     def __iadd__(self, other: Media) -> Self:
         self.media += (other,)
@@ -104,7 +104,7 @@ class Or(Media):
 
     async def _render_media(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> list[MediaAttachment]:
         for widget in self.widgets:

@@ -1,6 +1,5 @@
 from typing import Any
 
-import pytest
 from magic_filter import F
 
 from maxo.dialogs import DialogManager
@@ -23,14 +22,12 @@ class Static(Media):
         return [MediaAttachment(AttachmentType.IMAGE, path=self.path)]
 
 
-@pytest.mark.asyncio
 async def test_or(mock_manager: DialogManager) -> None:
     text = Static("a") | Static("b")
     res = await text.render_media({}, mock_manager)
     assert res == [MediaAttachment(AttachmentType.IMAGE, path="a")]
 
 
-@pytest.mark.asyncio
 async def test_or_condition(mock_manager: DialogManager) -> None:
     text = Static("A", when=F["a"]) | Static("B", when=F["b"]) | Static("C")
     res = await text.render_media({"a": True}, mock_manager)

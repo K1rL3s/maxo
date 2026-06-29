@@ -1,10 +1,11 @@
 from typing import Any
 
 from maxo.dialogs.api.entities import ChatEvent, Data, ShowMode, StartMode
+from maxo.dialogs.api.internal import TextWidget
 from maxo.dialogs.api.protocols import DialogManager
 from maxo.dialogs.widgets.common import WhenCondition
 from maxo.dialogs.widgets.kbd.button import Button, OnClick
-from maxo.dialogs.widgets.text import Const, Text
+from maxo.dialogs.widgets.text import Const
 from maxo.dialogs.widgets.widget_event import WidgetEventProcessor
 from maxo.fsm import State
 from maxo.routing.updates import MessageCallback
@@ -37,7 +38,7 @@ class EventProcessorButton(Button, WidgetEventProcessor):
 class SwitchTo(EventProcessorButton):
     def __init__(
         self,
-        text: Text,
+        text: TextWidget,
         id: str,
         state: State,
         on_click: OnClick | None = None,
@@ -69,7 +70,7 @@ class SwitchTo(EventProcessorButton):
 class Next(EventProcessorButton):
     def __init__(
         self,
-        text: Text = NEXT_TEXT,
+        text: TextWidget = NEXT_TEXT,
         id: str = "__next__",
         on_click: OnClick | None = None,
         show_mode: ShowMode | None = None,
@@ -99,7 +100,7 @@ class Next(EventProcessorButton):
 class Back(EventProcessorButton):
     def __init__(
         self,
-        text: Text = BACK_TEXT,
+        text: TextWidget = BACK_TEXT,
         id: str = "__back__",
         on_click: OnClick | None = None,
         show_mode: ShowMode | None = None,
@@ -130,7 +131,7 @@ class Back(EventProcessorButton):
 class Cancel(EventProcessorButton):
     def __init__(
         self,
-        text: Text = CANCEL_TEXT,
+        text: TextWidget = CANCEL_TEXT,
         id: str = "__cancel__",
         result: Any = None,
         on_click: OnClick | None = None,
@@ -162,7 +163,7 @@ class Cancel(EventProcessorButton):
 class Start(EventProcessorButton):
     def __init__(
         self,
-        text: Text,
+        text: TextWidget,
         id: str,
         state: State,
         data: Data = None,

@@ -1,7 +1,9 @@
 import asyncio
 from asyncio import CancelledError
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import ANY, AsyncMock, call, patch
 
 import pytest
@@ -24,7 +26,12 @@ class MockUpdate(MaxoType):
 
 
 @pytest.fixture
-def mock_bot() -> Bot:
+def mock_api_client() -> AsyncMock:
+    return AsyncMock(spec=MaxApiClient)
+
+
+@pytest.fixture
+def mock_bot(mock_api_client: AsyncMock) -> Bot:
     bot = Bot("test_token")
     bot._state = RunningBotState(
         info=BotInfo(
@@ -34,15 +41,20 @@ def mock_bot() -> Bot:
             is_bot=True,
             last_activity_time=datetime.fromtimestamp(1234567890, tz=UTC),
         ),
-        api_client=AsyncMock(spec=MaxApiClient),
+        api_client=mock_api_client,
     )
     return bot
 
 
 @pytest.fixture
-def mock_dispatcher() -> Dispatcher:
+def mock_feed_max_update() -> AsyncMock:
+    return AsyncMock()
+
+
+@pytest.fixture
+def mock_dispatcher(mock_feed_max_update: AsyncMock) -> Dispatcher:
     dispatcher = Dispatcher()
-    dispatcher.feed_max_update = AsyncMock()
+    dispatcher.feed_max_update = mock_feed_max_update  # type: ignore[method-assign]
     return dispatcher
 
 
@@ -51,20 +63,24 @@ def long_polling(mock_dispatcher: Dispatcher) -> LongPolling:
     return LongPolling(dispatcher=mock_dispatcher)
 
 
-async def run_generator_once(generator):
-    task = asyncio.create_task(generator.__anext__())
+async def anext_coro(generator: AsyncIterator[Any]) -> Any:
+    return await anext(generator)
+
+
+async def run_generator_once(generator: AsyncIterator[Any]) -> None:
+    task = asyncio.create_task(anext_coro(generator))
     await asyncio.sleep(0.1)
     task.cancel()
     await asyncio.gather(task, return_exceptions=True)
 
 
-@pytest.mark.asyncio
 async def test_handles_load_error_and_skips_update(
     long_polling: LongPolling,
     mock_bot: Bot,
+    mock_api_client: AsyncMock,
 ) -> None:
     initial_marker = 10
-    mock_bot.state.api_client.call_method.side_effect = [
+    mock_api_client.call_method.side_effect = [
         LoadError("Test LoadError"),
         UpdateList(updates=[MockUpdate(timestamp=100)], marker=initial_marker + 2),
         CancelledError,
@@ -89,8 +105,8 @@ async def test_handles_load_error_and_skips_update(
             "Ошибка загрузки апдейта в модель. "
             "Сообщите об этой ошибке в https://github.com/K1rL3s/maxo/issues",
         )
-        assert mock_bot.state.api_client.call_method.call_count == 2
-        mock_bot.state.api_client.call_method.assert_has_calls(
+        assert mock_api_client.call_method.call_count == 2
+        mock_api_client.call_method.assert_has_calls(
             [
                 call(
                     GetUpdates(
@@ -123,12 +139,12 @@ async def test_handles_load_error_and_skips_update(
             await updates_generator.__anext__()
 
 
-@pytest.mark.asyncio
 async def test_handles_load_error_with_no_marker(
     long_polling: LongPolling,
     mock_bot: Bot,
+    mock_api_client: AsyncMock,
 ) -> None:
-    mock_bot.state.api_client.call_method.side_effect = [
+    mock_api_client.call_method.side_effect = [
         LoadError("Test LoadError"),
         CancelledError,
     ]
@@ -150,18 +166,19 @@ async def test_handles_load_error_with_no_marker(
             "Ошибка загрузки апдейта в модель. "
             "Сообщите об этой ошибке в https://github.com/K1rL3s/maxo/issues",
         )
-        assert mock_bot.state.api_client.call_method.call_count == 2
+        assert mock_api_client.call_method.call_count == 2
         mock_backoff_next.assert_called_once()
         mock_backoff_sleep.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_handles_general_exception(
     long_polling: LongPolling,
     mock_bot: Bot,
     mock_dispatcher: Dispatcher,
+    mock_api_client: AsyncMock,
+    mock_feed_max_update: AsyncMock,
 ) -> None:
-    mock_bot.state.api_client.call_method.side_effect = ValueError(
+    mock_api_client.call_method.side_effect = ValueError(
         "Test ValueError",
     )
 
@@ -175,5 +192,5 @@ async def test_handles_general_exception(
             "ValueError",
             ANY,
         )
-        mock_bot.state.api_client.call_method.assert_called_once()
-        mock_dispatcher.feed_max_update.assert_not_called()
+        mock_api_client.call_method.assert_called_once()
+        mock_feed_max_update.assert_not_called()

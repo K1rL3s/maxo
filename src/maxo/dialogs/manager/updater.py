@@ -14,7 +14,7 @@ class Updater:
             raise TypeError("Root router must be Dispatcher.")
         self.dp = dp
 
-    async def notify(self, update: DialogUpdateEvent, bot: Bot) -> None:
+    async def notify(self, bot: Bot, update: DialogUpdateEvent) -> None:
         asyncio.get_running_loop().call_soon(
             self.notify_task,
             bot,
@@ -23,7 +23,7 @@ class Updater:
         )
 
     def notify_task(self, bot: Bot, update: DialogUpdateEvent) -> Task[Any]:
-        return asyncio.create_task(self._process_update(update, bot))
+        return asyncio.create_task(self._process_update(bot, update))
 
-    async def _process_update(self, update: DialogUpdateEvent, bot: Bot) -> None:
+    async def _process_update(self, bot: Bot, update: DialogUpdateEvent) -> None:
         await self.dp.feed_update(MaxoUpdate(update=update), bot)

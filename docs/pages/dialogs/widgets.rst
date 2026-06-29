@@ -54,7 +54,7 @@ Multi и Case
 
 .. code-block:: python
 
-    from maxo.dialogs.widgets.text import Const, Format, Case, Multi
+    from maxo.dialogs.widgets.text import Case, Const, Format, Multi
 
     Multi(
         Const("Добро пожаловать!"),
@@ -82,11 +82,13 @@ Button
 
 .. code-block:: python
 
+    from maxo.dialogs.api.protocols import DialogManager
     from maxo.dialogs.widgets.kbd import Button
     from maxo.dialogs.widgets.text import Const
+    from maxo.routing.updates import MessageCallback
 
-    async def on_click(callback, button, manager):
-        await callback.answer("Вы нажали на кнопку!")
+    async def on_click(callback: MessageCallback, button: Button, manager: DialogManager):
+        await callback.callback_answer("Вы нажали на кнопку!")
 
     Button(Const("Нажми меня"), id="btn1", on_click=on_click)
 
@@ -121,7 +123,7 @@ Row, Column, Group
 
 .. code-block:: python
 
-    from maxo.dialogs.widgets.kbd import Button, Row, Column, Group
+    from maxo.dialogs.widgets.kbd import Button, Column, Group, Row
     from maxo.dialogs.widgets.text import Const
 
     # Две кнопки в одной строке
@@ -153,11 +155,13 @@ Select
 
 .. code-block:: python
 
+    from maxo.dialogs.api.protocols import DialogManager
     from maxo.dialogs.widgets.kbd import Select
     from maxo.dialogs.widgets.text import Format
+    from maxo.routing.updates import MessageCallback
 
-    async def on_fruit_selected(callback, widget, manager, item_id):
-        await callback.answer(f"Вы выбрали: {item_id}")
+    async def on_fruit_selected(callback: MessageCallback, widget: Select, manager: DialogManager, item_id: str):
+        await callback.callback_answer(f"Вы выбрали: {item_id}")
 
     # items - ключ из данных геттера (list[tuple[str, str]])
     # В геттере: return {"fruits": [("apple", "🍎 Яблоко"), ("banana", "🍌 Банан")]}
@@ -181,11 +185,135 @@ Radio
 
     Radio(
         Format("✅ {item[1]}"),  # текст для выбранного
-        Format("  {item[1]}"),   # текст для невыбранного
+        Format("  {item[1]}"),  # текст для невыбранного
         id="lang_radio",
         item_id_getter=lambda item: item[0],
         items="languages",
         # В геттере: return {"languages": [("ru", "Русский"), ("en", "English")]}
+    )
+
+ConfirmButton
+-------------
+
+Кнопка с двойным подтверждением. При первом нажатии переходит в состояние ожидания - показывает опциональный предупреждающий текст и кнопки «Отмена» / «Подтвердить». При повторном нажатии вызывает соответствующий обработчик.
+
+**Ключевая особенность:** виджет не хранит состояние в данных диалога - оно выводится из payload кнопки. Благодаря этому при переходе в другое окно и обратно кнопка автоматически сбрасывается в исходное (primary) состояние.
+
+Использование
+^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    from maxo.dialogs.api.protocols import DialogManager
+    from maxo.dialogs.widgets.kbd import ConfirmButton
+    from maxo.dialogs.widgets.text import Const
+    from maxo.routing.updates import MessageCallback
+
+    async def on_confirm(
+        callback: MessageCallback,
+        widget: ConfirmButton,
+        manager: DialogManager,
+    ) -> None:
+        await callback.message.answer("Действие подтверждено!")
+
+    async def on_cancel(
+        callback: MessageCallback,
+        widget: ConfirmButton,
+        manager: DialogManager,
+    ) -> None:
+        await callback.message.answer("Действие отменено.")
+
+    # Режим с предупредительным текстом (2 шага):
+    # primary → warning + [Отмена] [Подтвердить] → on_confirm / on_cancel
+    ConfirmButton(
+        id="delete_btn",
+        primary_text=Const("🗑 Удалить"),
+        confirm_text=Const("✅ Да, удалить"),
+        cancel_text=Const("❌ Отмена"),
+        warning_text=Const("⚠️ Вы уверены?"),
+        on_confirm=on_confirm,
+        on_cancel=on_cancel,
+    )
+
+    # Режим без предупредительного текста (1 шаг):
+    # primary → [Отмена] [Подтвердить] (без строки с текстом)
+    ConfirmButton(
+        id="buy_btn",
+        primary_text=Const("🛒 Купить"),
+        confirm_text=Const("✅ Купить"),
+        cancel_text=Const("❌ Нет"),
+        warning_text=None,  # строка-предупреждение не отображается
+        on_confirm=on_confirm,
+        on_cancel=None,    # при отмене просто возвращается primary
+    )
+
+Параметры
+^^^^^^^^^
+
+*   **id** (:py:class:`str`): Уникальный идентификатор виджета. Используется для различения нескольких ``ConfirmButton`` в одном окне.
+*   **primary_text** (:py:class:`~maxo.dialogs.api.internal.TextWidget`): Текст кнопки в исходном состоянии.
+*   **confirm_text** (:py:class:`~maxo.dialogs.api.internal.TextWidget`): Текст кнопки подтверждения в состоянии ожидания.
+*   **cancel_text** (:py:class:`~maxo.dialogs.api.internal.TextWidget`): Текст кнопки отмены в состоянии ожидания.
+*   **warning_text** (:py:class:`~maxo.dialogs.api.internal.TextWidget` | ``None``, optional): Текст предупреждения, отображаемый отдельной строкой над кнопками отмены/подтверждения. Если ``None`` - строка не добавляется, кнопки появляются сразу. По умолчанию ``None``.
+*   **on_confirm** (:py:class:`~maxo.dialogs.widgets.kbd.confirm_button.OnClick` | ``None``, optional): Обработчик, вызываемый при нажатии кнопки подтверждения. По умолчанию ``None`` (no-op).
+*   **on_cancel** (:py:class:`~maxo.dialogs.widgets.kbd.confirm_button.OnClick` | ``None``, optional): Обработчик, вызываемый при нажатии кнопки отмены. По умолчанию ``None`` (no-op, виджет возвращается в primary).
+*   **confirm_first** (:py:class:`bool`, optional): Если ``True`` - кнопка подтверждения отображается левее кнопки отмены. По умолчанию ``False`` (порядок: «Отмена» | «Подтвердить»).
+*   **oneline** (:py:class:`bool`, optional): Если ``True`` - кнопки отмены и подтверждения будут в одном ряду, иначе в двух. По умолчанию ``True``
+*   **when** (:py:class:`~maxo.dialogs.widgets.common.WhenCondition`, optional): Условие, при котором виджет отображается. При ``False`` виджет полностью скрывается.
+
+Поведение при переходах между окнами
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``ConfirmButton`` намеренно не сохраняет состояние ожидания в данных диалога. Это означает, что при переходе в другое окно (``SwitchTo``, ``Next``, ``Back``) и возврате обратно кнопка всегда отрисовывается в исходном (primary) состоянии. Такое поведение позволяет избежать «зависшего» состояния подтверждения при навигации.
+
+.. code-block:: python
+
+    from maxo.dialogs.widgets.kbd import ConfirmButton, SwitchTo
+    from maxo.dialogs.widgets.text import Const
+
+    # В этом примере при возврате из SG.settings обратно в SG.main
+    # кнопка delete_btn будет снова показана как "🗑 Удалить", а не как
+    # "⚠️ Вы уверены? / [Отмена] [Да, удалить]"
+    Window(
+        Const("Главное меню"),
+        ConfirmButton(
+            id="delete_btn",
+            primary_text=Const("🗑 Удалить"),
+            confirm_text=Const("✅ Да, удалить"),
+            cancel_text=Const("❌ Отмена"),
+            warning_text=Const("⚠️ Вы уверены?"),
+            on_confirm=on_confirm,
+        ),
+        SwitchTo(Const("⚙️ Настройки"), id="to_settings", state=SG.settings),
+        state=SG.main,
+    )
+
+Несколько кнопок в одном окне
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+В одном окне можно разместить несколько ``ConfirmButton`` - они не пересекаются по payload-префиксу, поскольку каждый виджет использует свой уникальный ``id``.
+
+.. code-block:: python
+
+    Window(
+        Const("Выберите заказ:"),
+        ConfirmButton(
+            id="pizza",
+            primary_text=Const("🍕 Заказать пиццу"),
+            confirm_text=Const("✅ Точно"),
+            cancel_text=Const("❌ Передумал"),
+            warning_text=Const("🍕 Подтверди заказ пиццы"),
+            on_confirm=on_pizza,
+            on_cancel=on_pizza_cancel,
+        ),
+        ConfirmButton(
+            id="sushi",
+            primary_text=Const("🍣 Заказать суши"),
+            confirm_text=Const("✅ Точно суши"),
+            cancel_text=Const("❌ Передумал, не суши"),
+            on_confirm=on_sushi,
+        ),
+        state=SG.main,
     )
 
 TimeSelect
@@ -194,23 +322,24 @@ TimeSelect
 Виджет для выбора времени (часы и минуты). Представляет собой две отдельные клавиатуры для выбора часов и минут, что позволяет пользователю легко ввести нужное время.
 
 Использование
-^^^^^^^^^^^^
+^^^^^^^^^^^^^
 
 .. code-block:: python
 
-    from maxo.dialogs import Dialog, Window
+    from datetime import time
+
+    from maxo.dialogs import Dialog, DialogManager, Window
     from maxo.dialogs.widgets.kbd import TimeSelect
     from maxo.dialogs.widgets.text import Const
-    from maxo.fsm.state import State, StatesGroup
-    from datetime import time
+    from maxo.fsm import State, StatesGroup
+
 
     class MySG(StatesGroup):
         time_selection = State()
 
-    async def on_time_selected(event, widget, manager, selected_time: time):
+    async def on_time_selected(event, widget, manager: DialogManager, selected_time: time):
         # Здесь можно обработать выбранное время
-        facade: MessageCallbackFacade = manager.middleware_data["facade"]
-        await facade.answer_text(f"Вы выбрали время: {selected_time.strftime('%H:%M')}")
+        await event.callback_answer(f"Вы выбрали время: {selected_time.strftime('%H:%M')}")
         manager.dialog_data["selected_time"] = selected_time
 
     dialog = Dialog(
@@ -241,7 +370,7 @@ TimeSelect
 *   **minute_width** (:py:class:`int`, optional): Количество кнопок минут в одной строке. По умолчанию 6.
 
 Управление виджетом (ManagedTimeSelect)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Вы можете получить или установить выбранное время программно с помощью ``ManagedTimeSelect``, который доступен через ``widget`` в обработчиках, или через ``manager.find(widget_id).get_value()``.
 

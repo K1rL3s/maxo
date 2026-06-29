@@ -24,7 +24,7 @@ class AiohttpBoundRequest(BoundRequest[Request]):
 
     async def json(self) -> dict[str, Any]:
         try:
-            return await self.request.json()
+            return cast(dict[str, Any], await self.request.json())
         except ContentTypeError as e:
             raise JSONDecodeError(str(e), "", 0) from e
 
@@ -32,7 +32,7 @@ class AiohttpBoundRequest(BoundRequest[Request]):
     def client_ip(self) -> IPv4Address | IPv6Address | str | None:
         peer_name = cast(Transport, self.request.transport).get_extra_info("peername")
         if peer_name:
-            return peer_name[0]
+            return cast(IPv4Address | IPv6Address | str, peer_name[0])
         return None
 
     @property

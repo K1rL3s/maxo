@@ -11,7 +11,7 @@ from maxo.types.update_context import UpdateContext
 
 FSM_STORAGE_KEY = "fsm_storage"
 FSM_CONTEXT_KEY = "fsm_context"
-FSM_CONTEXT_STATE_KEY = "state"  # same as "fsm_context", Подражаение aiogram
+FSM_CONTEXT_STATE_KEY = "state"  # same as "fsm_context", Подражание aiogram
 RAW_STATE_KEY = "raw_state"
 
 

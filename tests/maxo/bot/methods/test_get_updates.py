@@ -10,7 +10,7 @@ from maxo.types import Message
 from maxo.types.update_list import UpdateList
 
 
-def test_make_response_skips_malformed_update():
+def test_make_response_skips_malformed_update() -> None:
     get_updates = GetUpdates()
 
     raw_response = {

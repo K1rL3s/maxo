@@ -1,5 +1,6 @@
 from typing import Any
 
+from maxo import Bot
 from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
 from maxo.routing.interfaces.router import BaseRouter
@@ -19,11 +20,12 @@ class ErrorMiddleware(BaseMiddleware[Any]):
         except (SkipHandler, CancelHandler):  # pragma: no cover
             raise
         except Exception as exception:
+            bot: Bot = ctx["bot"]
             exception_event = ErrorEvent(
                 exception=exception,
                 update=update,
-            )
-            new_ctx = dict(ctx)
+            ).as_(bot)
+            new_ctx = Ctx(dict(ctx))
             new_ctx["update"] = exception_event
             result = await self._router.trigger(new_ctx)
             if result is UNHANDLED:

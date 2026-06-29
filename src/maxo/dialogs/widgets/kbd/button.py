@@ -1,9 +1,9 @@
 from collections.abc import Awaitable, Callable
+from typing import Any, TypeAlias
 
-from maxo.dialogs.api.internal import RawKeyboard
+from maxo.dialogs.api.internal import RawKeyboard, TextWidget
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.widgets.common import WhenCondition
-from maxo.dialogs.widgets.text import Text
 from maxo.dialogs.widgets.widget_event import (
     WidgetEventProcessor,
     ensure_event_processor,
@@ -14,13 +14,16 @@ from maxo.types import CallbackButton, ClipboardButton, LinkButton, OpenAppButto
 
 from .base import Keyboard
 
-OnClick = Callable[[MessageCallback, "Button", DialogManager], Awaitable]
+OnClick: TypeAlias = Callable[
+    [MessageCallback, "Button", DialogManager],
+    Awaitable[Any],
+]
 
 
 class Button(Keyboard):
     def __init__(
         self,
-        text: Text,
+        text: TextWidget,
         id: str,
         on_click: OnClick | WidgetEventProcessor | None = None,
         when: WhenCondition = None,
@@ -40,7 +43,7 @@ class Button(Keyboard):
 
     async def _render_keyboard(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
         return [
@@ -56,8 +59,8 @@ class Button(Keyboard):
 class Url(Keyboard):
     def __init__(
         self,
-        text: Text,
-        url: Text,
+        text: TextWidget,
+        url: TextWidget,
         when: WhenCondition = None,
     ) -> None:
         super().__init__(when=when)
@@ -66,7 +69,7 @@ class Url(Keyboard):
 
     async def _render_keyboard(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
         return [
@@ -85,8 +88,8 @@ Link = Url
 class WebApp(Keyboard):
     def __init__(
         self,
-        text: Text,
-        web_app: Text,
+        text: TextWidget,
+        web_app: TextWidget,
         contact_id: Omittable[int] = Omitted(),
         when: WhenCondition = None,
     ) -> None:
@@ -97,7 +100,7 @@ class WebApp(Keyboard):
 
     async def _render_keyboard(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
         text = await self.text.render_text(data, manager)
@@ -117,8 +120,8 @@ class WebApp(Keyboard):
 class Clipboard(Keyboard):
     def __init__(
         self,
-        text: Text,
-        payload: Text,
+        text: TextWidget,
+        payload: TextWidget,
         when: WhenCondition = None,
     ) -> None:
         super().__init__(when=when)
@@ -127,7 +130,7 @@ class Clipboard(Keyboard):
 
     async def _render_keyboard(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
         return [

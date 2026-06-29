@@ -1,14 +1,10 @@
 from abc import abstractmethod
-from typing import Self
+from typing import Any, Self
 
 from maxo.dialogs.api.internal import KeyboardWidget, RawKeyboard
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.utils import add_exception_note
-from maxo.dialogs.widgets.common import (
-    Actionable,
-    WhenCondition,
-    Whenable,
-)
+from maxo.dialogs.widgets.common import Actionable, WhenCondition, Whenable
 from maxo.routing.updates import MessageCallback
 
 
@@ -20,7 +16,7 @@ class Keyboard(Actionable, Whenable, KeyboardWidget):
     @add_exception_note
     async def render_keyboard(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
         """
@@ -36,7 +32,7 @@ class Keyboard(Actionable, Whenable, KeyboardWidget):
     @abstractmethod
     async def _render_keyboard(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
         """
@@ -55,9 +51,13 @@ class Keyboard(Actionable, Whenable, KeyboardWidget):
         """Create callback data for only button in widget."""
         return self.widget_id
 
+    _own_callback_data = _own_payload  # Подражание aiogram-dialog
+
     def _item_payload(self, data: str | int) -> str:
         """Create callback data for widgets button if multiple."""
         return f"{self.callback_prefix()}{data}"
+
+    _item_callback_data = _item_payload  # Подражание aiogram-dialog
 
     async def process_callback(
         self,
@@ -131,7 +131,7 @@ class Or(Keyboard):
 
     async def _render_keyboard(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
         for widget in self.widgets:

@@ -54,7 +54,6 @@ def middleware_factory(name: str) -> Callable[..., Any]:
     return middleware
 
 
-@pytest.mark.asyncio
 async def test_middleware_execution_order(ctx: Ctx) -> None:
     dp = Dispatcher()
 
@@ -86,7 +85,6 @@ async def test_middleware_execution_order(ctx: Ctx) -> None:
     ]
 
 
-@pytest.mark.asyncio
 async def test_middleware_stops_propagation(ctx: Ctx) -> None:
     dp = Dispatcher()
 
@@ -114,7 +112,6 @@ async def test_middleware_stops_propagation(ctx: Ctx) -> None:
     ]
 
 
-@pytest.mark.asyncio
 async def test_outer_middleware_runs_if_filter_fails(ctx: Ctx) -> None:
     dp = Dispatcher()
 
@@ -139,7 +136,6 @@ async def test_outer_middleware_runs_if_filter_fails(ctx: Ctx) -> None:
     ]
 
 
-@pytest.mark.asyncio
 async def test_nested_router_middleware_execution(ctx: Ctx) -> None:
     dp = Dispatcher()
     root_router = Router("root")
@@ -172,7 +168,6 @@ async def test_nested_router_middleware_execution(ctx: Ctx) -> None:
     ]
 
 
-@pytest.mark.asyncio
 async def test_router_filter_false_skips_router_inner_middleware(ctx: Ctx) -> None:
     dp = Dispatcher()
     router = Router("child")
@@ -195,7 +190,6 @@ async def test_router_filter_false_skips_router_inner_middleware(ctx: Ctx) -> No
     assert ctx["execution_order"] == ["filter"]
 
 
-@pytest.mark.asyncio
 async def test_router_filter_true_enters_router_inner_middleware(ctx: Ctx) -> None:
     dp = Dispatcher()
     router = Router("child")
@@ -223,7 +217,6 @@ async def test_router_filter_true_enters_router_inner_middleware(ctx: Ctx) -> No
     ]
 
 
-@pytest.mark.asyncio
 async def test_first_router_inner_middleware_skipped_second_router_handles(
     ctx: Ctx,
 ) -> None:
@@ -263,7 +256,6 @@ async def test_first_router_inner_middleware_skipped_second_router_handles(
     ]
 
 
-@pytest.mark.asyncio
 async def test_one_call_per_event_with_routers(ctx: Ctx) -> None:
     async def outer_middleware(
         update: MessageCreated,
@@ -300,7 +292,6 @@ async def test_one_call_per_event_with_routers(ctx: Ctx) -> None:
     assert ctx["handler_calls"] == 1
 
 
-@pytest.mark.asyncio
 async def test_fsm_disabled() -> None:
     dp = Dispatcher(disable_fsm=True)
 
@@ -310,7 +301,6 @@ async def test_fsm_disabled() -> None:
     )
 
 
-@pytest.mark.asyncio
 async def test_fsm_enabled_by_default() -> None:
     dp = Dispatcher()
 

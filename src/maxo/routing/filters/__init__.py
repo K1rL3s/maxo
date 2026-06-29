@@ -7,6 +7,7 @@ from .deeplink import DeeplinkFilter
 from .exception import ExceptionMessageFilter, ExceptionTypeFilter
 from .logic import AndFilter, InvertFilter, OrFilter, and_f, invert_f, or_f
 from .payload import Payload
+from .state import StateFilter
 
 __all__ = (
     "AlwaysFalseFilter",
@@ -22,6 +23,7 @@ __all__ = (
     "InvertFilter",
     "OrFilter",
     "Payload",
+    "StateFilter",
     "and_f",
     "invert_f",
     "or_f",

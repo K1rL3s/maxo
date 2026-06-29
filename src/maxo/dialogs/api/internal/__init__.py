@@ -1,8 +1,7 @@
 from .fake_data import FakeRecipient, FakeUser, ReplyCallback
-from .manager import (
-    DialogManagerFactory,
-)
+from .manager import DialogManagerFactory
 from .middleware import (
+    CALLBACK_DATA_KEY,
     CONTEXT_KEY,
     EVENT_SIMULATED,
     PAYLOAD_KEY,
@@ -23,6 +22,7 @@ from .widgets import (
 from .window import WindowProtocol
 
 __all__ = (
+    "CALLBACK_DATA_KEY",
     "CONTEXT_KEY",
     "EVENT_SIMULATED",
     "PAYLOAD_KEY",

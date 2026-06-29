@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 from yarl import URL
 
@@ -16,7 +18,7 @@ from .fixtures import DummyBoundRequest, DummyRequest
         "https://example.com/webhook?foo=bar",
     ],
 )
-def test_static_routing(url, bot):
+def test_static_routing(url: str, bot: Bot) -> None:
     routing = StaticRouting(url=url)
     assert routing.webhook_point(bot) == url
 
@@ -64,7 +66,14 @@ def test_static_routing(url, bot):
         "custom-param-missing",
     ],
 )
-def test_path_routing(url, param, token, path_params, expected_url, expected_token):
+def test_path_routing(
+    url: str,
+    param: str,
+    token: str,
+    path_params: dict[str, str] | dict[Any, Any],
+    expected_url: str,
+    expected_token: str | None,
+) -> None:
     routing = PathRouting(url=url, param=param)
     assert routing.webhook_point(Bot(token)) == expected_url
     req = DummyBoundRequest(DummyRequest(path_params=path_params))
@@ -150,7 +159,14 @@ def test_path_routing(url, param, token, path_params, expected_url, expected_tok
         "complex-params",
     ],
 )
-def test_query_routing(url, param, token, query_params, expected_url, expected_token):
+def test_query_routing(
+    url: str,
+    param: str,
+    token: str,
+    query_params: dict[str, str] | dict[Any, Any],
+    expected_url: str,
+    expected_token: str | None,
+) -> None:
     routing = QueryRouting(url=url, param=param)
     webhook_url = routing.webhook_point(Bot(token))
 

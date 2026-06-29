@@ -95,7 +95,6 @@ def bot() -> Bot:
     return FakeBot()
 
 
-@pytest.mark.asyncio
 async def test_start(
     bot: Bot,
     message_manager: MockMessageManager,
@@ -108,7 +107,6 @@ async def test_start(
     assert first_message.body.keyboard
 
 
-@pytest.mark.asyncio
 async def test_next_back(
     dp: Dispatcher,
     bot: Bot,
@@ -143,7 +141,6 @@ async def test_next_back(
     assert last_message.body.keyboard
 
 
-@pytest.mark.asyncio
 async def test_finish_last(
     dp: Dispatcher,
     bot: Bot,
@@ -167,7 +164,6 @@ async def test_finish_last(
     assert not last_message.body.keyboard, "Keyboard closed"
 
 
-@pytest.mark.asyncio
 async def test_reset_stack(
     dp: Dispatcher,
     bot: Bot,
@@ -196,7 +192,6 @@ async def test_reset_stack(
     assert not last_message.body.keyboard, "Keyboard closed"
 
 
-@pytest.mark.asyncio
 async def test_subdialog(
     dp: Dispatcher,
     bot: Bot,

@@ -18,7 +18,7 @@ def _partial_middleware(
     next: NextMiddleware[_UpdateT],
 ) -> NextMiddleware[_UpdateT]:
     async def wrapper(ctx: Ctx) -> Any:
-        return await middleware(update=ctx["update"], ctx=ctx, next=next)
+        return await middleware(ctx["update"], ctx, next)
 
     return wrapper
 
@@ -44,7 +44,7 @@ class MiddlewareManager(Generic[_UpdateT]):
         self,
         trigger: Callable[[Ctx], Awaitable[_ReturnT]],
     ) -> NextMiddleware[_UpdateT]:
-        middleware = cast("NextMiddleware[_UpdateT]", trigger)
+        middleware = cast(NextMiddleware[_UpdateT], trigger)
 
         for m in reversed(self.middlewares):
             middleware = _partial_middleware(m, middleware)
@@ -69,3 +69,9 @@ class MiddlewareManagerFacade(Generic[_UpdateT]):
     @property
     def outer(self) -> MiddlewareManager[_UpdateT]:
         return self._outer
+
+    # Подражание aiogram,
+    # чтобы по `router.message_created.middleware(MyMiddleware())`
+    # он добавлялся в inner-мидлвари
+    def __call__(self, *middlewares: BaseMiddleware[_UpdateT]) -> None:
+        self.inner.add(*middlewares)

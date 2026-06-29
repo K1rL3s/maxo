@@ -15,7 +15,6 @@ from maxo.routing.filters import Command, CommandObject, CommandStart
 from maxo.routing.updates import MessageCallback, MessageCreated
 from maxo.transport.long_polling import LongPolling
 from maxo.types import CallbackButton
-from maxo.utils.facades import MessageCallbackFacade, MessageCreatedFacade
 
 from ..ids import SharedId
 from ..user_repo import DbUser, UserRepo
@@ -45,13 +44,12 @@ def get_keyboard() -> list[list[CallbackButton]]:
 @router.message_created(CommandStart())
 async def start_handler(
     message: MessageCreated,
-    facade: MessageCreatedFacade,
     fsm_context: FSMContext,
     current_user: DbUser,
 ) -> None:
     current_state = await fsm_context.get_state()
 
-    await facade.send_message(
+    await message.send_message(
         (
             f"Ваш общий ID: {current_user.shared_id}\n\n"
             f"Отправьте эту команду боту TG: /link {current_user.shared_id}\n\n"
@@ -59,27 +57,22 @@ async def start_handler(
             "чтобы связать их: /link <shared_id>"
         ),
     )
-    await facade.send_message(
+    await message.send_message(
         text=f"Ваше текущее состояние: {current_state}",
         keyboard=get_keyboard(),
     )
 
 
 @router.message_created(Command("state"))
-async def get_state_handler(
-    message: MessageCreated,
-    fsm_context: FSMContext,
-    facade: MessageCreatedFacade,
-) -> None:
+async def get_state_handler(message: MessageCreated, fsm_context: FSMContext) -> None:
     current_state = await fsm_context.get_state()
-    await facade.send_message(text=f"Ваше текущее состояние: {current_state}")
+    await message.send_message(text=f"Ваше текущее состояние: {current_state}")
 
 
 @router.message_created(Command("link"))
 async def handle_deeplink(
     message: MessageCreated,
     command: CommandObject,
-    facade: MessageCreatedFacade,
     user_repo: UserRepo,
     current_user: DbUser,
 ) -> None:
@@ -89,48 +82,36 @@ async def handle_deeplink(
             current_user=current_user,
             shared_id_to_link=shared_id_to_link,
         )
-        await facade.send_message(text="Аккаунты успешно связаны!")
+        await message.send_message(text="Аккаунты успешно связаны!")
     except (IndexError, ValueError, TypeError):
-        await facade.send_message(text="Использование: /link <shared_id>")
+        await message.send_message(text="Использование: /link <shared_id>")
 
 
 @router.message_callback(MagicFilter(F.payload == "to_state_1"))
-async def to_state_1(
-    callback: MessageCallback,
-    fsm_context: FSMContext,
-    facade: MessageCallbackFacade,
-) -> None:
+async def to_state_1(callback: MessageCallback, fsm_context: FSMContext) -> None:
     await fsm_context.set_state(MyStates.state1)
     current_state = await fsm_context.get_state()
-    await facade.edit_message(
+    await callback.edit_message(
         text=f"Ваше текущее состояние: {current_state}",
         keyboard=get_keyboard(),
     )
 
 
 @router.message_callback(MagicFilter(F.payload == "to_state_2"))
-async def to_state_2(
-    callback: MessageCallback,
-    fsm_context: FSMContext,
-    facade: MessageCallbackFacade,
-) -> None:
+async def to_state_2(callback: MessageCallback, fsm_context: FSMContext) -> None:
     await fsm_context.set_state(MyStates.state2)
     current_state = await fsm_context.get_state()
-    await facade.edit_message(
+    await callback.edit_message(
         text=f"Ваше текущее состояние: {current_state}",
         keyboard=get_keyboard(),
     )
 
 
 @router.message_callback(MagicFilter(F.payload == "clear_state"))
-async def clear_state(
-    callback: MessageCallback,
-    fsm_context: FSMContext,
-    facade: MessageCallbackFacade,
-) -> None:
+async def clear_state(callback: MessageCallback, fsm_context: FSMContext) -> None:
     await fsm_context.clear()
     current_state = await fsm_context.get_state()
-    await facade.edit_message(
+    await callback.edit_message(
         text=f"Состояние очищено. Ваше текущее состояние: {current_state}",
         keyboard=get_keyboard(),
     )

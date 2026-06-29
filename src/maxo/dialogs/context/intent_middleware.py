@@ -1,6 +1,6 @@
-from logging import getLogger
 from typing import Any
 
+from maxo import loggers
 from maxo.dialogs.api.entities import (
     DEFAULT_STACK_ID,
     EVENT_CONTEXT_KEY,
@@ -16,12 +16,21 @@ from maxo.dialogs.api.exceptions import (
     UnknownIntent,
     UnknownState,
 )
-from maxo.dialogs.api.internal import CONTEXT_KEY, STACK_KEY, STORAGE_KEY
+from maxo.dialogs.api.internal import (
+    CALLBACK_DATA_KEY,
+    CONTEXT_KEY,
+    PAYLOAD_KEY,
+    STACK_KEY,
+    STORAGE_KEY,
+)
 from maxo.dialogs.api.protocols import DialogRegistryProtocol, StackAccessValidator
+from maxo.dialogs.context.storage import StorageProxy
 from maxo.dialogs.utils import remove_intent_id
 from maxo.enums import ChatType
 from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
 from maxo.routing.ctx import Ctx
+from maxo.routing.facades import MessageCallbackFacade
+from maxo.routing.facades.middleware import FACADE_KEY
 from maxo.routing.interfaces import BaseMiddleware, NextMiddleware
 from maxo.routing.middlewares.fsm_context import FSM_STORAGE_KEY
 from maxo.routing.middlewares.update_context import (
@@ -41,12 +50,6 @@ from maxo.routing.updates import (
     UserAddedToChat,
     UserRemovedFromChat,
 )
-from maxo.utils.facades import MessageCallbackFacade
-from maxo.utils.facades.middleware import FACADE_KEY
-
-from .storage import StorageProxy
-
-logger = getLogger(__name__)
 
 FORBIDDEN_STACK_KEY = "aiogd_stack_forbidden"
 
@@ -170,7 +173,7 @@ class IntentMiddlewareFactory:
             storage=fsm_storage,
             events_isolation=self.events_isolation,
             state_groups=self.registry.states_groups(),
-            user_id=event_context.user.id,
+            user_id=event_context.user_id,
             chat_id=event_context.chat_id,
             chat_type=event_context.chat_type,
         )
@@ -204,7 +207,7 @@ class IntentMiddlewareFactory:
         stack_id: str | None,
         ctx: Ctx,
     ) -> None:
-        logger.debug(
+        loggers.dialogs.debug(
             "Loading context for stack: `%s`, user: `%s`, chat: `%s`",
             stack_id,
             proxy.user_id,
@@ -228,7 +231,7 @@ class IntentMiddlewareFactory:
             event,
             ctx,
         ):
-            logger.debug(
+            loggers.dialogs.debug(
                 "Stack %s is not allowed for user %s",
                 stack.id,
                 proxy.user_id,
@@ -248,7 +251,7 @@ class IntentMiddlewareFactory:
         intent_id: str,
         ctx: Ctx,
     ) -> None:
-        logger.debug(
+        loggers.dialogs.debug(
             "Loading context for intent: `%s`, user: `%s`, chat: `%s`",
             intent_id,
             proxy.user_id,
@@ -270,7 +273,7 @@ class IntentMiddlewareFactory:
             event,
             ctx,
         ):
-            logger.debug(
+            loggers.dialogs.debug(
                 "Stack %s is not allowed for user %s",
                 stack.id,
                 proxy.user_id,
@@ -355,7 +358,7 @@ class IntentMiddlewareFactory:
                 )
             else:
                 await self._load_default_context(update, ctx, event_context)
-            ctx["payload"] = original_data
+            ctx[PAYLOAD_KEY] = ctx[CALLBACK_DATA_KEY] = original_data
         else:
             await self._load_default_context(update, ctx, event_context)
         result = await next(ctx)
@@ -535,7 +538,7 @@ class IntentErrorMiddleware(BaseMiddleware[ErrorEvent]):
         try:
             return await storage.load_context(stack.last_intent_id())
         except (UnknownIntent, OutdatedIntent):
-            logger.warning(
+            loggers.dialogs.warning(
                 "Stack is broken for user %s, chat %s, resetting",
                 storage.user_id,
                 storage.chat_id,
@@ -570,7 +573,7 @@ class IntentErrorMiddleware(BaseMiddleware[ErrorEvent]):
                 storage=ctx[FSM_STORAGE_KEY],
                 events_isolation=self.events_isolation,
                 state_groups=self.registry.states_groups(),
-                user_id=event_context.user.id,
+                user_id=event_context.user_id,
                 chat_id=event_context.chat_id,
                 chat_type=event_context.chat_type,
             )
@@ -593,7 +596,7 @@ class IntentErrorMiddleware(BaseMiddleware[ErrorEvent]):
                 ctx[STACK_KEY] = stack
                 ctx[CONTEXT_KEY] = context
             else:
-                logger.debug(
+                loggers.dialogs.debug(
                     "Stack %s is not allowed for user %s",
                     stack.id,
                     proxy.user_id,

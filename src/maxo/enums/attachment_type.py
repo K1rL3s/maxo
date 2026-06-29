@@ -6,6 +6,7 @@ class AttachmentType(StrEnum):
     """Общая схема, представляющая вложение сообщения"""
 
     TEXT = "text"  # Самодельное поле
+    UNKNOWN = "unknown"  # Самодельное поле
     AUDIO = "audio"
     CONTACT = "contact"
     FILE = "file"
@@ -18,6 +19,7 @@ class AttachmentType(StrEnum):
 
     # Подражание aiogram
     DOCUMENT = FILE
+    PHOTO = IMAGE
 
 
 # Подражание aiogram

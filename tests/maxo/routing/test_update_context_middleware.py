@@ -138,14 +138,14 @@ async def run_middleware(
             BotStarted(chat_id=12, user=make_user(3), timestamp=datetime.now(UTC)),
             12,
             3,
-            None,
+            ChatType.DIALOG,
             True,
         ),
         (
             BotStopped(chat_id=13, user=make_user(4), timestamp=datetime.now(UTC)),
             13,
             4,
-            None,
+            ChatType.DIALOG,
             True,
         ),
         (
@@ -169,7 +169,7 @@ async def run_middleware(
             ),
             15,
             6,
-            None,
+            ChatType.DIALOG,
             True,
         ),
         (
@@ -182,7 +182,7 @@ async def run_middleware(
             ),
             16,
             7,
-            None,
+            ChatType.DIALOG,
             True,
         ),
         (
@@ -194,7 +194,7 @@ async def run_middleware(
             ),
             17,
             8,
-            None,
+            ChatType.DIALOG,
             True,
         ),
         (
@@ -206,7 +206,7 @@ async def run_middleware(
             ),
             18,
             9,
-            None,
+            ChatType.DIALOG,
             True,
         ),
         (
@@ -262,7 +262,6 @@ async def run_middleware(
         (make_message_removed(chat_id=24, user_id=15), 24, 15, None, False),
     ],
 )
-@pytest.mark.asyncio
 async def test_resolve_update_context_for_all_update_types(
     update: Any,
     expected_chat_id: int,
@@ -289,7 +288,6 @@ async def test_resolve_update_context_for_all_update_types(
         assert EVENT_FROM_USER_KEY not in ctx
 
 
-@pytest.mark.asyncio
 async def test_resolve_message_created_without_enrich() -> None:
     middleware = UpdateContextMiddleware()
     msg = make_message_created(chat_id=10, user_id=5)
@@ -306,7 +304,6 @@ async def test_resolve_message_created_without_enrich() -> None:
     assert ctx[EVENT_FROM_USER_KEY] is msg.message.sender
 
 
-@pytest.mark.asyncio
 async def test_resolve_message_removed_without_enrich() -> None:
     middleware = UpdateContextMiddleware()
     removed = make_message_removed(chat_id=20, user_id=7)
@@ -323,7 +320,6 @@ async def test_resolve_message_removed_without_enrich() -> None:
     assert EVENT_FROM_USER_KEY not in ctx
 
 
-@pytest.mark.asyncio
 async def test_enrich_disabled_does_not_call_bot() -> None:
     async def get_chat(_: Any, /, **__: Any) -> None:
         raise AssertionError("get_chat must not be called")
@@ -342,7 +338,6 @@ async def test_enrich_disabled_does_not_call_bot() -> None:
     assert update_context.chat is None
 
 
-@pytest.mark.asyncio
 async def test_enrich_enabled_fills_chat_and_user_from_payload() -> None:
     chat_result = Chat(
         chat_id=1,
@@ -377,7 +372,6 @@ async def test_enrich_enabled_fills_chat_and_user_from_payload() -> None:
     assert ctx[EVENT_FROM_USER_KEY] is msg.message.sender
 
 
-@pytest.mark.asyncio
 async def test_enrich_message_removed_fills_user() -> None:
     chat_result = Chat(
         chat_id=1,
@@ -432,7 +426,6 @@ async def test_enrich_message_removed_fills_user() -> None:
     assert ctx[EVENT_FROM_USER_KEY] is member
 
 
-@pytest.mark.asyncio
 async def test_enrich_message_removed_dialog_fills_user() -> None:
     dialog_user = UserWithPhoto(
         user_id=3,
@@ -476,7 +469,6 @@ async def test_enrich_message_removed_dialog_fills_user() -> None:
     assert ctx[EVENT_FROM_USER_KEY] is dialog_user
 
 
-@pytest.mark.asyncio
 async def test_enrich_enabled_fills_chat_and_event_chat_key() -> None:
     chat_result = Chat(
         chat_id=1,

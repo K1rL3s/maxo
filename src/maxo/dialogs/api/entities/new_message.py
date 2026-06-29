@@ -4,6 +4,7 @@ from enum import Enum
 from maxo.dialogs.api.entities import MediaAttachment, ShowMode
 from maxo.dialogs.api.entities.link_preview import LinkPreviewOptions
 from maxo.enums import TextFormat
+from maxo.omit import Omittable, Omitted
 from maxo.types import (
     Attachments,
     InlineButtons,
@@ -48,7 +49,7 @@ class NewMessage(MaxoType):
     recipient: Recipient
     keyboard: MarkupVariant | None = None
     media: list[MediaAttachment] = field(default_factory=list)
-    parse_mode: TextFormat | None = None
+    parse_mode: Omittable[TextFormat | None] = Omitted()
     link_preview_options: LinkPreviewOptions | None = None
     show_mode: ShowMode = ShowMode.AUTO
     text: str | None = None

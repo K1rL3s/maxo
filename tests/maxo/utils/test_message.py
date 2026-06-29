@@ -4,7 +4,7 @@ from maxo.enums import ChatType
 from maxo.types import Message, MessageBody, Recipient
 
 
-def test_message_link():
+def test_message_link() -> None:
     message = Message(
         body=MessageBody(mid="mid:edren_baton", seq=116341337478799028),
         recipient=Recipient(chat_id=-71196681472709, chat_type=ChatType.CHAT),

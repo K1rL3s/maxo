@@ -1,0 +1,45 @@
+# maxo
+
+> Асинхронный Python-фреймворк для разработки ботов мессенджера MAX (max.ru) с поддержкой long-polling, вебхуков, FSM, диалогов, фильтров и Dependency Injection. Интерфейс намеренно близок к aiogram.
+
+`maxo` распространяется через PyPI (`pip install maxo`), требует Python 3.12-3.14, использует `aiohttp`/`unihttp` для сети и `adaptix` для валидации данных. Поддерживает интеграции с `dishka` (DI), `magic_filter` (фильтры) и `redis` (FSM-хранилище). Диалоги (`maxo.dialogs`) - порт `aiogram_dialog`, вебхуки (`maxo.transport.webhook`) - порт `aiogram-webhook`.
+
+## Документация
+
+- [Начало работы](https://maxo.readthedocs.io/ru/latest/pages/getting-started.html): Установка через uv/poetry/pip, требования, быстрый старт - эхо-бот, команды, клавиатуры, вебхук.
+- [Обработка событий - обзор](https://maxo.readthedocs.io/ru/latest/pages/event-handling/index.html): Архитектура цепочки обработки апдейтов в maxo.
+- [Роутеры](https://maxo.readthedocs.io/ru/latest/pages/event-handling/routers.html): Структура бота через `Dispatcher` и `Router`, вложенность, масштабирование.
+- [Фильтры](https://maxo.readthedocs.io/ru/latest/pages/event-handling/filters.html): Встроенные фильтры (`Command`, `CommandStart`), кастомные фильтры, комбинирование, интеграция с `magic_filter`.
+- [Мидлвари](https://maxo.readthedocs.io/ru/latest/pages/event-handling/middlewares.html): Outer/Inner middleware, поток выполнения, типичные сценарии.
+- [Хендлеры](https://maxo.readthedocs.io/ru/latest/pages/event-handling/handlers.html): Сигнатуры функций-обработчиков, контекст `Ctx`, внедрение зависимостей.
+- [FSM](https://maxo.readthedocs.io/ru/latest/pages/event-handling/fsm.html): Машина состояний, `StatesGroup`, `MemoryStorage`, `RedisStorage`.
+- [Фасады](https://maxo.readthedocs.io/ru/latest/pages/event-handling/facades.html): Объекты-обёртки над API для упрощённой работы с апдейтами.
+- [Ошибки](https://maxo.readthedocs.io/ru/latest/pages/event-handling/errors.html): Перехват исключений и обработка ошибок.
+- [Сигналы](https://maxo.readthedocs.io/ru/latest/pages/event-handling/signals.html): Сигналы жизненного цикла (startup, shutdown).
+- [Long-polling](https://maxo.readthedocs.io/ru/latest/pages/event-handling/long-polling.html): Получение апдейтов через long-polling.
+- [Webhooks](https://maxo.readthedocs.io/ru/latest/pages/event-handling/webhooks.html): Вебхуки через `aiohttp` или `fastapi`.
+
+## Диалоги (maxo.dialogs)
+
+- [Обзор](https://maxo.readthedocs.io/ru/latest/pages/dialogs/index.html): Что такое `maxo.dialogs`, чем он похож и чем отличается от `aiogram_dialog`.
+- [Быстрый старт диалогов](https://maxo.readthedocs.io/ru/latest/pages/dialogs/quickstart.html): Создание окна, виджета и диалога с состояниями.
+- [Окна и диалоги](https://maxo.readthedocs.io/ru/latest/pages/dialogs/windows_and_dialogs.html): Структура `Window` и `Dialog`.
+- [Виджеты](https://maxo.readthedocs.io/ru/latest/pages/dialogs/widgets.html): Кнопки, списки, ввод, кастомные виджеты.
+- [Переходы](https://maxo.readthedocs.io/ru/latest/pages/dialogs/transitions.html): Переход между окнами, switch_to, start, done.
+- [Данные и контекст](https://maxo.readthedocs.io/ru/latest/pages/dialogs/data_and_context.html): `dialog_data`, `getter`, передача состояния между окнами.
+- [Background Manager](https://maxo.readthedocs.io/ru/latest/pages/dialogs/background_manager.html): Управление диалогом из внешнего кода.
+
+## API Reference
+
+- [Bot API](https://maxo.readthedocs.io/ru/latest/pages/botapi/index.html): Полная API-справка по типам, методам, апдейтам и енумам, сгенерированная из официальной документации MAX.
+
+## Optional
+
+- [GitHub-репозиторий](https://github.com/K1rL3s/maxo): Исходный код, issues, релизы.
+- [Релизы](https://github.com/K1rL3s/maxo/releases): История версий.
+- [PyPI](https://pypi.org/project/maxo/): Дистрибутив.
+- [Примеры](https://github.com/K1rL3s/maxo/tree/master/examples): Готовые мини-боты.
+- [DeepWiki](https://deepwiki.com/K1rL3s/maxo): Автогенерированный гайд по коду.
+- [Telegram-чат @maxo_py](https://t.me/maxo_py): Поддержка и обсуждение.
+- [Платформа для партнёров MAX](https://business.max.ru/self): Получение токена бота.
+- [Bot API MAX (официальная документация)](https://dev.max.ru/docs-api): Базовый API мессенджера.

@@ -1,13 +1,13 @@
+import contextlib
 import dataclasses
 from collections.abc import Awaitable, Callable
-from logging import getLogger
 from typing import (
     Any,
     ParamSpec,
     TypeVar,
 )
 
-from maxo import Router
+from maxo import Router, loggers
 from maxo.dialogs.api.entities import Context, Data, LaunchMode, NewMessage
 from maxo.dialogs.api.exceptions import UnregisteredWindowError
 from maxo.dialogs.api.internal import Widget, WindowProtocol
@@ -17,6 +17,7 @@ from maxo.dialogs.api.protocols import (
     DialogProtocol,
 )
 from maxo.enums import ChatType
+from maxo.errors import AttributeIsEmptyError
 from maxo.fsm import State, StatesGroup
 from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces import BaseRouter
@@ -28,8 +29,6 @@ from .context.intent_filter import IntentFilter
 from .utils import remove_intent_id
 from .widgets.data import PreviewAwareGetter
 from .widgets.utils import GetterVariant, ensure_data_getter
-
-logger = getLogger(__name__)
 
 OnDialogEvent = Callable[[Any, DialogManager], Awaitable]
 OnResultEvent = Callable[[Data, Any, DialogManager], Awaitable]
@@ -95,7 +94,7 @@ class Dialog(Router, DialogProtocol):
     ) -> None:
         if state is None:
             state = self._states[0]
-        logger.debug("Dialog start: %s (%s)", state, self)
+        loggers.dialogs.debug("Dialog start: %s (%s)", state, self)
         await manager.switch_to(state)
         await self._process_callback(self.on_start, start_data, manager)
 
@@ -129,7 +128,7 @@ class Dialog(Router, DialogProtocol):
         return data
 
     async def render(self, manager: DialogManager) -> NewMessage:
-        logger.debug("Dialog render (%s)", self)
+        loggers.dialogs.debug("Dialog render (%s)", self)
         window = await self._current_window(manager)
         return await window.render(self, manager)
 
@@ -163,6 +162,13 @@ class Dialog(Router, DialogProtocol):
 
         cleaned_callback = dataclasses.replace(callback.callback, payload=payload)
         cleaned_event = dataclasses.replace(callback, callback=cleaned_callback)
+
+        with contextlib.suppress(AttributeIsEmptyError):
+            bot = callback.bot
+            cleaned_callback.as_(bot)
+            cleaned_event.as_(bot)
+            if cleaned_event.message:
+                cleaned_event.message.as_(bot)
 
         window = await self._current_window(dialog_manager)
         try:

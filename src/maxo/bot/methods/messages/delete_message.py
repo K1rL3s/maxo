@@ -9,9 +9,7 @@ class DeleteMessage(MaxoMethod[SimpleQueryResult]):
 
     Удаляет сообщение в диалоге или чате, если бот имеет разрешение на удаление сообщений
 
-    > С помощью метода можно удалять сообщения, которые отправлены менее 24 часов назад
-
-    Пример запроса:
+    #### Пример запроса:
     ```bash
     curl -X DELETE "https://platform-api.max.ru/messages?message_id={message_id}" \
       -H "Authorization: {access_token}"

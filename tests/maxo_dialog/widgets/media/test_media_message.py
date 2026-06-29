@@ -1,5 +1,3 @@
-import pytest
-
 from maxo import Dispatcher
 from maxo.dialogs import (
     Dialog,
@@ -43,7 +41,6 @@ async def start_path(message: MessageCreated, dialog_manager: DialogManager) -> 
     await dialog_manager.start(MainSG.with_path, mode=StartMode.RESET_STACK)
 
 
-@pytest.mark.asyncio
 async def test_click() -> None:
     dp = Dispatcher(
         storage=JsonMemoryStorage(),

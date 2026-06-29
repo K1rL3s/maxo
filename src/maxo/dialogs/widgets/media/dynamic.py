@@ -7,6 +7,7 @@ https://github.com/SamWarden/maxo_dialog_extras
 
 from collections.abc import Callable
 from operator import itemgetter
+from typing import Any
 
 from maxo.dialogs import DialogManager
 from maxo.dialogs.api.entities import MediaAttachment
@@ -30,7 +31,7 @@ class DynamicMedia(Media):
 
     async def _render_media(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> list[MediaAttachment]:
         media: list[MediaAttachment] = self.selector(data)

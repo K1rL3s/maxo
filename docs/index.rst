@@ -4,10 +4,12 @@
    .. image:: _static/maxo-logo.png
       :width: 200px
       :height: 200px
-      :alt: maxo
+      :alt: maxo - асинхронный Python-фреймворк для ботов мессенджера MAX (max.ru)
       :align: center
 
-==================
+==========================================================
+maxo - асинхронный Python-фреймворк для ботов MAX (max.ru)
+==========================================================
 
 .. rst-class:: center
 
@@ -43,7 +45,7 @@
 
 .. rst-class:: lead
 
-   Асинхронный фреймворк для разработки `ботов <https://dev.max.ru/docs>`_ в `max.ru <https://max.ru>`_
+   Асинхронный Python-фреймворк для разработки `ботов <https://dev.max.ru/docs>`_ в `MAX <https://max.ru>`_
 
 .. container:: buttons
 
@@ -96,7 +98,7 @@
       Подробная документация и примеры для быстрого старта.
 
 
-Если у вас есть вопросы, вы можете задать их в Телеграме `@maxo_py <https://t.me/maxo_py>`_ или `MAX <https://max.ru/join/rwJmWA4B5AipBiJdWRkORGjxFmqnJPUhJbQxxmscrnc>`_
+Если у вас есть вопросы, вы можете задать их в Телеграме `@maxo_py <https://t.me/maxo_py>`_ или `MAX <https://max.ru/join/rwJmWA4B5AipBiJdWRkORGjxFmqnJPUhJbQxxmscrnc>`__
 
 Contributors
 ------------
@@ -104,7 +106,7 @@ Contributors
 
 .. container:: rounded-image
 
-    .. contributors:: k1rl3s/maxo
+    .. contributors:: K1rL3s/maxo
         :avatars:
         :contributions:
 
@@ -132,6 +134,7 @@ Contributors
    pages/event-handling/signals
    pages/event-handling/long-polling
    pages/event-handling/webhooks
+   pages/event-handling/bot-mixin
 
 .. toctree::
    :maxdepth: 2
@@ -168,3 +171,10 @@ Contributors
    :hidden:
 
    pages/utils/link
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Релизы
+   :hidden:
+
+   pages/changelog

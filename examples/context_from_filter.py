@@ -7,7 +7,6 @@ from maxo.routing.filters import BaseFilter
 from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
 from maxo.types.user import User
-from maxo.utils.facades import MessageCreatedFacade
 
 dp = Dispatcher()
 
@@ -32,12 +31,8 @@ class HelloFilter(BaseFilter[MessageCreated]):
 
 
 @dp.message_created(HelloFilter())
-async def my_handler(
-    message: MessageCreated,
-    facade: MessageCreatedFacade,
-    name: str,
-) -> Any:
-    return await facade.answer_text(f"Привет, {name}!")
+async def my_handler(message: MessageCreated, name: str) -> Any:
+    return await message.answer_text(f"Привет, {name}!")
 
 
 def main() -> None:

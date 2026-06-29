@@ -1,31 +1,32 @@
 from maxo.enums.update_type import UpdateType
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
+from maxo.routing.mixins import ChatMethodsFacade
 from maxo.routing.updates.base import MaxUpdate
 from maxo.types.user import User
 
 
-class BotStarted(MaxUpdate):
+class BotStarted(MaxUpdate, ChatMethodsFacade):
     """
-    Бот получает этот тип обновления, как только пользователь нажал кнопку `Start`
+    Вы получите это событие, как только пользователь начнёт или возобновит общение с ботом: нажмёт соответствующую кнопку в настройках бота в МАКС
 
     Args:
-        chat_id: ID диалога, где произошло событие
-        payload: Дополнительные данные из дип-линков, переданные при запуске бота
+        chat_id: ID диалога, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)
+        payload: Дополнительные данные из диплинков, переданные при запуске бота
         type:
-        user: Пользователь, который нажал кнопку 'Start'
+        user: Пользователь, который нажал кнопку `Start`
         user_locale: Текущий язык пользователя в формате IETF BCP 47
     """
 
     type = UpdateType.BOT_STARTED
 
     chat_id: int
-    """ID диалога, где произошло событие"""
+    """ID диалога, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)"""
     user: User
-    """Пользователь, который нажал кнопку 'Start'"""
+    """Пользователь, который нажал кнопку `Start`"""
 
     payload: Omittable[str | None] = Omitted()
-    """Дополнительные данные из дип-линков, переданные при запуске бота"""
+    """Дополнительные данные из диплинков, переданные при запуске бота"""
     user_locale: Omittable[str] = Omitted()
     """Текущий язык пользователя в формате IETF BCP 47"""
 

@@ -25,13 +25,13 @@ class Jinja(Text):
 
     async def _render_text(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> str:
         if JINJA_ENV_FIELD in manager.middleware_data:
-            env = manager.middleware_data[JINJA_ENV_FIELD]
+            env: Environment = manager.middleware_data[JINJA_ENV_FIELD]
         else:
-            bot: Bot = manager.middleware_data.get("bot")
+            bot = manager.middleware_data.get("bot")
             env: Environment = getattr(bot, JINJA_ENV_FIELD, default_env)
         template = env.get_template(self.template_text)
 
@@ -81,7 +81,7 @@ def setup_jinja(
         )
         setattr(dp, JINJA_ENV_FIELD, env)
     else:
-        dp[JINJA_ENV_FIELD] = env
+        dp.workflow_data[JINJA_ENV_FIELD] = env
     return env
 
 

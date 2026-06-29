@@ -9,10 +9,10 @@ class User(MaxoType):
     """
     Объект, описывающий один из вариантов наследования:
 
-    - [`User`](https://dev.max.ru/docs-api/objects/User) — объект содержит общую информацию о пользователе или боте без аватара
-    - [`UserWithPhoto`](https://dev.max.ru/docs-api/objects/UserWithPhoto) — объект с общей информацией о пользователе или боте, дополнительно содержит URL аватара и описание
-    - [`BotInfo`](https://dev.max.ru/docs-api/objects/BotInfo) — объект включает общую информацию о боте, URL аватара и описание. Дополнительно содержит список команд, поддерживаемых ботом. Возвращается только при вызове метода [`GET /me`](https://dev.max.ru/docs-api/methods/GET/me)
-    - [`ChatMember`](https://dev.max.ru/docs-api/objects/ChatMember) — объект включает общую информацию о пользователе или боте, URL аватара и описание при его наличии. Дополнительно содержит данные для пользователей-участников чата. Возвращается только при вызове некоторых методов группы `/chats`, например [`GET /chats/{chatId}/members`](https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members)
+    - [`User`](https://dev.max.ru/docs-api/objects/User) - объект содержит общую информацию о пользователе или боте без аватара
+    - [`UserWithPhoto`](https://dev.max.ru/docs-api/objects/UserWithPhoto) - объект с общей информацией о пользователе или боте, дополнительно содержит URL аватара и описание
+    - [`BotInfo`](https://dev.max.ru/docs-api/objects/BotInfo) - объект включает общую информацию о боте, URL аватара и описание. Дополнительно содержит список команд, поддерживаемых ботом. Возвращается только при вызове метода [`GET /me`](https://dev.max.ru/docs-api/methods/GET/me)
+    - [`ChatMember`](https://dev.max.ru/docs-api/objects/ChatMember) - объект включает общую информацию о пользователе или боте, URL аватара и описание при его наличии. Дополнительно содержит данные для пользователей-участников чата. Возвращается только при вызове некоторых методов группы `/chats`, например [`GET /chats/{chatId}/members`](https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members)
 
     Args:
         first_name: Отображаемое имя пользователя или бота
@@ -46,12 +46,12 @@ class User(MaxoType):
         return self.user_id
 
     @property
-    def fullname(self) -> str | None:
+    def fullname(self) -> str:
         if self.first_name and self.last_name:
             return f"{self.first_name} {self.last_name}"
-        if self.first_name:
-            return self.first_name
-        return None
+        return self.first_name
+
+    full_name = fullname  # Подражание aiogram
 
     @property
     def unsafe_last_name(self) -> str:

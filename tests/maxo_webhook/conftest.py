@@ -6,7 +6,7 @@ from maxo import Bot
 
 
 @pytest.fixture
-def bot():
+def bot() -> Bot:
     return Bot("42:TEST")
 
 

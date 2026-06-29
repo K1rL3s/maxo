@@ -22,10 +22,7 @@
         main = State()
 
     async def get_user_data(**kwargs):
-        return {
-            "name": "Иван",
-            "balance": 100
-        }
+        return {"name": "Иван", "balance": 100}
 
     Window(
         Format("Пользователь {name}, баланс: {balance}"),
@@ -79,13 +76,20 @@
 
 .. code-block:: python
 
-    from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
+    from typing import Any
+
     from maxo.routing.ctx import Ctx
-    from maxo.routing.updates.message_created import MessageCreated
+    from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
+    from maxo.routing.updates import MessageCreated
 
     class UserMiddleware(BaseMiddleware[MessageCreated]):
-        async def __call__(self, update: MessageCreated, ctx: Ctx, next: NextMiddleware[MessageCreated]):
-            user = await get_user_from_db(update.message.sender.user_id)
+        async def __call__(
+            self,
+            update: MessageCreated,
+            ctx: Ctx,
+            next: NextMiddleware[MessageCreated],
+        ) -> Any:
+            user = await get_user_from_db(update.message.unsafe_sender.user_id)
             ctx["user"] = user  # кладём в контекст
             return await next(ctx)
 
@@ -115,10 +119,12 @@ start_data - данные между диалогами
 
 .. code-block:: python
 
+    from maxo.dialogs import DialogManager
     from maxo.routing.filters import Command
+    from maxo.routing.updates import MessageCreated
 
     @router.message_created(Command("profile"))
-    async def show_profile(message, dialog_manager):
+    async def show_profile(message: MessageCreated, dialog_manager: DialogManager):
         await dialog_manager.start(
             ProfileSG.main,
             data={"user_id": message.message.sender.user_id},
@@ -128,7 +134,9 @@ start_data - данные между диалогами
 
 .. code-block:: python
 
-    async def profile_getter(dialog_manager, **kwargs):
+    from maxo.dialogs import DialogManager
+
+    async def profile_getter(dialog_manager: DialogManager, **kwargs):
         user_id = dialog_manager.start_data["user_id"]
         user = await get_user_from_db(user_id)
         return {"name": user.name, "age": user.age}
@@ -137,12 +145,21 @@ start_data - данные между диалогами
 
 .. code-block:: python
 
-    async def on_edit_click(callback, button, manager):
+    from maxo.dialogs import DialogManager
+    from maxo.dialogs.widgets.kbd import Button
+    from maxo.routing.updates import MessageCallback
+
+    async def on_edit_click(
+        callback: MessageCallback,
+        button: Button,
+        dialog_manager: DialogManager,
+    ) -> None:
         # Передаём данные из текущего диалога в дочерний
-        await manager.start(
+        await dialog_manager.start(
             EditSG.main,
-            data={"item_id": manager.dialog_data["selected_item"]},
+            data={"item_id": dialog_manager.dialog_data["selected_item"]},
         )
+
 
 dialog_data - данные между окнами
 ----------------------------------
@@ -151,15 +168,19 @@ dialog_data - данные между окнами
 
 .. code-block:: python
 
-    async def on_name_input(message, widget, manager):
-        manager.dialog_data["name"] = message.text
+    from maxo.dialogs import DialogManager
+    from maxo.dialogs.widgets.input import MessageInput
+    from maxo.routing.updates import MessageCreated
+
+    async def on_name_input(message: MessageCreated, widget: MessageInput, manager: DialogManager):
+        manager.dialog_data["name"] = message.message.body.text
         await manager.next()
 
-    async def on_age_input(message, widget, manager):
-        manager.dialog_data["age"] = message.text
+    async def on_age_input(message: MessageCreated, widget: MessageInput, manager: DialogManager):
+        manager.dialog_data["age"] = message.message.body.text
         await manager.next()
 
-    async def summary_getter(dialog_manager, **kwargs):
+    async def summary_getter(dialog_manager: DialogManager, **kwargs):
         return {
             "name": dialog_manager.dialog_data.get("name", "-"),
             "age": dialog_manager.dialog_data.get("age", "-"),

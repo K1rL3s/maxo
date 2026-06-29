@@ -9,7 +9,7 @@ class GetMessageById(MaxoMethod[Message]):
 
     Возвращает сообщение по его ID
 
-    Пример запроса:
+    #### Пример запроса:
     ```bash
     curl -X GET "https://platform-api.max.ru/messages/{messageId}" \
       -H "Authorization: {access_token}"

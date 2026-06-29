@@ -13,6 +13,7 @@ from .chats.get_membership import GetMembership
 from .chats.get_pinned_message import GetPinnedMessage
 from .chats.leave_chat import LeaveChat
 from .chats.pin_message import PinMessage
+from .chats.post_admins import PostAdmins
 from .chats.remove_member import RemoveMember
 from .chats.send_action import SendAction
 from .chats.set_admins import SetAdmins
@@ -56,6 +57,7 @@ __all__ = (
     "GetVideoAttachmentDetails",
     "LeaveChat",
     "PinMessage",
+    "PostAdmins",
     "RemoveMember",
     "SendAction",
     "SendMessage",

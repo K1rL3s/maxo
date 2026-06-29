@@ -2,8 +2,6 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 from unittest.mock import AsyncMock
 
-import pytest
-
 from maxo import Dispatcher
 from maxo.dialogs import Dialog, DialogManager, StartMode, Window, setup_dialogs
 from maxo.dialogs.test_tools import BotClient, MockMessageManager
@@ -67,7 +65,6 @@ async def start(message: MessageCreated, dialog_manager: DialogManager) -> None:
     await dialog_manager.start(MainSG.start, mode=StartMode.RESET_STACK)
 
 
-@pytest.mark.asyncio
 async def test_click() -> None:
     usecase = AsyncMock()
     user_getter = AsyncMock(side_effect=["Username"])

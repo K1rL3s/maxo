@@ -1,6 +1,6 @@
 from collections.abc import Awaitable, Callable, Mapping
 from ipaddress import IPv4Address, IPv6Address
-from typing import Any
+from typing import Any, cast
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -20,7 +20,7 @@ class FastApiBoundRequest(BoundRequest[Request]):
         self._query_params = FastApiQueryMapping(self.request.query_params)
 
     async def json(self) -> dict[str, Any]:
-        return await self.request.json()
+        return cast(dict[str, Any], await self.request.json())
 
     @property
     def client_ip(self) -> IPv4Address | IPv6Address | str | None:

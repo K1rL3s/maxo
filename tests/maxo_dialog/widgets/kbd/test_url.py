@@ -1,12 +1,9 @@
-import pytest
-
 from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.kbd import Url
 from maxo.dialogs.widgets.text import Const
 from maxo.types import LinkButton
 
 
-@pytest.mark.asyncio
 async def test_render_url(mock_manager: DialogManager) -> None:
     url = Url(
         Const("Github"),

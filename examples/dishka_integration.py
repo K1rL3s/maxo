@@ -21,7 +21,6 @@ from maxo.integrations.dishka import setup_dishka
 from maxo.routing.filters import CommandStart
 from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
-from maxo.utils.facades import MessageCreatedFacade
 
 
 class GreeterService:
@@ -48,11 +47,10 @@ class AppProvider(Provider):
 # greeter приходит из контейнера по типу аргумента (auto_inject)
 async def start_handler(
     message: MessageCreated,
-    facade: MessageCreatedFacade,
     greeter: FromDishka[GreeterService],
 ) -> None:
     text = greeter.greet("друг")
-    await facade.answer_text(text)
+    await message.answer_text(text)
 
 
 async def main() -> None:

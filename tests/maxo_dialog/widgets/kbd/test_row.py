@@ -1,11 +1,8 @@
-import pytest
-
 from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.kbd import Button, Row
 from maxo.dialogs.widgets.text import Const
 
 
-@pytest.mark.asyncio
 async def test_render_row(mock_manager: DialogManager) -> None:
     row = Row(
         Button(Const("1"), id="first"),

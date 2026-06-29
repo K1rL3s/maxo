@@ -1,7 +1,5 @@
 from unittest.mock import AsyncMock
 
-import pytest
-
 from maxo import Dispatcher
 from maxo.dialogs import (
     Dialog,
@@ -22,7 +20,6 @@ from maxo.routing.signals import AfterStartup, BeforeStartup
 from maxo.routing.updates import MessageCreated
 
 
-@pytest.mark.asyncio
 async def test_render_group(mock_manager: DialogManager) -> None:
     group = Group(
         Button(Const("1"), id="first"),
@@ -44,7 +41,6 @@ async def test_render_group(mock_manager: DialogManager) -> None:
     assert keyboard[2][0].text == "3"
 
 
-@pytest.mark.asyncio
 async def test_render_group_with_width(mock_manager: DialogManager) -> None:
     group = Group(
         Button(Const("1"), id="first"),
@@ -94,7 +90,6 @@ async def start(message: MessageCreated, dialog_manager: DialogManager) -> None:
     await dialog_manager.start(MainSG.start, mode=StartMode.RESET_STACK)
 
 
-@pytest.mark.asyncio
 async def test_click_buttons_in_group() -> None:
     dp = Dispatcher(
         storage=JsonMemoryStorage(),

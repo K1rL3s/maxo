@@ -2,15 +2,12 @@ import operator
 from typing import cast
 from unittest.mock import AsyncMock, Mock
 
-import pytest
-
 from maxo.dialogs import DialogManager
 from maxo.dialogs.api.entities import ChatEvent
 from maxo.dialogs.widgets.kbd import Multiselect
 from maxo.dialogs.widgets.text import Format
 
 
-@pytest.mark.asyncio
 async def test_check_multiselect(mock_manager: DialogManager) -> None:
     multiselect: Multiselect[str] = Multiselect(
         Format("✓ {item[1]}"),
@@ -28,7 +25,6 @@ async def test_check_multiselect(mock_manager: DialogManager) -> None:
     assert multiselect.get_checked(mock_manager) == ["1", "3"]
 
 
-@pytest.mark.asyncio
 async def test_min_selected_multiselect(mock_manager: DialogManager) -> None:
     multiselect: Multiselect[str] = Multiselect(
         Format("✓ {item[1]}"),
@@ -49,7 +45,6 @@ async def test_min_selected_multiselect(mock_manager: DialogManager) -> None:
     assert multiselect.get_checked(mock_manager) == ["1", "3"]
 
 
-@pytest.mark.asyncio
 async def test_max_selected_multiselect(mock_manager: DialogManager) -> None:
     multiselect: Multiselect[str] = Multiselect(
         Format("✓ {item[1]}"),
@@ -70,7 +65,6 @@ async def test_max_selected_multiselect(mock_manager: DialogManager) -> None:
     assert multiselect.get_checked(mock_manager) == ["1", "3"]
 
 
-@pytest.mark.asyncio
 async def test_reset_checked_multiselect(mock_manager: DialogManager) -> None:
     multiselect: Multiselect[str] = Multiselect(
         Format("✓ {item[1]}"),
@@ -90,7 +84,6 @@ async def test_reset_checked_multiselect(mock_manager: DialogManager) -> None:
     assert multiselect.get_checked(mock_manager) == []
 
 
-@pytest.mark.asyncio
 async def test_on_state_changed_multiselect(mock_manager: DialogManager) -> None:
     on_state_changed = AsyncMock()
     multiselect: Multiselect[str] = Multiselect(
@@ -107,7 +100,6 @@ async def test_on_state_changed_multiselect(mock_manager: DialogManager) -> None
     on_state_changed.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_render_multiselect(mock_manager: DialogManager) -> None:
     multiselect: Multiselect[str] = Multiselect(
         Format("✓ {item[1]}"),

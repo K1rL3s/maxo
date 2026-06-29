@@ -1,11 +1,10 @@
 import asyncio
-import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Any
 
-from maxo import Bot, Dispatcher
+from maxo import Bot, Dispatcher, loggers
 from maxo.dialogs import DialogManager
 from maxo.dialogs.api.entities import (
     DEFAULT_STACK_ID,
@@ -26,9 +25,7 @@ from maxo.dialogs.manager.updater import Updater
 from maxo.dialogs.utils import is_user_loaded
 from maxo.enums import ChatType
 from maxo.fsm import State
-from maxo.types import Recipient, User
-
-logger = logging.getLogger(__name__)
+from maxo.types import Chat, ChatMembersList, Recipient, User
 
 
 class BgManager(BaseDialogManager):
@@ -58,7 +55,9 @@ class BgManager(BaseDialogManager):
         self.load = load
 
     def _get_fake_user(self, user_id: int | None = None) -> User:
-        if user_id is None or user_id == self._event_context.user.id:
+        if self._event_context.user is not None and (
+            user_id is None or user_id == self._event_context.user.id
+        ):
             return self._event_context.user
         return FakeUser(
             user_id=user_id,
@@ -120,23 +119,30 @@ class BgManager(BaseDialogManager):
 
     async def _notify(self, event: DialogUpdateEvent) -> None:
         bot = self._event_context.bot
-        await self._updater.notify(update=event, bot=bot)
+        await self._updater.notify(bot=bot, update=event)
 
     async def _load(self) -> None:
-        if self.load:
-            bot = self._event_context.bot
-            if not is_user_loaded(self._event_context.user):
-                logger.debug(
-                    "load user %s from chat %s",
-                    self._event_context.user_id,
-                    self._event_context.chat_id,
-                )
-                chat_members = await bot.get_members(
+        if not self.load:
+            return
+
+        bot = self._event_context.bot
+        if not is_user_loaded(self._event_context.user):
+            loggers.dialogs.debug(
+                "load user %s from chat %s",
+                self._event_context.user_id,
+                self._event_context.chat_id,
+            )
+            if self._event_context.chat_type == ChatType.DIALOG:
+                chat: Chat = await bot.get_chat(chat_id=self._event_context.chat_id)
+                self._event_context.chat = chat
+                self._event_context.user = chat.unsafe_dialog_with_user
+            else:
+                chat_members: ChatMembersList = await bot.get_members(
                     chat_id=self._event_context.chat_id,
                     user_ids=[self._event_context.user_id],
                 )
-                if chat_members:
-                    self._event_context.user = chat_members[0]
+                if chat_members.members:
+                    self._event_context.user = chat_members.members[0]
 
     async def done(
         self,
@@ -215,7 +221,7 @@ class BgManager(BaseDialogManager):
             **self._base_event_params(),
         )
         bot = self._event_context.bot
-        task = self._updater.notify_task(update=event, bot=bot)
+        task = self._updater.notify_task(bot=bot, update=event)
         try:
             manager = await event.entered
             yield manager

@@ -3,15 +3,12 @@ from datetime import UTC, datetime
 from typing import Any, cast
 from unittest.mock import AsyncMock, Mock
 
-import pytest
-
 from maxo.dialogs import DialogManager
 from maxo.dialogs.api.entities import ChatEvent
 from maxo.dialogs.widgets.kbd import Radio
 from maxo.dialogs.widgets.text import Format
 
 
-@pytest.mark.asyncio
 async def test_check_radio(mock_manager: DialogManager) -> None:
     radio: Radio[Any] = Radio(
         Format("🔘 {item[1]}"),
@@ -29,7 +26,6 @@ async def test_check_radio(mock_manager: DialogManager) -> None:
     assert radio.is_checked("2", mock_manager)
 
 
-@pytest.mark.asyncio
 async def test_validation_radio(mock_manager: DialogManager) -> None:
     def validate_datetime(text: str) -> datetime:
         return datetime.fromtimestamp(int(text), tz=UTC)
@@ -74,7 +70,6 @@ async def test_validation_radio(mock_manager: DialogManager) -> None:
     assert current_checked_date == datetime(2024, 5, 30, tzinfo=UTC)
 
 
-@pytest.mark.asyncio
 async def test_on_state_changed_radio(mock_manager: DialogManager) -> None:
     on_state_changed = AsyncMock()
     radio: Radio[Any] = Radio(

@@ -1,10 +1,7 @@
-import pytest
-
 from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.text import Const, Multi
 
 
-@pytest.mark.asyncio
 async def test_render_multi(mock_manager: DialogManager) -> None:
     multi = Multi(
         Const("Hello!"),

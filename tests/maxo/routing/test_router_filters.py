@@ -42,7 +42,6 @@ async def skipping_handler(_: Any, ctx: Ctx) -> None:
     raise SkipHandler
 
 
-@pytest.mark.asyncio
 async def test_parent_included_router_filter_false_blocks_child_router(
     ctx: Ctx,
 ) -> None:
@@ -74,7 +73,6 @@ async def test_parent_included_router_filter_false_blocks_child_router(
     assert ctx["execution_order"] == ["parent_filter"]
 
 
-@pytest.mark.asyncio
 async def test_parent_and_child_included_router_filters_allow_handler(ctx: Ctx) -> None:
     dp = Dispatcher()
     parent_router = Router("parent")
@@ -108,7 +106,6 @@ async def test_parent_and_child_included_router_filters_allow_handler(ctx: Ctx) 
     ]
 
 
-@pytest.mark.asyncio
 async def test_child_filter_false_stops_after_parent_filter(ctx: Ctx) -> None:
     dp = Dispatcher()
     parent_router = Router("parent")
@@ -141,7 +138,6 @@ async def test_child_filter_false_stops_after_parent_filter(ctx: Ctx) -> None:
     ]
 
 
-@pytest.mark.asyncio
 async def test_dispatcher_filter_false_blocks_included_routers(ctx: Ctx) -> None:
     dp = Dispatcher()
     child_router = Router("child")
@@ -169,7 +165,6 @@ async def test_dispatcher_filter_false_blocks_included_routers(ctx: Ctx) -> None
     assert ctx["execution_order"] == ["dispatcher_filter"]
 
 
-@pytest.mark.asyncio
 async def test_parent_handlers_filtered_out_falls_through_to_child(ctx: Ctx) -> None:
     dp = Dispatcher()
     parent_router = Router("parent")
@@ -210,7 +205,6 @@ async def test_parent_handlers_filtered_out_falls_through_to_child(ctx: Ctx) -> 
     ]
 
 
-@pytest.mark.asyncio
 async def test_skip_handler_in_parent_falls_through_to_child(ctx: Ctx) -> None:
     dp = Dispatcher()
     parent_router = Router("parent")

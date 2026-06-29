@@ -1,5 +1,4 @@
-from logging import getLogger
-
+from maxo import loggers
 from maxo.dialogs.api.entities import (
     DialogAction,
     DialogStartEvent,
@@ -9,8 +8,6 @@ from maxo.dialogs.api.entities import (
 )
 from maxo.dialogs.api.entities.update_event import DialogFgEvent
 from maxo.dialogs.api.protocols import DialogManager
-
-logger = getLogger(__name__)
 
 
 async def handle_aiogd_update(
@@ -34,7 +31,7 @@ async def handle_aiogd_update(
         await event.exited
     elif event.action is DialogAction.UPDATE:
         if not dialog_manager.has_context():
-            logger.warning("No context found")
+            loggers.dialogs.warning("No context found")
             return
         if event.data:
             for k, v in event.data.items():

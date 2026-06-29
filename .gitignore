@@ -215,3 +215,6 @@ test.py
 
 docs/superpowers/
 uv.lock
+
+# macos
+.DS_Store

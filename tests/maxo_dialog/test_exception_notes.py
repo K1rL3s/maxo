@@ -18,7 +18,7 @@ from maxo.dialogs.widgets.text import Const, Jinja
 from maxo.fsm.state import State, StatesGroup
 from maxo.routing.filters import CommandStart
 from maxo.routing.signals import BeforeStartup
-from maxo.types import Message
+from maxo.routing.updates import MessageCreated
 
 
 class MainSG(StatesGroup):
@@ -45,12 +45,11 @@ dialog = Dialog(
 )
 
 
-async def start(message: Message, dialog_manager: DialogManager):
+async def start(message: MessageCreated, dialog_manager: DialogManager) -> None:
     await dialog_manager.start(MainSG.start, mode=StartMode.RESET_STACK)
 
 
-@pytest.mark.asyncio
-async def test_exception_notes():
+async def test_exception_notes() -> None:
     usecase = Mock()
     user_getter = Mock(side_effect=["Username"])
     dp = Dispatcher(

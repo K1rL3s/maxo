@@ -1,27 +1,34 @@
 from collections.abc import Callable, Sequence
+from typing import TypeAlias
 
 from maxo.dialogs.api.exceptions import InvalidWidgetType
-from maxo.dialogs.api.internal import DataGetter, LinkPreviewWidget
+from maxo.dialogs.api.internal import DataGetter, LinkPreviewWidget, TextWidget
 
 from .data.data_context import CompositeGetter, StaticGetter
 from .input import BaseInput, CombinedInput, MessageHandlerFunc, MessageInput
 from .kbd import Group, Keyboard
 from .link_preview import LinkPreviewBase
 from .media import Media, MultiMedia
-from .text import Format, Multi as MultiText, Text
+from .text import Format, Multi as MultiText
 from .widget_event import WidgetEventProcessor
 
-WidgetSrc = (
-    str | Text | Keyboard | MessageHandlerFunc | Media | BaseInput | LinkPreviewBase
+WidgetSrc: TypeAlias = (
+    str
+    | TextWidget
+    | Keyboard
+    | MessageHandlerFunc
+    | Media
+    | BaseInput
+    | LinkPreviewBase
 )
 
-SingleGetterBase = DataGetter | dict
-GetterVariant = (
+SingleGetterBase: TypeAlias = DataGetter | dict
+GetterVariant: TypeAlias = (
     SingleGetterBase | list[SingleGetterBase] | tuple[SingleGetterBase, ...] | None
 )
 
 
-def ensure_text(widget: str | Text | Sequence[Text]) -> Text:
+def ensure_text(widget: str | TextWidget | Sequence[TextWidget]) -> TextWidget:
     if isinstance(widget, str):
         return Format(widget)
     if isinstance(widget, Sequence):
@@ -78,7 +85,7 @@ def ensure_link_preview(
 def ensure_widgets(
     widgets: Sequence[WidgetSrc],
 ) -> tuple[
-    Text,
+    TextWidget,
     Keyboard,
     BaseInput | None,
     Media,
@@ -91,7 +98,7 @@ def ensure_widgets(
     link_preview = []
 
     for w in widgets:
-        if isinstance(w, (str, Text)):
+        if isinstance(w, (str, TextWidget)):
             texts.append(ensure_text(w))
         elif isinstance(w, Keyboard):
             keyboards.append(ensure_keyboard(w))
@@ -104,7 +111,7 @@ def ensure_widgets(
         else:
             raise InvalidWidgetType(
                 f"Cannot add widget of type {type(w)}. "
-                f"Only str, Text, Keyboard, BaseInput "
+                f"Only str, TextWidget, Keyboard, BaseInput, Media, LinkPreview "
                 f"and Callable are supported",
             )
     return (

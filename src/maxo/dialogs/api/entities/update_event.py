@@ -7,8 +7,8 @@ from maxo.fsm import State
 from maxo.routing.updates import BaseUpdate
 from maxo.types import Recipient, User
 
+from .access import AccessSettings
 from .modes import ShowMode, StartMode
-from .stack import AccessSettings
 
 if TYPE_CHECKING:
     from maxo.dialogs.api.protocols.manager import DialogManager
@@ -34,6 +34,11 @@ class DialogUpdateEvent(BaseUpdate):
     stack_id: str | None
     show_mode: ShowMode | None = None
     bot: Bot
+
+    # Для частичной совместимости с `MaxUpdate`
+    @property
+    def event_type(self) -> str:
+        return DIALOG_EVENT_NAME
 
 
 class DialogStartEvent(DialogUpdateEvent):

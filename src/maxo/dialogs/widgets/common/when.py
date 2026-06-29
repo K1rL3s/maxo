@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Protocol
+from typing import Any, Protocol
 
 from maxo.dialogs.api.protocols import DialogManager
 from maxo.dialogs.integrations.magic_filter import DialogMagic
@@ -9,7 +9,7 @@ class Predicate(Protocol):
     @abstractmethod
     def __call__(
         self,
-        data: dict,
+        data: dict[Any, Any],
         widget: "Whenable",
         dialog_manager: DialogManager,
         /,
@@ -30,7 +30,7 @@ WhenCondition = str | DialogMagic | Predicate | None
 
 def new_when_field(fieldname: str) -> Predicate:
     def when_field(
-        data: dict,
+        data: dict[Any, Any],
         widget: "Whenable",
         manager: DialogManager,
     ) -> bool:
@@ -41,7 +41,7 @@ def new_when_field(fieldname: str) -> Predicate:
 
 def new_when_magic(f: DialogMagic) -> Predicate:
     def when_magic(
-        data: dict,
+        data: dict[Any, Any],
         widget: "Whenable",
         manager: DialogManager,
     ) -> bool:
@@ -50,7 +50,11 @@ def new_when_magic(f: DialogMagic) -> Predicate:
     return when_magic
 
 
-def true_condition(data: dict, widget: "Whenable", manager: DialogManager) -> bool:
+def true_condition(
+    data: dict[Any, Any],
+    widget: "Whenable",
+    manager: DialogManager,
+) -> bool:
     return True
 
 
@@ -66,5 +70,5 @@ class Whenable:
         else:
             self.condition = when
 
-    def is_(self, data: dict, manager: DialogManager) -> bool:
+    def is_(self, data: dict[Any, Any], manager: DialogManager) -> bool:
         return self.condition(data, self, manager)

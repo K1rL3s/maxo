@@ -1,3 +1,5 @@
+from typing import Any
+
 from maxo.dialogs.api.internal import RawKeyboard
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.widgets.common import (
@@ -37,7 +39,7 @@ class ScrollingGroup(Group, BaseScroll):
 
     async def _render_contents(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
         return await super()._render_keyboard(data, manager)
@@ -96,7 +98,7 @@ class ScrollingGroup(Group, BaseScroll):
 
     async def _render_keyboard(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
         keyboard = await self._render_contents(data, manager)
@@ -120,6 +122,6 @@ class ScrollingGroup(Group, BaseScroll):
         await self.set_page(callback, int(data), manager)
         return True
 
-    async def get_page_count(self, data: dict, manager: DialogManager) -> int:
+    async def get_page_count(self, data: dict[Any, Any], manager: DialogManager) -> int:
         keyboard = await self._render_contents(data, manager)
         return self._get_page_count(keyboard=keyboard)

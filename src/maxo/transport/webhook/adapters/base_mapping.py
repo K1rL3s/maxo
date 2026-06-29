@@ -2,11 +2,11 @@ from abc import ABC, abstractmethod
 from collections.abc import ItemsView, Iterator, KeysView, Mapping, ValuesView
 from typing import Any, Generic, TypeVar
 
-M = TypeVar("M", bound=Mapping[str, Any])
+M_co = TypeVar("M_co", bound=Mapping[str, Any], covariant=True)
 
 
-class MappingABC(ABC, Generic[M]):
-    def __init__(self, mapping: M) -> None:
+class MappingABC(ABC, Generic[M_co]):
+    def __init__(self, mapping: M_co) -> None:
         self._mapping = mapping
 
     def get(self, name: str, default: Any = None) -> Any:
@@ -25,14 +25,14 @@ class MappingABC(ABC, Generic[M]):
     def __len__(self) -> int:
         return len(self._mapping)
 
-    def __iter__(self) -> Iterator:
+    def __iter__(self) -> Iterator[str]:
         return iter(self._mapping)
 
-    def keys(self) -> KeysView:
+    def keys(self) -> KeysView[str]:
         return self._mapping.keys()
 
-    def values(self) -> ValuesView:
+    def values(self) -> ValuesView[Any]:
         return self._mapping.values()
 
-    def items(self) -> ItemsView:
+    def items(self) -> ItemsView[str, Any]:
         return self._mapping.items()

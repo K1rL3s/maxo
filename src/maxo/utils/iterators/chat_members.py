@@ -38,10 +38,10 @@ class ChatMembersIterator(AsyncIterator[ChatMember]):
             return self._chat_members.popleft()
 
         while True:
-            result = await self._bot.get_chat_members(
+            result = await self._bot.get_members(
                 chat_id=self._chat_id,
                 user_ids=self._user_ids,
-                marker=cast("int | Omitted", self._marker),
+                marker=cast(int | Omitted, self._marker),
                 count=self._count,
             )
             self._marker = result.marker

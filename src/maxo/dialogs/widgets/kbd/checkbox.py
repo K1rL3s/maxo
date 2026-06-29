@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
+from typing import Any
 
 from maxo.dialogs.api.entities import ChatEvent
-from maxo.dialogs.api.internal import RawKeyboard
+from maxo.dialogs.api.internal import RawKeyboard, TextWidget
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.widgets.common import ManagedWidget, WhenCondition
-from maxo.dialogs.widgets.text import Case, Text
+from maxo.dialogs.widgets.text import Case
 from maxo.dialogs.widgets.widget_event import (
     WidgetEventProcessor,
     ensure_event_processor,
@@ -24,8 +25,8 @@ OnStateChangedVariant = OnStateChanged | WidgetEventProcessor | None
 class BaseCheckbox(Keyboard, ABC):
     def __init__(
         self,
-        checked_text: Text,
-        unchecked_text: Text,
+        checked_text: TextWidget,
+        unchecked_text: TextWidget,
         id: str,
         on_click: OnStateChangedVariant = None,
         on_state_changed: OnStateChangedVariant = None,
@@ -41,7 +42,7 @@ class BaseCheckbox(Keyboard, ABC):
 
     async def _render_keyboard(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
         checked = int(self.is_checked(manager))
@@ -74,7 +75,7 @@ class BaseCheckbox(Keyboard, ABC):
 
     def _is_text_checked(
         self,
-        data: dict,
+        data: dict[Any, Any],
         case: Case,
         manager: DialogManager,
     ) -> bool:
@@ -99,8 +100,8 @@ class BaseCheckbox(Keyboard, ABC):
 class Checkbox(BaseCheckbox):
     def __init__(
         self,
-        checked_text: Text,
-        unchecked_text: Text,
+        checked_text: TextWidget,
+        unchecked_text: TextWidget,
         id: str,
         on_click: OnStateChanged | WidgetEventProcessor | None = None,
         on_state_changed: OnStateChanged | None = None,

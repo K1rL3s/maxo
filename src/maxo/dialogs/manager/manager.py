@@ -3,10 +3,9 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from copy import deepcopy
 from datetime import UTC, datetime
-from logging import getLogger
 from typing import Any, cast
 
-from maxo import Ctx
+from maxo import Ctx, loggers
 from maxo.dialogs.api.entities import (
     DEFAULT_STACK_ID,
     EVENT_CONTEXT_KEY,
@@ -55,8 +54,6 @@ from maxo.routing.interfaces import BaseRouter
 from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
 from maxo.routing.updates import ErrorEvent, MessageCallback, MessageCreated
 from maxo.types import Message, MessageButton, Recipient, User
-
-logger = getLogger(__name__)
 
 
 class ManagerImpl(DialogManager):
@@ -145,7 +142,7 @@ class ManagerImpl(DialogManager):
         self.check_disabled()
         context = self._current_context_unsafe()
         if not context:
-            logger.warning(
+            loggers.dialogs.warning(
                 "Trying to access current context, while no dialog is opened",
             )
             raise NoContextError
@@ -382,7 +379,7 @@ class ManagerImpl(DialogManager):
             bot = self._ctx["bot"]
             old_message = self._get_last_message()
             if self.show_mode is ShowMode.NO_UPDATE:
-                logger.debug("ShowMode is NO_UPDATE, skip rendering")
+                loggers.dialogs.debug("ShowMode is NO_UPDATE, skip rendering")
                 return
 
             new_message = await self.dialog().render(self)
@@ -403,7 +400,7 @@ class ManagerImpl(DialogManager):
             except MessageNotModified:
                 # nothing changed so nothing to save
                 # we do not have the actual version of message
-                logger.debug("MessageNotModified, not storing ids")
+                loggers.dialogs.debug("MessageNotModified, not storing ids")
             else:
                 self._save_last_message(sent_message)
 

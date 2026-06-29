@@ -1,5 +1,6 @@
 from maxo.omit import Omittable, Omitted, is_defined
-from maxo.types import MaxoType, PhotoToken
+from maxo.types.base import MaxoType
+from maxo.types.photo_token import PhotoToken
 
 
 # Самодельный объект для UploadMedia

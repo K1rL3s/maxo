@@ -66,7 +66,7 @@ class DialogProtocol(Protocol):
     async def load_data(
         self,
         manager: DialogManager,
-    ) -> dict:
+    ) -> dict[Any, Any]:
         raise NotImplementedError
 
     @abstractmethod

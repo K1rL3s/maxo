@@ -5,7 +5,7 @@ from maxo.dialogs.api.protocols import (
     DialogManager,
     DialogProtocol,
 )
-from maxo.dialogs.tools.filter_object import FilterObject
+from maxo.dialogs.widgets.filter_object import FilterObject
 from maxo.routing.updates import MessageCreated
 
 from .base import BaseInput

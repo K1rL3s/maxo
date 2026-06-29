@@ -3,7 +3,7 @@
 from abc import abstractmethod
 from collections.abc import Sequence
 from copy import copy
-from typing import Generic, TypeVar, final
+from typing import Generic, TypeVar
 
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters.base import BaseFilter
@@ -19,7 +19,6 @@ class BaseLogicFilter(BaseFilter[_UpdateT], Generic[_UpdateT]):
     def __init__(self) -> None:
         self._inlining()
 
-    @final
     async def __call__(self, update: _UpdateT, ctx: Ctx) -> bool:
         copied_ctx = copy(ctx)
 
@@ -38,7 +37,6 @@ class BaseLogicFilter(BaseFilter[_UpdateT], Generic[_UpdateT]):
         raise NotImplementedError
 
 
-@final
 class AndFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
     _filters: Sequence[Filter[_UpdateT]]
 
@@ -70,7 +68,6 @@ class AndFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
         self._filters = inlined_filters
 
 
-@final
 class OrFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
     _filters: Sequence[Filter[_UpdateT]]
 
@@ -104,7 +101,6 @@ class OrFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
         self._filters = inlined_filters
 
 
-@final
 class InvertFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
     _inlined: bool
 

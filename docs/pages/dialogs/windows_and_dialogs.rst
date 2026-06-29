@@ -29,7 +29,7 @@ Window
 Dialog
 ======
 
-``Dialog`` - объединение окон в логический процесс. Он отвечает за маршрутизацию и хранение общего состояния.
+``Dialog`` - это набор окон, связанных логикой переходов. Диалог управляет жизненным циклом окон и хранит их общее состояние.
 
 .. code-block:: python
 
@@ -39,9 +39,12 @@ Dialog
         window1,
         window2,
         window3,
+        # другие окна...
     )
 
-Все окна внутри одного диалога **должны** принадлежать одному ``StatesGroup``.
+.. important::
+
+   Все окна внутри одного диалога **должны** принадлежать одному ``StatesGroup``.
 
 Жизненный цикл диалога
 ======================
@@ -54,14 +57,16 @@ Dialog
 4. Завершается (возврат через ``DialogManager.done()``)
 5. Может возвращать результат (параметр ``result``)
 
-Вы можете перехватывать эти события с помощью параметров ``on_start``, ``on_process_result``, ``on_close`` при создании ``Dialog``:
+Вы можете перехватывать эти события с помощью параметров ``on_start``, ``on_close``, ``on_process_result`` при создании ``Dialog``:
 
 .. code-block:: python
 
-    async def on_dialog_start(start_data: dict, manager):
+    from maxo.dialogs import Dialog, DialogManager
+
+    async def on_dialog_start(start_data: dict, manager: DialogManager):
         print("Dialog started with data:", start_data)
 
     dialog = Dialog(
         window,
-        on_start=on_dialog_start
+        on_start=on_dialog_start,
     )

@@ -1,3 +1,4 @@
+import contextlib
 import dataclasses
 from collections.abc import Callable, Sequence
 from typing import Any
@@ -15,6 +16,7 @@ from maxo.dialogs.widgets.common import (
 )
 from maxo.dialogs.widgets.common.items import ItemsGetterVariant, get_items_getter
 from maxo.dialogs.widgets.widget_event import ensure_event_processor
+from maxo.errors import AttributeIsEmptyError
 from maxo.routing.updates import MessageCallback
 
 from .base import Keyboard
@@ -46,14 +48,14 @@ class ListGroup(Keyboard, BaseScroll):
         total = len(items)
         return total // self.page_size + bool(total % self.page_size)
 
-    async def get_page_count(self, data: dict, manager: DialogManager) -> int:
+    async def get_page_count(self, data: dict[Any, Any], manager: DialogManager) -> int:
         if self.page_size == 0:
             return 1
         return self._get_page_count(self.items_getter(data))
 
     async def _render_keyboard(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
         kbd: RawKeyboard = []
@@ -74,7 +76,7 @@ class ListGroup(Keyboard, BaseScroll):
         self,
         pos: int,
         item: Any,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
         kbd: RawKeyboard = []
@@ -115,6 +117,13 @@ class ListGroup(Keyboard, BaseScroll):
 
         cleaned_callback = dataclasses.replace(callback.callback, payload=payload)
         cleaned_event = dataclasses.replace(callback, callback=cleaned_callback)
+
+        with contextlib.suppress(AttributeIsEmptyError):
+            bot = callback.bot
+            cleaned_callback.as_(bot)
+            cleaned_event.as_(bot)
+            if cleaned_event.message:
+                cleaned_event.message.as_(bot)
 
         sub_manager = SubManager(
             widget=self,

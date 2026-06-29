@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from logging import getLogger
 from typing import Any, ParamSpec, TypeVar
 
 from maxo.dialogs.api.internal import RawKeyboard
@@ -9,8 +8,6 @@ from maxo.types import (
     Recipient,
     User,
 )
-
-logger = getLogger(__name__)
 
 CB_SEP = "\x1d"
 
@@ -127,6 +124,9 @@ def intent_payload(
     if payload.startswith(prefix):
         return payload
     return prefix + payload
+
+
+intent_callback_data = intent_payload  # Подражание aiogram-dialogs
 
 
 def add_intent_id(keyboard: RawKeyboard, intent_id: str) -> None:

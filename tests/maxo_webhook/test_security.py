@@ -1,5 +1,7 @@
 import pytest
 
+from maxo import Bot
+from maxo.transport.webhook.security import SecurityCheck
 from maxo.transport.webhook.security.secret_token import (
     SECRET_HEADER,
     StaticSecretToken,
@@ -9,7 +11,6 @@ from maxo.transport.webhook.security.security import Security
 from .fixtures import DummyBoundRequest, DummyRequest, FailingCheck, PassingCheck
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("checks", "expected"),
     [
@@ -41,13 +42,16 @@ from .fixtures import DummyBoundRequest, DummyRequest, FailingCheck, PassingChec
         "failing-last-passing",
     ],
 )
-async def test_security_checks(checks, expected, bot):
+async def test_security_checks(
+    checks: list[SecurityCheck],
+    expected: bool,
+    bot: Bot,
+) -> None:
     sec = Security(*checks)
     req = DummyBoundRequest()
     assert await sec.verify(bot, req) is expected
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("checks", "secret_token", "request_token", "expected"),
     [
@@ -76,12 +80,12 @@ async def test_security_checks(checks, expected, bot):
     ],
 )
 async def test_security_checks_and_secret_token(
-    checks,
-    secret_token,
-    request_token,
-    expected,
-    bot,
-):
+    checks: list[SecurityCheck],
+    secret_token: StaticSecretToken | None,
+    request_token: str | None,
+    expected: bool,
+    bot: Bot,
+) -> None:
     sec = Security(*checks, secret_token=secret_token)
     headers = {SECRET_HEADER: request_token} if request_token is not None else {}
     req = DummyBoundRequest(DummyRequest(headers=headers))

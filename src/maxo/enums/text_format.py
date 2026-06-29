@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import TypeAlias
 
 
 class TextFormat(StrEnum):
@@ -6,3 +7,6 @@ class TextFormat(StrEnum):
 
     HTML = "html"
     MARKDOWN = "markdown"
+
+
+ParseMode: TypeAlias = TextFormat  # Подражание aiogram

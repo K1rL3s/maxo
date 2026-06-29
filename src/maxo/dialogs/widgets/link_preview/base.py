@@ -1,3 +1,5 @@
+from typing import Any
+
 from maxo.dialogs import DialogManager
 from maxo.dialogs.api.entities.link_preview import LinkPreviewOptions
 from maxo.dialogs.api.internal import LinkPreviewWidget, TextWidget
@@ -11,7 +13,7 @@ class LinkPreviewBase(Whenable, BaseWidget, LinkPreviewWidget):
 
     async def render_link_preview(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> LinkPreviewOptions | None:
         if not self.is_(data, manager):
@@ -20,7 +22,7 @@ class LinkPreviewBase(Whenable, BaseWidget, LinkPreviewWidget):
 
     async def _render_link_preview(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> LinkPreviewOptions | None:
         return None
@@ -39,7 +41,7 @@ class LinkPreview(LinkPreviewBase):
 
     async def render_link_preview(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> LinkPreviewOptions | None:
         if not self.is_(data, manager):
@@ -48,7 +50,7 @@ class LinkPreview(LinkPreviewBase):
 
     async def _render_link_preview(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> LinkPreviewOptions | None:
         return LinkPreviewOptions(

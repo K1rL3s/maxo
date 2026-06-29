@@ -11,6 +11,8 @@ from maxo.routing.updates import (
     BotAddedToChat,
     MessageCallback,
     MessageCreated,
+    MessageEdited,
+    MessageRemoved,
     UserAddedToChat,
 )
 from maxo.types import (
@@ -129,6 +131,73 @@ class BotClient:
                     message=self._new_message(text, reply_to),
                     timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
                     user_locale="ru",
+                ),
+            ),
+            self.bot,
+        )
+
+    async def send_channel_post(self, text: str) -> Any:
+        """Эмулирует пост в канале: MessageCreated без sender (бот-админ)."""
+        message_seq = self._new_message_id()
+        msg = Message(
+            recipient=Recipient(
+                chat_type=ChatType.CHANNEL,
+                user_id=self.bot.state.info.user_id,
+                chat_id=self.chat.chat_id,
+            ),
+            timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
+            body=MessageBody(
+                mid=str(message_seq),
+                seq=message_seq,
+                text=text,
+            ),
+            stat=MessageStat(views=1),
+            url="https://max.ru/",
+        )
+        return await self.dp.feed_update(
+            MaxoUpdate(
+                update=MessageCreated(
+                    message=msg,
+                    timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
+                    user_locale="ru",
+                ),
+            ),
+            self.bot,
+        )
+
+    async def send_channel_message_edited(self, text: str, mid: str) -> Any:
+        """Эмулирует MessageEdited в канале без sender."""
+        seq = int(mid) if mid.isdigit() else self._new_message_id()
+        msg = Message(
+            recipient=Recipient(
+                chat_type=ChatType.CHANNEL,
+                user_id=self.bot.state.info.user_id,
+                chat_id=self.chat.chat_id,
+            ),
+            timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
+            body=MessageBody(mid=mid, seq=seq, text=text),
+            stat=MessageStat(views=1),
+            url="https://max.ru/",
+        )
+        return await self.dp.feed_update(
+            MaxoUpdate(
+                update=MessageEdited(
+                    message=msg,
+                    timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
+                ),
+            ),
+            self.bot,
+        )
+
+    async def send_channel_message_removed(self, mid: str) -> Any:
+        """Эмулирует MessageRemoved в канале без sender."""
+        return await self.dp.feed_update(
+            MaxoUpdate(
+                update=MessageRemoved(
+                    message_id=mid,
+                    chat_id=self.chat.chat_id,
+                    user_id=self.bot.state.info.user_id,
+                    timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
                 ),
             ),
             self.bot,

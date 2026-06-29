@@ -2,15 +2,12 @@ import operator
 from typing import Any, cast
 from unittest.mock import AsyncMock
 
-import pytest
-
 from maxo.dialogs import DialogManager
 from maxo.dialogs.api.entities import ChatEvent
 from maxo.dialogs.widgets.kbd import Toggle
 from maxo.dialogs.widgets.text import Format
 
 
-@pytest.mark.asyncio
 async def test_render_toggle(mock_manager: DialogManager) -> None:
     toggle: Toggle[Any] = Toggle(
         Format("{item[1]}"),

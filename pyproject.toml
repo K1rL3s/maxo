@@ -1,13 +1,39 @@
 [build-system]
-requires = ["uv_build==0.9.13"]
+requires = ["uv_build==0.11.23"]
 build-backend = "uv_build"
 
 [project]
 name = "maxo"
-description = "Asynchronous framework for MAX.ru bots"
-version = "0.5.3"
+description = "Асинхронный Python-фреймворк для разработки ботов мессенджера MAX (max.ru) с поддержкой long-polling, вебхуков, FSM, диалогов, фильтров и DI"
+version = "0.7.0"
 readme = "README.md"
 license = { file = "LICENSE" }
+keywords = [
+    "max",
+    "max.ru",
+    "max-messenger",
+    "max-bot",
+    "max-bot-api",
+    "max-api",
+    "maxapi",
+    "maxo",
+    "messenger",
+    "bot",
+    "bots",
+    "chat-bot",
+    "bot-framework",
+    "framework",
+    "async",
+    "asyncio",
+    "aiohttp",
+    "unihttp",
+    "long-polling",
+    "webhook",
+    "fsm",
+    "dialogs",
+    "dispatcher",
+    "dependency-injection",
+]
 authors = [
     { name = "K1rL3s - Kirill Lesovoy", email = "kirill.lesovoi@mail.ru" },
     { name = "Ivan Kirpichnikov" },
@@ -30,6 +56,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Application Frameworks",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Communications :: Chat",
+    "Natural Language :: Russian",
 ]
 requires-python = ">=3.12,<3.15"
 dependencies = [
@@ -45,7 +72,10 @@ dependencies = [
 magic_filter = ["magic_filter>=1.0.0,<2.0.0"]
 dishka = ["dishka>=1.0.0,<2.0.0"]
 redis = ["redis[hiredis]>=5.0.1,<8.0.0"]
-fastapi = ["fastapi>=0.128.0,<1.0.0"]
+fastapi = [
+    "fastapi>=0.128.0,<1.0.0; python_version <= '3.12'",
+    "fastapi>=0.138.0,<1.0.0; python_version > '3.12'"
+]
 preview = ["diagrams>=0.25.1,<1.0.0"]
 
 [project.scripts]
@@ -63,6 +93,8 @@ docs = [
     "sphinxcontrib-mermaid>=2.0,<3",
     "myst-parser>=5.0,<6",
     "shibuya>=2026.1",
+    "sphinx-sitemap>=2.6,<3",
+    "sphinxext-opengraph>=0.9,<1",
     # TODO: remove when `sphinx-tabs` is fixed:
     # https://github.com/executablebooks/sphinx-tabs/issues/212
     "docutils==0.21.2",
@@ -78,7 +110,7 @@ tests = [
     "httpx==0.27.0",
 ]
 lint = [
-    "mypy==1.19.0",
+    "mypy==2.1.0",
     "ruff==0.14.5",
     "codespell==2.4.1",
     "bandit==1.9.1",
@@ -93,7 +125,7 @@ dev = [
 ]
 
 [project.urls]
-Documentation = "https://maxo.rtfd.io"
+Documentation = "https://maxo.readthedocs.io"
 Repository = "https://github.com/K1rL3s/maxo"
 
 [tool.mypy]
@@ -225,4 +257,7 @@ include = 'src/.*\.py$|tests/.*\.py$|examples/.*\.py$'
 [tool.pytest.ini_options]
 log_cli = true
 log_cli_level = "DEBUG"
-asyncio_mode = "strict"
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

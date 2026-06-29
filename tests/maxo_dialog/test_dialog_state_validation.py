@@ -17,7 +17,6 @@ class Second(StatesGroup):
     state = State()
 
 
-@pytest.mark.asyncio
 async def test_one_state_group_per_dialog() -> None:
     first_dialog = Dialog(Window(Const("foo"), state=First.state))
     second_dialog = Dialog(Window(Const("bar"), state=First.state))

@@ -1,8 +1,8 @@
 import pytest
 
 from maxo.enums import MarkupElementType
+from maxo.types import StrikethroughMarkup
 from maxo.types.emphasized_markup import EmphasizedMarkup
-from maxo.types.markup_element import MarkupElement
 from maxo.types.strong_markup import StrongMarkup
 from maxo.types.underline_markup import UnderlineMarkup
 from maxo.types.user_mention_markup import UserMentionMarkup
@@ -82,7 +82,7 @@ class TestNode:
             ),
         ],
     )
-    def test_render_plain_only(self, node: Text, result: str):
+    def test_render_plain_only(self, node: Text, result: str) -> None:
         text, entities = node.render()
         if node.type:
             assert len(entities) == 1
@@ -92,13 +92,13 @@ class TestNode:
         content = html_decoration.unparse(text, entities)
         assert content == result
 
-    def test_render_text(self):
+    def test_render_text(self) -> None:
         node = Text("Hello, ", "World", "!")
         text, entities = node.render()
         assert text == "Hello, World!"
         assert not entities
 
-    def test_render_nested(self):
+    def test_render_nested(self) -> None:
         node = Text(
             Text("Hello, ", Bold("World"), "!"),
             "\n",
@@ -107,21 +107,21 @@ class TestNode:
         text, entities = node.render()
         assert text == "Hello, World!\nThis is test!"
         assert entities == [
-            StrongMarkup(type=MarkupElementType.STRONG, from_=7, length=5),
-            StrongMarkup(type=MarkupElementType.STRONG, from_=14, length=13),
-            UnderlineMarkup(type=MarkupElementType.UNDERLINE, from_=19, length=2),
-            EmphasizedMarkup(type=MarkupElementType.EMPHASIZED, from_=26, length=1),
+            StrongMarkup(from_=7, length=5),
+            StrongMarkup(from_=14, length=13),
+            UnderlineMarkup(from_=19, length=2),
+            EmphasizedMarkup(from_=26, length=1),
         ]
 
-    def test_as_html(self):
+    def test_as_html(self) -> None:
         node = Text("Hello, ", Bold("World"), "!")
         assert node.as_html() == "Hello, <b>World</b>!"
 
-    def test_as_markdown(self):
+    def test_as_markdown(self) -> None:
         node = Text("Hello, ", Bold("World"), "!")
         assert node.as_markdown() == r"Hello, **World**\!"
 
-    def test_replace(self):
+    def test_replace(self) -> None:
         node0 = Text("test0", param0="test1")
         node1 = node0.replace("test1", "test2", param1="test1")
         assert node0._body != node1._body
@@ -129,7 +129,7 @@ class TestNode:
         assert "param1" not in node0._params
         assert "param1" in node1._params
 
-    def test_add(self):
+    def test_add(self) -> None:
         node0 = Text("Hello")
         node1 = Bold("World")
 
@@ -143,26 +143,26 @@ class TestNode:
         text, _ = node2.render()
         assert text == "Hello, World!"
 
-    def test_getitem_position(self):
+    def test_getitem_position(self) -> None:
         node = Text("Hello, ", Bold("World"), "!")
         with pytest.raises(TypeError):
-            node[2]
+            _ = node[2]  # type: ignore[index]
 
-    def test_getitem_empty_slice(self):
+    def test_getitem_empty_slice(self) -> None:
         node = Text("Hello, ", Bold("World"), "!")
         new_node = node[:]
         assert new_node is not node
         assert isinstance(new_node, Text)
         assert new_node._body == node._body
 
-    def test_getitem_slice_zero(self):
+    def test_getitem_slice_zero(self) -> None:
         node = Text("Hello, ", Bold("World"), "!")
         new_node = node[2:2]
         assert node is not new_node
         assert isinstance(new_node, Text)
         assert not new_node._body
 
-    def test_getitem_slice_simple(self):
+    def test_getitem_slice_simple(self) -> None:
         node = Text("Hello, ", Bold("World"), "!")
         new_node = node[2:10]
         assert isinstance(new_node, Text)
@@ -171,7 +171,7 @@ class TestNode:
         assert len(entities) == 1
         assert entities[0].type == MarkupElementType.STRONG
 
-    def test_getitem_slice_inside_child(self):
+    def test_getitem_slice_inside_child(self) -> None:
         node = Text("Hello, ", Bold("World"), "!")
         new_node = node[8:10]
         assert isinstance(new_node, Text)
@@ -180,7 +180,7 @@ class TestNode:
         assert len(entities) == 1
         assert entities[0].type == MarkupElementType.STRONG
 
-    def test_getitem_slice_tail(self):
+    def test_getitem_slice_tail(self) -> None:
         node = Text("Hello, ", Bold("World"), "!")
         new_node = node[12:13]
         assert isinstance(new_node, Text)
@@ -188,15 +188,15 @@ class TestNode:
         assert text == "!"
         assert not entities
 
-    def test_from_entities(self):
+    def test_from_entities(self) -> None:
         # Most of the cases covered by text_decorations module
 
         node = Strikethrough.from_entities(
             text="test1 test2 test3 test4 test5 test6",
             entities=[
-                MarkupElement(type=MarkupElementType.STRONG, from_=6, length=23),
-                MarkupElement(type=MarkupElementType.UNDERLINE, from_=12, length=5),
-                MarkupElement(type=MarkupElementType.EMPHASIZED, from_=24, length=5),
+                StrongMarkup(from_=6, length=23),
+                UnderlineMarkup(from_=12, length=5),
+                EmphasizedMarkup(from_=24, length=5),
             ],
         )
         assert len(node._body) == 3
@@ -207,7 +207,7 @@ class TestNode:
             == "<s>test1 <b>test2 <u>test3</u> test4 <i>test5</i></b> test6</s>"
         )
 
-    def test_pretty_string(self):
+    def test_pretty_string(self) -> None:
         node = Strikethrough.from_entities(
             text="X",
             entities=[
@@ -232,55 +232,55 @@ class TestNode:
 
 
 class TestUtils:
-    def test_apply_entity(self):
+    def test_apply_entity(self) -> None:
         node = _apply_entity(
-            MarkupElement(type=MarkupElementType.STRONG, from_=0, length=4),
+            StrongMarkup(from_=0, length=4),
             "test",
         )
         assert isinstance(node, Bold)
         assert node._body == ("test",)
 
-    def test_as_line(self):
+    def test_as_line(self) -> None:
         node = as_line("test", "test", "test")
         assert isinstance(node, Text)
         assert len(node._body) == 4  # 3 + '\\n'
 
-    def test_line_with_sep(self):
+    def test_line_with_sep(self) -> None:
         node = as_line("test", "test", "test", sep=" ")
         assert isinstance(node, Text)
         assert len(node._body) == 6  # 3 + 2 * ' ' + '\\n'
 
-    def test_as_line_single_element_with_sep(self):
+    def test_as_line_single_element_with_sep(self) -> None:
         node = as_line("test", sep=" ")
         assert isinstance(node, Text)
         assert len(node._body) == 2  # 1 + '\\n'
 
-    def test_as_list(self):
+    def test_as_list(self) -> None:
         node = as_list("test", "test", "test")
         assert isinstance(node, Text)
         assert len(node._body) == 5  # 3 + 2 * '\\n' between lines
 
-    def test_as_marked_list(self):
+    def test_as_marked_list(self) -> None:
         node = as_marked_list("test 1", "test 2", "test 3")
         assert node.as_html() == "- test 1\n- test 2\n- test 3"
 
-    def test_as_numbered_list(self):
+    def test_as_numbered_list(self) -> None:
         node = as_numbered_list("test 1", "test 2", "test 3", start=5)
         assert node.as_html() == "5. test 1\n6. test 2\n7. test 3"
 
-    def test_as_section(self):
+    def test_as_section(self) -> None:
         node = as_section("title", "test 1", "test 2", "test 3")
         assert node.as_html() == "title\ntest 1test 2test 3"
 
-    def test_as_marked_section(self):
+    def test_as_marked_section(self) -> None:
         node = as_marked_section("Section", "test 1", "test 2", "test 3")
         assert node.as_html() == "Section\n- test 1\n- test 2\n- test 3"
 
-    def test_as_numbered_section(self):
+    def test_as_numbered_section(self) -> None:
         node = as_numbered_section("Section", "test 1", "test 2", "test 3", start=5)
         assert node.as_html() == "Section\n5. test 1\n6. test 2\n7. test 3"
 
-    def test_as_key_value(self):
+    def test_as_key_value(self) -> None:
         node = as_key_value("key", "test 1")
         assert node.as_html() == "<b>key:</b> test 1"
 
@@ -297,12 +297,12 @@ class TestGetItemUnicode:
 
     # --- helpers / sanity checks ---
 
-    def test_sizeof_emoji(self):
+    def test_sizeof_emoji(self) -> None:
         """Baseline: emoji takes 2 UTF-16 code units, not 1."""
         assert sizeof("👋") == 2
         assert len("👋") == 1  # code points - the source of the bug
 
-    def test_len_of_node_with_emoji_string_body(self):
+    def test_len_of_node_with_emoji_string_body(self) -> None:
         """len(Text(...)) must return UTF-16 units (sizeof), not code points."""
         node = Text("hi", "👋", "!")
         # h=1 i=1 👋=2 !=1  →  5 UTF-16 units
@@ -310,7 +310,7 @@ class TestGetItemUnicode:
 
     # --- single string node ---
 
-    def test_getitem_single_string_emoji_slice_over_emoji(self):
+    def test_getitem_single_string_emoji_slice_over_emoji(self) -> None:
         """
         Text("hi👋!")[2:4] should return the 2 UTF-16 units that represent "👋",
         not "👋!" (which is what a plain code-point slice "hi👋!"[2:4] produces).
@@ -321,7 +321,7 @@ class TestGetItemUnicode:
         text, _ = sliced.render()
         assert text == "👋"
 
-    def test_getitem_single_string_emoji_slice_after_emoji(self):
+    def test_getitem_single_string_emoji_slice_after_emoji(self) -> None:
         """
         Text("hi👋!")[4:5] should return "!" (UTF-16 offset 4).
         With the len()-based bug the node_size is 4 (code points) so the
@@ -335,7 +335,7 @@ class TestGetItemUnicode:
 
     # --- multiple string nodes ---
 
-    def test_getitem_emoji_node_boundary(self):
+    def test_getitem_emoji_node_boundary(self) -> None:
         """
         Text("hi", "👋", "!")[2:4] must return only "👋".
         Bug: len("👋")==1 shifts the tracked position by 1 too few, so "!" is
@@ -347,7 +347,7 @@ class TestGetItemUnicode:
         text, _ = sliced.render()
         assert text == "👋"
 
-    def test_getitem_slice_starts_after_emoji_node(self):
+    def test_getitem_slice_starts_after_emoji_node(self) -> None:
         """
         Text("hi", "👋", "!")[4:5] must return "!".
         Bug: the position counter ends at 3 after the emoji node (instead of 4),
@@ -359,7 +359,7 @@ class TestGetItemUnicode:
         text, _ = sliced.render()
         assert text == "!"
 
-    def test_getitem_multiple_emojis_offset_accumulation(self):
+    def test_getitem_multiple_emojis_offset_accumulation(self) -> None:
         """
         Each emoji adds 2 UTF-16 units.  After two emoji the offset drift is 2.
         Text("a", "😀", "b", "😀", "c")[6:7] should return the second "c".
@@ -374,7 +374,7 @@ class TestGetItemUnicode:
 
     # --- Text sub-nodes (Bold etc.) are NOT affected ---
 
-    def test_getitem_emoji_inside_bold_subnode_is_correct(self):
+    def test_getitem_emoji_inside_bold_subnode_is_correct(self) -> None:
         """
         When the emoji lives inside a Text sub-node (Bold), len(Bold) already
         calls sizeof() correctly, so slicing must work fine.
@@ -387,7 +387,7 @@ class TestGetItemUnicode:
         assert len(entities) == 1
         assert entities[0].type == MarkupElementType.STRONG
 
-    def test_getitem_after_bold_emoji_subnode_is_correct(self):
+    def test_getitem_after_bold_emoji_subnode_is_correct(self) -> None:
         """Complement: slicing after an emoji Bold node must also work."""
         node = Text("hi", Bold("👋"), "!")
         sliced = node[4:5]
@@ -396,7 +396,7 @@ class TestGetItemUnicode:
 
     # --- tests for entity sort stability (same offset) ---
 
-    def test_from_entities_same_offset_outer_arrives_last(self):
+    def test_from_entities_same_offset_outer_arrives_last(self) -> None:
         """
         from_entities must sort by (offset, -length) so that the wider
         (outer) entity wraps the narrower (inner) one, even when the
@@ -413,14 +413,14 @@ class TestGetItemUnicode:
             text="Hello",
             entities=[
                 # shorter / inner - arrives first (wrong order)
-                MarkupElement(type=MarkupElementType.EMPHASIZED, from_=0, length=3),
+                EmphasizedMarkup(from_=0, length=3),
                 # longer / outer - arrives second
-                MarkupElement(type=MarkupElementType.STRONG, from_=0, length=5),
+                StrongMarkup(from_=0, length=5),
             ],
         )
         assert node.as_html() == "<b><i>Hel</i>lo</b>"
 
-    def test_from_entities_same_offset_outer_arrives_first(self):
+    def test_from_entities_same_offset_outer_arrives_first(self) -> None:
         """
         Sanity check: from_entities works correctly when the wider entity
         already arrives before the narrower one at the same offset.
@@ -429,14 +429,14 @@ class TestGetItemUnicode:
             text="Hello",
             entities=[
                 # longer / outer - arrives first (correct order)
-                MarkupElement(type=MarkupElementType.STRONG, from_=0, length=5),
+                StrongMarkup(from_=0, length=5),
                 # shorter / inner - arrives second
-                MarkupElement(type=MarkupElementType.EMPHASIZED, from_=0, length=3),
+                EmphasizedMarkup(from_=0, length=3),
             ],
         )
         assert node.as_html() == "<b><i>Hel</i>lo</b>"
 
-    def test_from_entities_same_offset_triple_nesting(self):
+    def test_from_entities_same_offset_triple_nesting(self) -> None:
         """
         Three entities sharing offset=0 with descending lengths must nest
         from outermost to innermost regardless of input order.
@@ -447,16 +447,16 @@ class TestGetItemUnicode:
             text="Hi! there",
             entities=[
                 # innermost, shortest - arrives first
-                MarkupElement(type=MarkupElementType.EMPHASIZED, from_=0, length=2),
+                EmphasizedMarkup(from_=0, length=2),
                 # outermost, longest - arrives last
-                MarkupElement(type=MarkupElementType.STRIKETHROUGH, from_=0, length=9),
+                StrikethroughMarkup(from_=0, length=9),
                 # middle
-                MarkupElement(type=MarkupElementType.STRONG, from_=0, length=3),
+                StrongMarkup(from_=0, length=3),
             ],
         )
         assert node.as_html() == "<s><b><i>Hi</i>!</b> there</s>"
 
-    def test_render_same_offset_entities_ordered_by_descending_length(self):
+    def test_render_same_offset_entities_ordered_by_descending_length(self) -> None:
         """
         render() must sort collected entities by (offset, -length) so that
         the outer (wider) entity appears before the inner (narrower) one
@@ -484,7 +484,7 @@ class TestGetItemUnicode:
         # Verify the HTML round-trip is correct
         assert node.as_html() == "<b><i>Hel</i>lo</b>"
 
-    def test_render_as_html_same_offset_nested(self):
+    def test_render_as_html_same_offset_nested(self) -> None:
         """
         as_html() end-to-end: Bold wrapping Italic at the same start offset
         must produce correct HTML after the render() sort fix.

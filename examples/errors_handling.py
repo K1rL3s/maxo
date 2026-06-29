@@ -6,7 +6,6 @@ from maxo.errors import MaxoError
 from maxo.routing.filters import Command, ExceptionTypeFilter
 from maxo.routing.updates import ErrorEvent, MessageCreated
 from maxo.transport.long_polling import LongPolling
-from maxo.utils.facades import MessageCreatedFacade
 
 logger = logging.getLogger(__name__)
 
@@ -24,19 +23,17 @@ class InvalidName(ValueError):
 @dp.error(ExceptionTypeFilter(InvalidAge))
 async def handle_invalid_age_exception(
     event: ErrorEvent[InvalidAge, MessageCreated],
-    facade: MessageCreatedFacade,
 ) -> None:
     """Сюда попадают только ошибки с типом InvalidAge."""
     assert isinstance(event.error, InvalidAge)  # noqa: S101
     logger.error("Error caught: %r while processing %r", event.error, event.update)
     text = f"Поймана ошибка: {event.error!r}"
-    await facade.answer_text(text)
+    await event.event.answer_text(text)
 
 
 @dp.error()
 async def handle_invalid_exceptions(
     event: ErrorEvent[Exception, MessageCreated],
-    facade: MessageCreatedFacade,
 ) -> None:
     """Обработчик всех остальных ошибок (без фильтра по типу)."""
     logger.error(
@@ -44,11 +41,12 @@ async def handle_invalid_exceptions(
         event.error,
         event.update,
     )
-    await facade.answer_text(f"Произошла ошибка: {event.error!r}")
+    text = f"Произошла неизвестная ошибка: {event.error!r}"
+    await event.event.answer_text(text)
 
 
 @dp.message_created(Command("age"))
-async def handle_set_age(message: MessageCreated, facade: MessageCreatedFacade) -> None:
+async def handle_set_age(message: MessageCreated) -> None:
     """
     Обрабатывает только сообщения с командой /age.
     Если пользователь отправил /age с неверным возрастом, выбрасывается InvalidAge -
@@ -67,14 +65,11 @@ async def handle_set_age(message: MessageCreated, facade: MessageCreatedFacade) 
         msg = "Возраст должен быть числом"
         raise InvalidAge(msg)
     age = int(age)
-    await facade.reply_text(text=f"Твой возраст: {age}")
+    await message.reply_text(text=f"Твой возраст: {age}")
 
 
 @dp.message_created(Command("name"))
-async def handle_set_name(
-    message: MessageCreated,
-    facade: MessageCreatedFacade,
-) -> None:
+async def handle_set_name(message: MessageCreated) -> None:
     """
     Обрабатывает только сообщения с командой /name.
     Объект команды: аргумент keyword `command` с типом CommandObject.
@@ -88,7 +83,7 @@ async def handle_set_name(
     if not name:
         msg = "Неверное имя. Укажи своё имя аргументом команды (например: /name Имя)."
         raise InvalidName(msg)
-    await facade.reply_text(text=f"Тебя зовут {name}")
+    await message.reply_text(text=f"Тебя зовут {name}")
 
 
 def main() -> None:

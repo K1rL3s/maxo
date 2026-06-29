@@ -69,7 +69,6 @@ def bot() -> Bot:
     return FakeBot()
 
 
-@pytest.mark.asyncio
 async def test_middleware(
     bot: Bot,
     message_manager: MockMessageManager,

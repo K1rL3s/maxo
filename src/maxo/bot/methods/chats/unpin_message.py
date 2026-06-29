@@ -5,9 +5,11 @@ from maxo.types.simple_query_result import SimpleQueryResult
 
 class UnpinMessage(MaxoMethod[SimpleQueryResult]):
     """
-    Удаление закреплённого сообщения в групповом чате
+    Открепление сообщения в групповом чате или канале
 
-    Удаляет закреплённое сообщение в групповом чате
+    Открепляет сообщение в групповом чате или канале 
+
+    Бот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала 
 
     Пример запроса:
     ```bash
@@ -16,7 +18,7 @@ class UnpinMessage(MaxoMethod[SimpleQueryResult]):
     ```
 
     Args:
-        chat_id: ID чата, из которого нужно удалить закреплённое сообщение
+        chat_id: ID группового чата или канала, в котором нужно открепить сообщение или пост
 
     Источник: https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/pin
     """
@@ -25,4 +27,4 @@ class UnpinMessage(MaxoMethod[SimpleQueryResult]):
     __method__ = "delete"
 
     chat_id: Path[int]
-    """ID чата, из которого нужно удалить закреплённое сообщение"""
+    """ID группового чата или канала, в котором нужно открепить сообщение или пост"""

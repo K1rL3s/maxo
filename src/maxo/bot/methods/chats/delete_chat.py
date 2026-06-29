@@ -9,7 +9,7 @@ class DeleteChat(MaxoMethod[SimpleQueryResult]):
 
     Удаляет групповой чат для всех участников
 
-    Пример запроса:
+    #### Пример запроса:
     ```bash
     curl -X DELETE "https://platform-api.max.ru/chats/{chatId}" \
       -H "Authorization: {access_token}"

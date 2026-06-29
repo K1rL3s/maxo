@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from collections.abc import Mapping, Sequence
+from collections.abc import MutableMapping, Sequence
 from typing import Any, Protocol
 
 from maxo.routing.ctx import Ctx
@@ -32,7 +32,7 @@ class BaseRouter(Protocol):
 
     @property
     @abstractmethod
-    def observers(self) -> Mapping[Any, Observer[Any, Any, Any]]:
+    def observers(self) -> MutableMapping[Any, Observer[Any, Any, Any]]:
         raise NotImplementedError
 
     @property

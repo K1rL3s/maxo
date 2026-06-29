@@ -7,7 +7,7 @@ from .base import Text
 
 
 class _FormatDataStub:
-    def __init__(self, name: str = "", data: dict | None = None) -> None:
+    def __init__(self, name: str = "", data: dict[Any, Any] | None = None) -> None:
         self.name = name
         self.data = data or {}
 
@@ -33,7 +33,7 @@ class Format(Text):
 
     async def _render_text(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> str:
         if manager.is_preview():

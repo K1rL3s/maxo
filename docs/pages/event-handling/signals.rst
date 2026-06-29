@@ -58,6 +58,8 @@
 
 .. code-block:: python
 
+    import os
+
     from maxo import Bot, Dispatcher
     from maxo.transport.long_polling import LongPolling
 
@@ -72,7 +74,8 @@
     async def on_shutdown(bot: Bot) -> None:
         print("Бот останавливается...")
 
-    LongPolling(dispatcher).run(Bot("TOKEN"))
+    if __name__ == "__main__":
+        LongPolling(dispatcher).run(Bot(os.environ["TOKEN"]))
 
 
 Через метод ``handler()``
@@ -80,9 +83,12 @@
 
 .. code-block:: python
 
+    from maxo import Bot, Dispatcher
+
     async def on_startup(bot: Bot) -> None:
         print(f"Бот @{bot.state.info.username} запущен!")
 
+    dispatcher = Dispatcher()
     dispatcher.after_startup.handler(on_startup)
 
 
@@ -94,6 +100,8 @@
 сигналов на каждом уровне:
 
 .. code-block:: python
+
+    import os
 
     from maxo import Bot, Dispatcher, Router
     from maxo.transport.long_polling import LongPolling
@@ -110,7 +118,9 @@
 
     dispatcher = Dispatcher()
     dispatcher.include(router)
-    LongPolling(dispatcher).run(Bot("TOKEN"))
+
+    if __name__ == "__main__":
+        LongPolling(dispatcher).run(Bot(os.environ["TOKEN"]))
 
 
 Типичные сценарии
@@ -124,6 +134,10 @@
 .. code-block:: python
 
     import redis.asyncio as redis
+
+    from maxo import Dispatcher
+
+    dispatcher = Dispatcher()
 
     @dispatcher.after_startup()
     async def setup_redis() -> None:
@@ -142,6 +156,9 @@
 
 .. code-block:: python
 
+    from maxo import Bot, Dispatcher
+
+    dispatcher = Dispatcher()
     ADMIN_USER_ID = 123456
 
     @dispatcher.after_startup()
@@ -161,15 +178,19 @@
 
 .. code-block:: python
 
+    from maxo import Dispatcher
+    from maxo.routing.updates import MessageCreated
+
+    dispatcher = Dispatcher()
+
     @dispatcher.after_startup()
     async def setup_config() -> None:
         dispatcher.workflow_data["admin_ids"] = [123, 456, 789]
 
     @dispatcher.message_created()
-    async def handler(update, facade, admin_ids: list[int]) -> None:
-        if update.message.sender.user_id in admin_ids:
-            await facade.answer_text("Привет, админ!")
-
+    async def handler(update: MessageCreated, admin_ids: list[int]) -> None:
+        if update.message.unsafe_sender.user_id in admin_ids:
+            await update.answer_text("Привет, админ!")
 
 Отличие от обработчиков обновлений
 -----------------------------------

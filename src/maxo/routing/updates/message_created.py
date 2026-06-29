@@ -1,13 +1,14 @@
 from maxo.enums.update_type import UpdateType
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
+from maxo.routing.mixins import MessageMethodsFacade
 from maxo.routing.updates.base import MaxUpdate
 from maxo.types.message import Message
 
 
-class MessageCreated(MaxUpdate):
+class MessageCreated(MaxUpdate, MessageMethodsFacade):
     """
-    ы получите этот `update`, как только сообщение будет создано
+    Вы получите это событие, как только сообщение будет создано
 
     Args:
         message: Новое созданное сообщение
@@ -36,3 +37,9 @@ class MessageCreated(MaxUpdate):
     @property
     def text(self) -> str | None:
         return self.message.body.text
+
+    @property
+    def user_id(self) -> int | None:
+        if is_defined(self.message.sender):
+            return self.message.sender.user_id
+        return None

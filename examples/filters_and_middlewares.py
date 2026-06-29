@@ -7,7 +7,6 @@ from maxo.routing.filters.base import BaseFilter
 from maxo.routing.interfaces import BaseMiddleware, NextMiddleware
 from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
-from maxo.utils.facades import MessageCreatedFacade
 
 
 # Outer выполняется всегда и до фильтров; inner - после всех фильтров, если они прошли
@@ -62,11 +61,7 @@ dp.message_created.middleware.outer(OuterMiddleware())
     (ContainsTextFilter("gojo") & ContainsTextFilter("maki"))
     | ContainsTextFilter("sukuna"),
 )
-async def echo_handler(
-    update: MessageCreated,
-    ctx: Ctx,
-    facade: MessageCreatedFacade,
-) -> None:
+async def echo_handler(_: MessageCreated) -> None:
     print("Исполнение хендлера")
 
 

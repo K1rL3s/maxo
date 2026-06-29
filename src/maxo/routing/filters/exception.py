@@ -1,6 +1,6 @@
 import re
 from collections.abc import Callable
-from typing import Any, Generic, TypeVar, final
+from typing import Any, Generic, TypeVar
 
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters.base import BaseFilter
@@ -11,7 +11,6 @@ _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 _ExceptionT = TypeVar("_ExceptionT", bound=Exception)
 
 
-@final
 class ExceptionTypeFilter(
     BaseFilter[ErrorEvent[_ExceptionT, _UpdateT]],
     Generic[_ExceptionT, _UpdateT],

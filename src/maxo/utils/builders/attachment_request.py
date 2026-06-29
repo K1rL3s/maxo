@@ -88,7 +88,10 @@ class AttachmentRequestBuilder:
 
     def add_location(self, latitude: Decimal, longitude: Decimal) -> Self:
         self._items.append(
-            LocationAttachmentRequest(latitude=latitude, longitude=longitude),
+            LocationAttachmentRequest(
+                latitude=float(latitude),
+                longitude=float(longitude),
+            ),
         )
         return self
 

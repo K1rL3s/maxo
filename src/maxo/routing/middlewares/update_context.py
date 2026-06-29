@@ -28,7 +28,7 @@ UPDATE_CONTEXT_KEY: Final = "update_context"
 EVENT_FROM_USER_KEY: Final = "event_from_user"
 EVENT_CHAT_KEY: Final = "event_chat"
 
-# Подражание аиограму
+# Подражание aiogram
 EVENT_CONTEXT_KEY: Final = "event_context"  # same as UPDATE_CONTEXT_KEY
 
 
@@ -121,7 +121,7 @@ class UpdateContextMiddleware(BaseMiddleware[MaxoUpdate[Any]]):
         do_enrich: bool,
     ) -> UpdateContext:
         # Deferred import to avoid circular dependency:
-        # update_context → dialogs → fsm → update_context
+        # update_context -> dialogs -> fsm -> update_context
         from maxo.dialogs.api.entities import DialogUpdateEvent  # noqa: PLC0415
 
         chat_id = None
@@ -132,51 +132,51 @@ class UpdateContextMiddleware(BaseMiddleware[MaxoUpdate[Any]]):
         if isinstance(
             update,
             (
-                BotAddedToChat,
-                BotRemovedFromChat,
                 BotStarted,
                 BotStopped,
-                ChatTitleChanged,
                 DialogCleared,
                 DialogMuted,
                 DialogRemoved,
                 DialogUnmuted,
-                UserAddedToChat,
-                UserRemovedFromChat,
             ),
         ):
-            chat_id = update.chat_id
-            user_id = update.user.user_id
             user = update.user
+            user_id = user.id
+            chat_id = update.chat_id
+            chat_type = ChatType.DIALOG
+        elif isinstance(
+            update,
+            (
+                BotAddedToChat,
+                BotRemovedFromChat,
+                UserAddedToChat,
+                UserRemovedFromChat,
+                ChatTitleChanged,
+            ),
+        ):
+            user = update.user
+            user_id = user.id
+            chat_id = update.chat_id
             if hasattr(update, "is_channel"):
                 chat_type = ChatType.CHANNEL if update.is_channel else ChatType.CHAT
         elif isinstance(update, MessageCallback):
-            user_id = update.user.user_id
-            user = update.callback.user
-            if update.message is not None:
-                chat_id = (
-                    update.message.recipient.chat_id or update.message.recipient.user_id
-                )
-                chat_type = update.message.recipient.chat_type
+            user = update.user
+            user_id = user.id
+            if (_message := update.message) is not None:
+                chat_id = _message.recipient.chat_id
+                chat_type = _message.recipient.chat_type
         elif isinstance(update, (MessageEdited, MessageCreated)):
-            user_id = (
-                update.message.sender.user_id
-                if is_defined(update.message.sender)
-                else None
-            )
             user = update.message.sender if is_defined(update.message.sender) else None
-            if update.message is not None:
-                chat_id = (
-                    update.message.recipient.chat_id or update.message.recipient.user_id
-                )
-                chat_type = update.message.recipient.chat_type
+            user_id = user.id if user is not None else None
+            _recipient = update.message.recipient
+            chat_id = _recipient.chat_id
+            chat_type = _recipient.chat_type
         elif isinstance(update, MessageRemoved):
             chat_id = update.chat_id
             user_id = update.user_id
-            chat_type = None
         elif isinstance(update, DialogUpdateEvent):
-            user_id = update.user.user_id
             user = update.user
+            user_id = user.id
             chat_id = update.recipient.chat_id
             chat_type = update.recipient.chat_type
 

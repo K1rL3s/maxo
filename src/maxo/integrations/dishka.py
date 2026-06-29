@@ -160,7 +160,7 @@ class DishkaMiddleware(BaseMiddleware[MaxoUpdate[Any]]):
 
 
 class MaxoProvider(Provider):
-    scope = Scope.REQUEST
+    scope = Scope.REQUEST  # type: ignore[mutable-override]
 
     context = (
         from_context(provides=Bot)

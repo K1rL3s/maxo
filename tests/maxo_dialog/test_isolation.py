@@ -22,7 +22,6 @@ async def start(
     await event_common.wait()
 
 
-@pytest.mark.asyncio
 @pytest.mark.repeat(10)
 async def test_concurrent_events() -> None:
     event_common = Event()

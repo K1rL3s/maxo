@@ -31,7 +31,7 @@ jobs:
 
       - name: Run ruff
         run: |
-          ruff check .
+          ruff check --no-fix .
 
       - name: Run mypy
         run: |

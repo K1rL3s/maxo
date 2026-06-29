@@ -150,11 +150,10 @@ Omitted в объектах ответа
 .. code-block:: python
 
     from maxo.routing.updates.message_created import MessageCreated
-    from maxo.utils.facades import MessageCreatedFacade
     from maxo.omit import is_defined, is_omitted
 
     @dispatcher.message_created()
-    async def handler(update: MessageCreated, facade: MessageCreatedFacade) -> None:
+    async def handler(update: MessageCreated) -> None:
         msg = update.message
 
         # sender может отсутствовать (например, системное сообщение)
@@ -177,12 +176,11 @@ Omitted в объектах ответа
 .. code-block:: python
 
     from maxo.routing.updates.message_created import MessageCreated
-    from maxo.utils.facades import MessageCreatedFacade
     from maxo.omit import is_defined
     from maxo.errors import AttributeIsEmptyError
 
     @dispatcher.message_created()
-    async def handler(update: MessageCreated, facade: MessageCreatedFacade) -> None:
+    async def handler(update: MessageCreated) -> None:
         # Безопасный доступ - проверяйте сами:
         if is_defined(update.message.sender):
             name = update.message.sender.first_name
@@ -210,16 +208,15 @@ Omitted в объектах ответа
 
 .. code-block:: python
 
-    from maxo.routing.updates.message_created import MessageCreated
-    from maxo.utils.facades import MessageCreatedFacade
+    from maxo.routing.updates import MessageCreated
 
     @dispatcher.message_created()
-    async def handler(update: MessageCreated, facade: MessageCreatedFacade) -> None:
-        # notify не указан → Omitted → не попадёт в запрос → сервер использует значение по умолчанию (true)
-        await facade.answer_text("Привет!")
+    async def handler(message: MessageCreated) -> None:
+        # notify не указан -> Omitted -> не попадёт в запрос -> сервер использует значение по умолчанию (true)
+        await message.answer_text("Привет!")
 
-        # notify=False → попадёт в запрос → участники чата НЕ получат уведомление
-        await facade.answer_text("Тихое сообщение", notify=False)
+        # notify=False -> попадёт в запрос -> участники чата НЕ получат уведомление
+        await message.answer_text("Тихое сообщение", notify=False)
 
 
 Проверка в своём коде

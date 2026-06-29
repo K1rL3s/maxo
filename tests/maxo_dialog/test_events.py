@@ -58,7 +58,6 @@ def client(dp: Dispatcher) -> BotClient:
     return BotClient(dp)
 
 
-@pytest.mark.asyncio
 async def test_click(
     dp: Dispatcher,
     client: BotClient,
@@ -70,7 +69,6 @@ async def test_click(
     assert first_message.body.text == "stub"
 
 
-@pytest.mark.asyncio
 async def test_request_join(
     dp: Dispatcher,
     client: BotClient,
@@ -86,7 +84,6 @@ async def test_request_join(
     assert first_message.body.text == "stub"
 
 
-@pytest.mark.asyncio
 async def test_my_chat_member_update(
     dp: Dispatcher,
     client: BotClient,

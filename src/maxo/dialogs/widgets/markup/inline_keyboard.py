@@ -1,3 +1,5 @@
+from typing import Any
+
 from maxo.dialogs import DialogManager
 from maxo.dialogs.api.internal.widgets import (
     MarkupFactory,
@@ -10,7 +12,7 @@ from maxo.dialogs.utils import add_intent_id
 class InlineKeyboardFactory(MarkupFactory):
     async def render_markup(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
         keyboard: RawKeyboard,
     ) -> MarkupVariant:

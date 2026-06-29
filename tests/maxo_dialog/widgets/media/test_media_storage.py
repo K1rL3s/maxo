@@ -2,14 +2,11 @@ import asyncio
 import os
 import tempfile
 
-import pytest
-
 from maxo.dialogs.api.entities import MediaId
 from maxo.dialogs.context.media_storage import MediaIdStorage
 from maxo.enums import AttachmentType
 
 
-@pytest.mark.asyncio
 async def test_get_media_id() -> None:
     manager = MediaIdStorage()
     with tempfile.TemporaryDirectory() as d:

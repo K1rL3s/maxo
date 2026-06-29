@@ -1,3 +1,30 @@
+"""
+https://github.com/aiogram/aiogram/blob/dev-3.x/aiogram/filters/command.py.
+
+Original code licensed under MIT by aiogram contributors
+
+The MIT License (MIT)
+
+Copyright (c) 2017 - present Alex Root Junior
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy, modify,
+merge, publish, distribute, sublicense, and/or sell copies of the Software,
+and to permit persons to whom the Software is furnished to do so, subject to the
+following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies
+or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
+OR OTHER DEALINGS IN THE SOFTWARE.
+"""
+
 import re
 from collections.abc import Iterable, Sequence
 from dataclasses import field, replace
@@ -5,12 +32,13 @@ from re import Match, Pattern
 from typing import cast
 
 from maxo import Bot, Ctx
+from maxo.omit import is_defined
 from maxo.routing.filters import BaseFilter
 from maxo.routing.updates import MessageCreated
 from maxo.types.base import MaxoType
 from maxo.types.bot_command import BotCommand
 
-CommandPatternType = str | re.Pattern | BotCommand
+CommandPatternType = str | re.Pattern[str] | BotCommand
 
 
 class CommandException(Exception):
@@ -94,12 +122,13 @@ class Command(BaseFilter[MessageCreated]):
         message: MessageCreated,
         ctx: Ctx,
     ) -> bool:
-        if not isinstance(message, MessageCreated):
-            return False
+        if message.message.body.text:
+            text = message.message.body.text
+        elif is_defined(link := message.message.link) and link.message.text:
+            text = link.message.text
+        else:
+            text = None
 
-        text = (message.message.body and message.message.body.text) or (
-            message.message.link and message.message.link.message.text
-        )
         if not text:
             return False
 

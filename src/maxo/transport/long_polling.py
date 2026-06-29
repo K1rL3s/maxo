@@ -75,7 +75,7 @@ class LongPolling:
         async with self._lock:
             dispatcher.workflow_data.update(bot=bot, **workflow_data)
 
-            await dispatcher.feed_signal(BeforeStartup())
+            await dispatcher.feed_signal(BeforeStartup(), bot)
 
             async with bot.context(auto_close=auto_close_bot):
                 loggers.dispatcher.info(

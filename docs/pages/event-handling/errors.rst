@@ -18,14 +18,12 @@
 
 .. code-block:: python
 
-    from maxo.routing.updates.error import ErrorEvent
-    from maxo.utils.facades.updates.error import ErrorEventFacade
+    from maxo.routing.updates import ErrorEvent
 
     @router.error()
-    async def global_error_handler(event: ErrorEvent, facade: ErrorEventFacade):
+    async def global_error_handler(event: ErrorEvent):
         # Логируем ошибку
         print(f"Произошла ошибка: {event.exception}")
-        
         # Можно попробовать ответить пользователю, если контекст позволяет
         # (но учтите, что update внутри event может быть любым)
 
@@ -42,21 +40,20 @@ ExceptionTypeFilter
 .. code-block:: python
 
     from maxo.routing.filters import ExceptionTypeFilter
-    from maxo.utils.facades.updates.error import ErrorEventFacade
-    from maxo.routing.updates.error import ErrorEvent
+    from maxo.routing.updates import ErrorEvent
     from maxo.types import UpdateContext
 
     # Перехват ошибок конкретного типа
     @router.error(ExceptionTypeFilter(ValueError))
     async def value_error_handler(
         event: ErrorEvent,
-        facade: ErrorEventFacade,
         update_context: UpdateContext,
     ):
-        await facade.bot.send_message(
+        await event.bot.send_message(
             chat_id=update_context.chat_id,
-            text="Вы ввели некорректные данные!"
+            text="Вы ввели некорректные данные!",
         )
+
 
 ExceptionMessageFilter
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -66,10 +63,10 @@ ExceptionMessageFilter
 .. code-block:: python
 
     from maxo.routing.filters import ExceptionMessageFilter
-    from maxo.utils.facades.updates.error import ErrorEventFacade
+    from maxo.routing.updates import ErrorEvent
 
     @router.error(ExceptionMessageFilter(r"Access denied"))
-    async def access_denied_handler(event: ErrorEvent, facade: ErrorEventFacade):
+    async def access_denied_handler(event: ErrorEvent):
         ...
 
 Аргументы обработчика
@@ -80,40 +77,36 @@ ExceptionMessageFilter
 1.  **event**: объект :class:`~maxo.routing.updates.error.ErrorEvent`. Содержит:
     - ``event.exception`` - само исключение.
     - ``event.update`` - исходное событие (Update), при обработке которого возникла ошибка.
-2.  **facade**: объект :class:`~maxo.utils.facades.updates.error.ErrorEventFacade`.
-3.  **ctx**: контекст выполнения.
+2.  **ctx**: контекст выполнения.
+3.  Либо "заинлайненные" ключи **ctx**
 
 Пример
 ------
 
 .. code-block:: python
 
-    from maxo.routing.filters import ExceptionTypeFilter
-    from maxo.routing.updates.error import ErrorEvent
-    from maxo.utils.facades.updates.error import ErrorEventFacade
-    from maxo.types import UpdateContext
-
-    from maxo.routing.updates.message_created import MessageCreated
-    from maxo.routing.ctx import Ctx
-    from maxo.utils.facades import MessageCreatedFacade
-
     import logging
+
+    from maxo.routing.ctx import Ctx
+    from maxo.routing.filters import ExceptionTypeFilter
+    from maxo.routing.updates import ErrorEvent, MessageCreated
+    from maxo.types import UpdateContext
 
     class MyCustomError(Exception):
         pass
 
     @router.message_created()
-    async def my_handler(update: MessageCreated, ctx: Ctx, facade: MessageCreatedFacade):
+    async def my_handler(update: MessageCreated, ctx: Ctx):
         if update.message.body.text == "boom":
             raise MyCustomError("Ба-бах!")
 
     @router.error(ExceptionTypeFilter(MyCustomError))
-    async def error_handler(event: ErrorEvent, facade: ErrorEventFacade, update_context: UpdateContext):
+    async def error_handler(event: ErrorEvent, update_context: UpdateContext):
         # Пытаемся отправить сообщение в тот же чат, где произошла ошибка
         try:
-            await facade.bot.send_message(
+            await event.bot.send_message(
                 chat_id=update_context.chat_id,
-                text=f"Ой, что-то сломалось: {event.exception}"
+                text=f"Ой, что-то сломалось: {event.exception}",
             )
         except Exception:
             # Если не удалось отправить сообщение об ошибке, просто логируем

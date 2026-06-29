@@ -1,18 +1,19 @@
 from maxo.enums.update_type import UpdateType
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
+from maxo.routing.mixins import ChatMethodsFacade
 from maxo.routing.updates.base import MaxUpdate
 from maxo.types.user import User
 
 
-class UserRemovedFromChat(MaxUpdate):
+class UserRemovedFromChat(MaxUpdate, ChatMethodsFacade):
     """
-    Вы получите это обновление, когда пользователь будет удалён из чата, где бот является администратором
+    Вы получите это событие, как только пользователь будет удалён из чата, где бот является администратором
 
     Args:
         admin_id: Администратор, который удалил пользователя из чата. Может быть `null`, если пользователь покинул чат сам
-        chat_id: ID чата, где произошло событие
-        is_channel: Указывает, был ли пользователь удалён из канала или нет
+        chat_id: ID чата, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)
+        is_channel: Указывает, что пользователь удалён из канала, а не из чата
         type:
         user: Пользователь, удалённый из чата
     """
@@ -20,9 +21,9 @@ class UserRemovedFromChat(MaxUpdate):
     type = UpdateType.USER_REMOVED
 
     chat_id: int
-    """ID чата, где произошло событие"""
+    """ID чата, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)"""
     is_channel: bool
-    """Указывает, был ли пользователь удалён из канала или нет"""
+    """Указывает, что пользователь удалён из канала, а не из чата"""
     user: User
     """Пользователь, удалённый из чата"""
 

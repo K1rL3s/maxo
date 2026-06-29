@@ -1,3 +1,5 @@
+# Кастомный фильтр - проверяет точное совпадение текста
+
 import logging
 import os
 
@@ -5,12 +7,10 @@ from maxo import Bot, Ctx, Dispatcher
 from maxo.routing.filters import BaseFilter
 from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
-from maxo.utils.facades import MessageCreatedFacade
 
 dp = Dispatcher()
 
 
-# Кастомный фильтр - проверяет точное совпадение текста
 class MyFilter(BaseFilter[MessageCreated]):
     def __init__(self, my_text: str) -> None:
         self.my_text = my_text
@@ -22,8 +22,8 @@ class MyFilter(BaseFilter[MessageCreated]):
 
 
 @dp.message_created(MyFilter("привет"))
-async def my_handler(message: MessageCreated, facade: MessageCreatedFacade) -> None:
-    await facade.answer_text("Ответ из кастомного фильтра!")
+async def my_handler(message: MessageCreated) -> None:
+    await message.answer_text("Ответ из кастомного фильтра!")
 
 
 def main() -> None:

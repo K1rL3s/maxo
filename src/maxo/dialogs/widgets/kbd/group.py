@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 from itertools import chain
+from typing import Any
 
 from maxo.dialogs.api.internal import ButtonVariant, RawKeyboard
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
@@ -33,7 +34,7 @@ class Group(Keyboard):
 
     async def _render_keyboard(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
         kbd: RawKeyboard = []

@@ -1,10 +1,40 @@
+"""
+https://github.com/aiogram/aiogram/blob/dev-3.x/aiogram/client/bot.py.
+
+Original code licensed under MIT by aiogram contributors
+
+The MIT License (MIT)
+
+Copyright (c) 2017 - present Alex Root Junior
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy, modify,
+merge, publish, distribute, sublicense, and/or sell copies of the Software,
+and to permit persons to whom the Software is furnished to do so, subject to the
+following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies
+or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
+OR OTHER DEALINGS IN THE SOFTWARE.
+"""
+
 import io
 import json
 import pathlib
+import ssl
 from collections.abc import AsyncGenerator, Callable
 from typing import Any, BinaryIO, Never
 
-from aiohttp import ClientSession, ClientTimeout
+from aiohttp import ClientSession, ClientTimeout, TCPConnector
+from aiohttp.hdrs import AUTHORIZATION, USER_AGENT
+from aiohttp.http import SERVER_SOFTWARE
 from anyio import open_file
 from unihttp.clients.aiohttp import AiohttpAsyncClient
 from unihttp.http import HTTPResponse
@@ -14,6 +44,7 @@ from unihttp.serialize import RequestDumper, ResponseLoader
 
 from maxo import loggers
 from maxo.__meta__ import __version__
+from maxo.bot.methods import AddMembers
 from maxo.errors import (
     MaxBotApiError,
     MaxBotBadRequestError,
@@ -35,7 +66,7 @@ class MaxApiClient(AiohttpAsyncClient):
         token: str,
         request_dumper: RequestDumper,
         response_loader: ResponseLoader,
-        base_url: str = "https://platform-api.max.ru/",
+        base_url: str = "https://platform-api2.max.ru/",
         middleware: list[AsyncMiddleware] | None = None,
         session: ClientSession | None = None,
         json_dumps: Callable[[Any], str] = json.dumps,
@@ -44,12 +75,16 @@ class MaxApiClient(AiohttpAsyncClient):
         self._token = token
 
         if session is None:
-            session = ClientSession()
+            cert = (pathlib.Path(__file__).parent / "russiantrustedca.pem").resolve()
+            ssl_context = ssl.create_default_context()
+            ssl_context.load_verify_locations(cafile=cert)
+            connector = TCPConnector(ssl=ssl_context)
+            session = ClientSession(connector=connector)
 
-        if "Authorization" not in session.headers:
-            session.headers["Authorization"] = self._token
-        if "User-Agent" not in session.headers:
-            session.headers["User-Agent"] = f"maxo/{__version__}"
+        if AUTHORIZATION not in session.headers:
+            session.headers[AUTHORIZATION] = self._token
+        if USER_AGENT not in session.headers:
+            session.headers[USER_AGENT] = f"{SERVER_SOFTWARE} maxo/{__version__}"
 
         super().__init__(
             base_url=base_url,
@@ -106,6 +141,11 @@ class MaxApiClient(AiohttpAsyncClient):
                 or response.data.get("success", None) is False
             )
         ):
+            if isinstance(method, AddMembers):
+                # При ошибке добавления юзера апи возвращает success=false и статус 200,
+                # и даёт подробную инфу в ModifyMembersResult.
+                # Из-за этого для нормальной работы метода нужно не патчить его статус
+                return
             loggers.bot_session.warning(
                 "Patch the status code from %d to 400 due to an error on the MAX API",
                 response.status_code,

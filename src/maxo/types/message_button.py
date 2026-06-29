@@ -15,7 +15,7 @@ class MessageButton(Button):
 
     type: ButtonType = ButtonType.MESSAGE
 
-    text: Omittable[str] = Omitted()
+    text: Omittable[str] = Omitted()  # type: ignore[assignment]
     """Текст кнопки, который будет отправлен в чат от лица пользователя"""
 
     @property

@@ -26,6 +26,7 @@ from maxo.routing.filters.logic import (
     or_f,
 )
 from maxo.routing.filters.payload import Payload
+from maxo.routing.filters.state import StateFilter
 
 __all__ = (
     "AlwaysFalseFilter",
@@ -41,6 +42,7 @@ __all__ = (
     "InvertFilter",
     "OrFilter",
     "Payload",
+    "StateFilter",
     "and_f",
     "invert_f",
     "or_f",

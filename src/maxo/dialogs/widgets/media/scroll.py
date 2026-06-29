@@ -1,3 +1,5 @@
+from typing import Any
+
 from maxo.dialogs.api.entities import MediaAttachment
 from maxo.dialogs.api.protocols import DialogManager
 from maxo.dialogs.widgets.common import (
@@ -29,7 +31,7 @@ class MediaScroll(Media, BaseScroll):
 
     async def _render_media(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> list[MediaAttachment]:
         items = self.items_getter(data)
@@ -50,6 +52,6 @@ class MediaScroll(Media, BaseScroll):
             manager,
         )
 
-    async def get_page_count(self, data: dict, manager: DialogManager) -> int:
+    async def get_page_count(self, data: dict[Any, Any], manager: DialogManager) -> int:
         items = self.items_getter(data)
         return len(items)

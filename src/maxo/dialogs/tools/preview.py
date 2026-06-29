@@ -1,7 +1,6 @@
 # ruff: noqa: SLF001 BLE001
 
 import html
-import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -12,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Optional
 import anyio
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from maxo import Bot
+from maxo import Bot, loggers
 from maxo.dialogs.api.entities import (
     EVENT_CONTEXT_KEY,
     AccessSettings,
@@ -51,9 +50,6 @@ from maxo.types.recipient import Recipient
 if TYPE_CHECKING:
     from maxo.dialogs.api.internal.widgets import Widget
     from maxo.dialogs.dialog import Dialog
-
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -316,7 +312,7 @@ async def create_button(
             dialog_manager=manager,
         )
     except Exception:
-        logger.debug("Click %s", callback)
+        loggers.dialogs.debug("Click %s", callback)
     state = manager.current_context().state
     return RenderButton(title=title, state=state.state)
 
@@ -339,12 +335,12 @@ async def render_input(
         manager.set_state(state)
         await dialog._message_handler(message, dialog_manager=manager)
     except Exception:
-        logger.debug("Input %s", content_type)
+        loggers.dialogs.debug("Input %s", content_type)
 
     if state == manager.current_context().state:
-        logger.debug("State not changed")
+        loggers.dialogs.debug("State not changed")
         return None
-    logger.debug(
+    loggers.dialogs.debug(
         "State changed %s >> %s",
         state,
         manager.current_context().state,

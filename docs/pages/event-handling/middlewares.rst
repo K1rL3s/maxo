@@ -41,9 +41,10 @@
 .. code-block:: python
 
     from typing import Any
-    from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
+
     from maxo.routing.ctx import Ctx
-    from maxo.routing.updates.message_created import MessageCreated
+    from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
+    from maxo.routing.updates import MessageCreated
 
     class MyMiddleware(BaseMiddleware[MessageCreated]):
         async def __call__(
@@ -60,5 +61,5 @@
 
             # Код, выполняемый ПОСЛЕ обработчика
             print("After handler")
-            
+
             return result

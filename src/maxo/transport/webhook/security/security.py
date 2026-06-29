@@ -1,6 +1,7 @@
 from typing import Any
 
 from maxo import Bot
+from maxo.omit import Omittable, Omitted
 from maxo.transport.webhook.adapters.base_adapter import BoundRequest
 from maxo.transport.webhook.security.base_check import SecurityCheck
 from maxo.transport.webhook.security.secret_token import SecretToken
@@ -38,12 +39,12 @@ class Security:
 
         return True
 
-    async def get_secret_token(self, *, bot: Bot) -> str | None:
+    async def get_secret_token(self, *, bot: Bot) -> Omittable[str]:
         """
         Get the secret token for the given bot, if configured.
 
         :return: The secret token as a string.
         """
         if self._secret_token is None:
-            return None
+            return Omitted()
         return self._secret_token.secret_token(bot=bot)

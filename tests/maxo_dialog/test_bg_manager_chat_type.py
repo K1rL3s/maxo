@@ -19,7 +19,7 @@ from maxo.dialogs import (
     Window,
     setup_dialogs,
 )
-from maxo.dialogs.api.entities import DialogStartEvent
+from maxo.dialogs.api.entities import DialogAction, DialogStartEvent
 from maxo.dialogs.api.protocols import BgManagerFactory
 from maxo.dialogs.manager.bg_manager import BgManager, BgManagerFactoryImpl
 from maxo.dialogs.test_tools import BotClient, MockMessageManager
@@ -54,7 +54,9 @@ async def on_message(
     widget: MessageInput,
     manager: DialogManager,
 ) -> None:
-    received_texts.append(message.message.body.text)
+    text = message.message.body.text
+    assert text is not None
+    received_texts.append(text)
 
 
 @pytest.fixture(autouse=True)
@@ -144,13 +146,12 @@ class TestBgManagerChatTypePropagation:
 class TestUpdateContextMiddlewareDialogEvent:
     """UpdateContextMiddleware must populate ctx for DialogUpdateEvent."""
 
-    @pytest.mark.asyncio
     async def test_sets_event_from_user(self) -> None:
         """https://github.com/K1rL3s/maxo/issues/78: EVENT_FROM_USER_KEY must be set."""
         middleware = UpdateContextMiddleware()
         user = _fake_user(100)
         event = DialogStartEvent(
-            action="start",
+            action=DialogAction.START,
             data=None,
             new_state=ChatSG.active,
             mode=StartMode.RESET_STACK,
@@ -162,24 +163,23 @@ class TestUpdateContextMiddlewareDialogEvent:
             intent_id=None,
             stack_id=None,
         )
-        captured_ctx: Ctx = {}
+        captured_ctx = Ctx({})
 
         async def next_handler(ctx: Ctx) -> None:
             captured_ctx.update(ctx)
 
-        ctx: Ctx = {}
+        ctx = Ctx({})
         await middleware(MaxoUpdate(update=event), ctx, next_handler)
 
         assert EVENT_FROM_USER_KEY in captured_ctx
         assert captured_ctx[EVENT_FROM_USER_KEY].user_id == 100
 
-    @pytest.mark.asyncio
     async def test_sets_update_context_with_chat_id(self) -> None:
         """https://github.com/K1rL3s/maxo/issues/79: chat_id must not be None."""
         middleware = UpdateContextMiddleware()
         user = _fake_user(100)
         event = DialogStartEvent(
-            action="start",
+            action=DialogAction.START,
             data=None,
             new_state=ChatSG.active,
             mode=StartMode.RESET_STACK,
@@ -191,12 +191,12 @@ class TestUpdateContextMiddlewareDialogEvent:
             intent_id=None,
             stack_id=None,
         )
-        captured_ctx: Ctx = {}
+        captured_ctx = Ctx({})
 
         async def next_handler(ctx: Ctx) -> None:
             captured_ctx.update(ctx)
 
-        ctx: Ctx = {}
+        ctx = Ctx({})
         await middleware(MaxoUpdate(update=event), ctx, next_handler)
 
         update_context = captured_ctx[UPDATE_CONTEXT_KEY]
@@ -242,7 +242,6 @@ def message_manager() -> MockMessageManager:
     return MockMessageManager()
 
 
-@pytest.mark.asyncio
 async def test_bg_start_dialog_then_message_handled(
     message_manager: MockMessageManager,
 ) -> None:
@@ -250,7 +249,7 @@ async def test_bg_start_dialog_then_message_handled(
     dp, bg_factory = _make_dp(message_manager)
 
     user_id = 100
-    chat_id = 999  # Different from user_id — real Max 1:1 chat
+    chat_id = 999  # Different from user_id - real Max 1:1 chat
     client = BotClient(dp, user_id=user_id, chat_id=chat_id, chat_type=ChatType.DIALOG)
 
     await dp.feed_signal(BeforeStartup(), client.bot)
@@ -259,7 +258,7 @@ async def test_bg_start_dialog_then_message_handled(
     bg = bg_factory.bg(client.bot, user_id, chat_id, chat_type=ChatType.DIALOG)
     await bg.start(ChatSG.active, mode=StartMode.RESET_STACK)
 
-    # bg.start() dispatches via call_soon + create_task — yield to event loop
+    # bg.start() dispatches via call_soon + create_task - yield to event loop
     await asyncio.sleep(0.1)
 
     assert len(message_manager.sent_messages) >= 1
@@ -271,7 +270,6 @@ async def test_bg_start_dialog_then_message_handled(
     assert received_texts == ["hello from user"]
 
 
-@pytest.mark.asyncio
 async def test_bg_start_wrong_chat_type_message_unhandled(
     message_manager: MockMessageManager,
 ) -> None:
@@ -285,7 +283,7 @@ async def test_bg_start_wrong_chat_type_message_unhandled(
     await dp.feed_signal(BeforeStartup(), client.bot)
     await dp.feed_signal(AfterStartup(), client.bot)
 
-    # Default ChatType.CHAT — wrong for 1:1 dialog
+    # Default ChatType.CHAT - wrong for 1:1 dialog
     bg = bg_factory.bg(client.bot, user_id, chat_id)
     await bg.start(ChatSG.active, mode=StartMode.RESET_STACK)
 
@@ -294,5 +292,5 @@ async def test_bg_start_wrong_chat_type_message_unhandled(
     message_manager.reset_history()
     await client.send("hello from user")
 
-    # Message NOT handled — stack key mismatch ("<100>" vs "")
+    # Message NOT handled - stack key mismatch ("<100>" vs "")
     assert received_texts == []

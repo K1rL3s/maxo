@@ -69,20 +69,21 @@ NEW_STACK
 
 .. code-block:: python
 
-    from maxo.fsm import State, StatesGroup
-    from maxo.dialogs import Dialog, Window, StartMode
-    from maxo.dialogs.widgets.text import Const, Format
+    from maxo.dialogs import Dialog, DialogManager, StartMode, Window
     from maxo.dialogs.widgets.kbd import Button
+    from maxo.dialogs.widgets.text import Const, Format
+    from maxo.fsm import State, StatesGroup
+    from maxo.routing.updates import MessageCallback
 
     # --- Вложенный диалог: выбор цвета ---
 
     class ColorSG(StatesGroup):
         pick = State()
 
-    async def on_red(callback, button, manager):
+    async def on_red(callback: MessageCallback, button: Button, manager: DialogManager):
         await manager.done(result="red")
 
-    async def on_blue(callback, button, manager):
+    async def on_blue(callback: MessageCallback, button: Button, manager: DialogManager):
         await manager.done(result="blue")
 
     color_dialog = Dialog(
@@ -99,16 +100,16 @@ NEW_STACK
     class MainSG(StatesGroup):
         menu = State()
 
-    async def on_pick_color(callback, button, manager):
+    async def on_pick_color(callback: MessageCallback, button: Button, manager: DialogManager):
         # Запускаем вложенный диалог
         await manager.start(ColorSG.pick, mode=StartMode.NORMAL)
 
-    async def on_color_chosen(start_data, result, manager):
+    async def on_color_chosen(start_data, result, manager: DialogManager):
         """Вызывается, когда вложенный диалог завершился через done()."""
         if result:
             manager.dialog_data["color"] = result
 
-    async def main_getter(dialog_manager, **kwargs):
+    async def main_getter(dialog_manager: DialogManager, **kwargs):
         color = dialog_manager.dialog_data.get("color", "не выбран")
         return {"color": color}
 

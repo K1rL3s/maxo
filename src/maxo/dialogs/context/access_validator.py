@@ -1,13 +1,12 @@
-from logging import getLogger
-
 from maxo.dialogs import ChatEvent
 from maxo.dialogs.api.entities import Context, Stack
 from maxo.dialogs.api.protocols import StackAccessValidator
+from maxo.enums import ChatType
 from maxo.routing.ctx import Ctx
-from maxo.routing.middlewares.update_context import EVENT_FROM_USER_KEY
-from maxo.types import User
-
-logger = getLogger(__name__)
+from maxo.routing.middlewares.update_context import (
+    EVENT_FROM_USER_KEY,
+    UPDATE_CONTEXT_KEY,
+)
 
 
 class DefaultAccessValidator(StackAccessValidator):
@@ -20,14 +19,16 @@ class DefaultAccessValidator(StackAccessValidator):
     ) -> bool:
         access_settings = context.access_settings if context else stack.access_settings
 
-        # if everything is disabled, it is allowed
-        if access_settings is None:
+        if not access_settings:
             return True
-        if not (access_settings.user_ids or access_settings.custom):
+        update_context = ctx.get(UPDATE_CONTEXT_KEY)
+        # У maxo нет ChatType.PRIVATE, аналог - ChatType.DIALOG.
+        # UpdateContext есть всегда, EVENT_CHAT_KEY - только при enrich=True.
+        if update_context is not None and update_context.chat_type is ChatType.DIALOG:
             return True
-
-        user: User = ctx[EVENT_FROM_USER_KEY]
-        if user.id in access_settings.user_ids:  # noqa: SIM103
-            return True
-
-        return False
+        if access_settings.user_ids:
+            user = ctx.get(EVENT_FROM_USER_KEY)
+            # Пост в канале без user - не пройдёт user_ids, но не AttributeError
+            if user is None or user.id not in access_settings.user_ids:
+                return False
+        return True

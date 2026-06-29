@@ -1,7 +1,7 @@
 import warnings
-from logging import getLogger
 from typing import Any
 
+from maxo import loggers
 from maxo.dialogs.api.entities import (
     EVENT_CONTEXT_KEY,
     EventContext,
@@ -12,6 +12,7 @@ from maxo.dialogs.api.entities import (
 from maxo.dialogs.api.internal import Widget, WindowProtocol
 from maxo.enums.text_format import TextFormat
 from maxo.fsm import State
+from maxo.omit import Omittable, Omitted
 from maxo.routing.updates import MessageCallback, MessageCreated
 from maxo.types import Recipient
 
@@ -30,8 +31,6 @@ from .widgets.utils import (
     ensure_widgets,
 )
 
-logger = getLogger(__name__)
-
 _DEFAULT_MARKUP_FACTORY = InlineKeyboardFactory()
 
 
@@ -43,7 +42,7 @@ class Window(WindowProtocol):
         getter: GetterVariant = None,
         on_process_result: OnResultEvent | None = None,
         markup_factory: MarkupFactory = _DEFAULT_MARKUP_FACTORY,
-        parse_mode: TextFormat | None = None,
+        parse_mode: Omittable[TextFormat | None] = Omitted(),
         disable_web_page_preview: bool | None = None,
         protect_content: bool | None = None,
         preview_add_transitions: list[Keyboard] | None = None,
@@ -82,23 +81,23 @@ class Window(WindowProtocol):
 
     async def render_text(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> str:
         return await self.text.render_text(data, manager)
 
     async def render_media(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> list[MediaAttachment]:
-        if self.media:
+        if self.media:  # type: ignore[truthy-bool]
             return await self.media.render_media(data, manager)
         return []
 
     async def render_kbd(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> MarkupVariant:
         keyboard = await self.keyboard.render_keyboard(data, manager)
@@ -110,7 +109,7 @@ class Window(WindowProtocol):
 
     async def render_link_preview(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> LinkPreviewOptions | None:
         if self.link_preview:
@@ -121,7 +120,7 @@ class Window(WindowProtocol):
         self,
         dialog: "DialogProtocol",
         manager: DialogManager,
-    ) -> dict:
+    ) -> dict[Any, Any]:
         data = await dialog.load_data(manager)
         data.update(await self.getter(**manager.middleware_data))
         return data
@@ -160,12 +159,12 @@ class Window(WindowProtocol):
         dialog: DialogProtocol,
         manager: DialogManager,
     ) -> NewMessage:
-        logger.debug("Show window: %s", self)
+        loggers.dialogs.debug("Show window: %s", self)
         event_context: EventContext = manager.middleware_data[EVENT_CONTEXT_KEY]
         try:
             current_data = await self.load_data(dialog, manager)
         except Exception:
-            logger.exception("Cannot get window data for state %s", self.state)
+            loggers.dialogs.exception("Cannot get window data for state %s", self.state)
             raise
         try:
             media = await self.render_media(current_data, manager)
@@ -190,7 +189,7 @@ class Window(WindowProtocol):
                 keyboard=keyboard,
             )
         except Exception:
-            logger.exception("Cannot render window for state %s", self.state)
+            loggers.dialogs.exception("Cannot render window for state %s", self.state)
             raise
 
     def get_state(self) -> State:

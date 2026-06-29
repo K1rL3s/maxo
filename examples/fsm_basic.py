@@ -13,7 +13,6 @@ from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageButton
 from maxo.utils.builders import KeyboardBuilder
-from maxo.utils.facades import MessageCreatedFacade
 
 logger = logging.getLogger(__name__)
 
@@ -28,39 +27,30 @@ class Form(StatesGroup):
 
 
 @dp.message_created(CommandStart())
-async def command_start(
-    message: MessageCreated,
-    facade: MessageCreatedFacade,
-    fsm_context: FSMContext,
-) -> None:
+async def command_start(message: MessageCreated, fsm_context: FSMContext) -> None:
     await fsm_context.set_state(Form.name)
-    await facade.answer_text("Привет! Как тебя зовут?")
+    await message.answer_text("Привет! Как тебя зовут?")
 
 
 @dp.message_created(MagicFilter(F.text.casefold() == "отмена"))
-async def cancel_handler(
-    message: MessageCreated,
-    facade: MessageCreatedFacade,
-    fsm_context: FSMContext,
-) -> None:
+async def cancel_handler(message: MessageCreated, fsm_context: FSMContext) -> None:
     current_state = await fsm_context.get_state()
     if current_state is None:
         return
 
     logger.info("Cancelling state %r", current_state)
     await fsm_context.clear()
-    await facade.answer_text("Отменено.")
+    await message.answer_text("Отменено.")
 
 
 @dp.message_created(StateFilter(Form.name))
 async def process_name(
     message: MessageCreated,
-    facade: MessageCreatedFacade,
     fsm_context: FSMContext,
 ) -> None:
     await fsm_context.update_data(name=message.message.body.text)
     await fsm_context.set_state(Form.like_bots)
-    await facade.answer_text(
+    await message.answer_text(
         f"Приятно познакомиться, {message.message.body.text}!\nНравится писать ботов?",
         keyboard=KeyboardBuilder()
         .add(
@@ -79,13 +69,12 @@ async def process_name(
 )
 async def process_dont_like_write_bots(
     message: MessageCreated,
-    facade: MessageCreatedFacade,
     fsm_context: FSMContext,
 ) -> None:
     data = await fsm_context.get_data()
     await fsm_context.clear()
-    await facade.answer_text("Ну ладно.\nДо встречи.")
-    await show_summary(facade=facade, data=data, positive=False)
+    await message.answer_text("Ну ладно.\nДо встречи.")
+    await show_summary(update=message, data=data, positive=False)
 
 
 @dp.message_created(
@@ -96,42 +85,34 @@ async def process_dont_like_write_bots(
 )
 async def process_like_write_bots(
     message: MessageCreated,
-    facade: MessageCreatedFacade,
     fsm_context: FSMContext,
 ) -> None:
     await fsm_context.set_state(Form.language)
-    await facade.reply_text(
+    await message.reply_text(
         "Круто! Я тоже!\nНа каком языке программировал?",
     )
 
 
 @dp.message_created(StateFilter(Form.like_bots))
-async def process_unknown_write_bots(
-    message: MessageCreated,
-    facade: MessageCreatedFacade,
-) -> None:
-    await facade.reply_text("Не понял :(")
+async def process_unknown_write_bots(message: MessageCreated) -> None:
+    await message.reply_text("Не понял :(")
 
 
 @dp.message_created(StateFilter(Form.language))
-async def process_language(
-    message: MessageCreated,
-    facade: MessageCreatedFacade,
-    fsm_context: FSMContext,
-) -> None:
+async def process_language(message: MessageCreated, fsm_context: FSMContext) -> None:
     data = await fsm_context.update_data(language=message.message.body.text)
     await fsm_context.clear()
 
     if message.message.body.text and message.message.body.text.casefold() == "python":
-        await facade.reply_text(
+        await message.reply_text(
             "Python? Это тот язык, от которого у меня загораются схемы! 😉",
         )
 
-    await show_summary(facade=facade, data=data)
+    await show_summary(update=message, data=data)
 
 
 async def show_summary(
-    facade: MessageCreatedFacade,
+    update: MessageCreated,
     data: MutableMapping[str, Any],
     positive: bool = True,
 ) -> None:
@@ -143,7 +124,7 @@ async def show_summary(
         if positive
         else "тебе не нравится писать ботов, жаль..."
     )
-    await facade.answer_text(text=text)
+    await update.answer_text(text=text)
 
 
 def main() -> None:

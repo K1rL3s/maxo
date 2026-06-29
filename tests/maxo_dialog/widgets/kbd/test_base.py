@@ -1,6 +1,5 @@
 from typing import Any
 
-import pytest
 from magic_filter import F
 
 from maxo.dialogs import DialogManager
@@ -23,14 +22,12 @@ class Button(Keyboard):
         return [[MessageButton(text=self.widget_id)]]
 
 
-@pytest.mark.asyncio
 async def test_or(mock_manager: DialogManager) -> None:
     text = Button("a") | Button("b")
     res = await text.render_keyboard({}, mock_manager)
     assert res == [[MessageButton(text="a")]]
 
 
-@pytest.mark.asyncio
 async def test_or_condition(mock_manager: DialogManager) -> None:
     text = Button("A", when=F["a"]) | Button("B", when=F["b"]) | Button("C")
     res = await text.render_keyboard({"a": True}, mock_manager)

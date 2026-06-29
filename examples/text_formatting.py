@@ -6,7 +6,6 @@ from maxo.enums import TextFormat
 from maxo.routing.filters import Command
 from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
-from maxo.utils.facades import MessageCreatedFacade
 from maxo.utils.formatting import (
     Bold,
     Heading,
@@ -28,7 +27,7 @@ dp = Dispatcher()
 
 
 @dp.message_created(Command("start"))
-async def start_handler(update: MessageCreated, facade: MessageCreatedFacade) -> None:
+async def start_handler(update: MessageCreated) -> None:
     text = Text(
         Heading("Привет, это демонстрация возможностей форматирования текста."),
         "\n\n",
@@ -77,8 +76,8 @@ async def start_handler(update: MessageCreated, facade: MessageCreatedFacade) ->
         ),
     )
 
-    await facade.answer_text(text.as_html(), format=TextFormat.HTML)
-    await facade.answer_text(text.as_markdown(), format=TextFormat.MARKDOWN)
+    await update.answer_text(text.as_html(), format=TextFormat.HTML)
+    await update.answer_text(text.as_markdown(), format=TextFormat.MARKDOWN)
 
 
 def main() -> None:

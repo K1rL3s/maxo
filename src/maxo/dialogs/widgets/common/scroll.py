@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable, Sequence
-from typing import Protocol
+from typing import Any, Protocol
 
 from maxo.dialogs.api.entities import ChatEvent
 from maxo.dialogs.api.internal import Widget
@@ -17,7 +17,7 @@ from .managed import ManagedWidget
 
 class Scroll(Widget, Protocol):
     @abstractmethod
-    async def get_page_count(self, data: dict, manager: DialogManager) -> int:
+    async def get_page_count(self, data: dict[Any, Any], manager: DialogManager) -> int:
         raise NotImplementedError
 
     @abstractmethod

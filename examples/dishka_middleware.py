@@ -16,7 +16,6 @@ from maxo.integrations.dishka import CONTAINER_NAME, setup_dishka
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
 from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
-from maxo.utils.facades import MessageCreatedFacade
 
 
 class GreeterService:
@@ -56,12 +55,8 @@ class GreetingMiddleware(BaseMiddleware[MessageCreated]):
 
 
 # Greeting заполнен в middleware, хендлер получает его аргументом из ctx
-async def message_handler(
-    message: MessageCreated,
-    facade: MessageCreatedFacade,
-    greeting: str,
-) -> None:
-    await facade.answer_text(greeting)
+async def message_handler(message: MessageCreated, greeting: str) -> None:
+    await message.answer_text(greeting)
 
 
 async def main() -> None:

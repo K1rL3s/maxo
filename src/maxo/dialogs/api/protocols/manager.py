@@ -58,7 +58,7 @@ class BaseDialogManager(Protocol):
     @abstractmethod
     async def update(
         self,
-        data: Data | None = None,
+        data: dict[Any, Any] | None = None,
         show_mode: ShowMode | None = None,
     ) -> None:
         """Обновить данные диалога и перерисовать текущее окно."""
@@ -108,13 +108,13 @@ class DialogManager(BaseDialogManager, Protocol):
 
     @property
     @abstractmethod
-    def middleware_data(self) -> dict:
+    def middleware_data(self) -> dict[Any, Any]:
         """Middleware data."""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def dialog_data(self) -> dict:
+    def dialog_data(self) -> dict[Any, Any]:
         """Dialog data for current context."""
         raise NotImplementedError
 
@@ -200,7 +200,7 @@ class DialogManager(BaseDialogManager, Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    async def load_data(self) -> dict:
+    async def load_data(self) -> dict[Any, Any]:
         """Load data for current state."""
         raise NotImplementedError
 

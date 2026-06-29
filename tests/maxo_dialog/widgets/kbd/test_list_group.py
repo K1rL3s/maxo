@@ -1,12 +1,10 @@
-import pytest
-
 from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.kbd import ListGroup
 from maxo.dialogs.widgets.kbd.button import Button, Url
 from maxo.dialogs.widgets.text import Const, Format
+from maxo.types import CallbackButton, LinkButton
 
 
-@pytest.mark.asyncio
 async def test_render_list_group_with_url_button(mock_manager: DialogManager) -> None:
     list_group = ListGroup(
         Url(Const("Url"), url=Const("https://test.com")),
@@ -19,11 +17,12 @@ async def test_render_list_group_with_url_button(mock_manager: DialogManager) ->
 
     assert len(keyboard) == 3
     assert len(keyboard[0]) == 1
-    assert keyboard[0][0].text == "Url"
-    assert keyboard[0][0].url == "https://test.com"
+    button = keyboard[0][0]
+    assert isinstance(button, LinkButton)
+    assert button.text == "Url"
+    assert button.url == "https://test.com"
 
 
-@pytest.mark.asyncio
 async def test_render_list_group_with_callback_button(
     mock_manager: DialogManager,
 ) -> None:
@@ -39,13 +38,19 @@ async def test_render_list_group_with_callback_button(
     assert len(keyboard) == 3
 
     assert len(keyboard[0]) == 1
-    assert keyboard[0][0].text == "Callback a"
-    assert keyboard[0][0].payload == "list:a:button"
+    button = keyboard[0][0]
+    assert isinstance(button, CallbackButton)
+    assert button.text == "Callback a"
+    assert button.payload == "list:a:button"
 
     assert len(keyboard[2]) == 1
-    assert keyboard[1][0].text == "Callback b"
-    assert keyboard[1][0].payload == "list:b:button"
+    button = keyboard[1][0]
+    assert isinstance(button, CallbackButton)
+    assert button.text == "Callback b"
+    assert button.payload == "list:b:button"
 
     assert len(keyboard[2]) == 1
-    assert keyboard[2][0].text == "Callback c"
-    assert keyboard[2][0].payload == "list:c:button"
+    button = keyboard[2][0]
+    assert isinstance(button, CallbackButton)
+    assert button.text == "Callback c"
+    assert button.payload == "list:c:button"

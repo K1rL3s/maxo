@@ -5,7 +5,6 @@ from maxo import Bot, Dispatcher
 from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
 from maxo.types import UpdateContext
-from maxo.utils.facades import MessageCreatedFacade
 from maxo.utils.upload_media import FSInputFile
 
 dp = Dispatcher()
@@ -13,8 +12,7 @@ dp = Dispatcher()
 
 @dp.message_created()
 async def attachments_handler(
-    update: MessageCreated,
-    facade: MessageCreatedFacade,
+    message: MessageCreated,
     update_context: UpdateContext,
 ) -> None:
     # В одном сообщении API принимает только один файл - отправляем по одному.
@@ -27,23 +25,23 @@ async def attachments_handler(
         FSInputFile.video(path="./files/watermelon.mp4"),
     ):
         # Отправка через InputFile
-        message = await facade.send_message(media=(file,))
+        bot_message = await message.send_message(media=(file,))
 
-        sent_attachs = message.body.attachments or []
+        sent_attachments = bot_message.body.attachments or []
 
         # Отправка через AttachmetsRequests
-        requests = [attachment.to_request() for attachment in sent_attachs]
-        await facade.bot.send_message(
+        requests = [attachment.to_request() for attachment in sent_attachments]
+        await message.bot.send_message(
             user_id=update_context.user_id,
             chat_id=update_context.chat_id,
             attachments=requests,
         )
 
         # Отправка через Attachmets
-        await facade.bot.send_message(
+        await message.bot.send_message(
             user_id=update_context.user_id,
             chat_id=update_context.chat_id,
-            attachments=message.body.attachments,
+            attachments=bot_message.body.attachments,
         )
 
 

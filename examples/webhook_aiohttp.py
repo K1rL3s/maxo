@@ -11,15 +11,14 @@ from maxo.transport.webhook.adapters.aiohttp import AiohttpWebAdapter
 from maxo.transport.webhook.engines import SimpleEngine, WebhookEngine
 from maxo.transport.webhook.routing import StaticRouting
 from maxo.transport.webhook.security import Security, StaticSecretToken
-from maxo.utils.facades import MessageCreatedFacade
 
 dp = Dispatcher()
 bot = Bot(os.environ["TOKEN"])
 
 
 @dp.message_created()
-async def echo_handler(message: MessageCreated, facade: MessageCreatedFacade) -> None:
-    await facade.answer_text(
+async def echo_handler(message: MessageCreated) -> None:
+    await message.answer_text(
         text=message.message.body.html_text,
         format=TextFormat.HTML,
     )

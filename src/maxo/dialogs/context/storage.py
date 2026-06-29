@@ -1,5 +1,6 @@
 from contextlib import AsyncExitStack
 from copy import copy
+from typing import Any
 
 from maxo import Bot
 from maxo.dialogs.api.entities import DEFAULT_STACK_ID, AccessSettings, Context, Stack
@@ -161,7 +162,7 @@ class StorageProxy:
 
     def _parse_access_settings(
         self,
-        raw: dict | None,
+        raw: dict[Any, Any] | None,
     ) -> AccessSettings | None:
         if not raw:
             return None
@@ -173,7 +174,7 @@ class StorageProxy:
     def _dump_access_settings(
         self,
         access_settings: AccessSettings | None,
-    ) -> dict | None:
+    ) -> dict[Any, Any] | None:
         if not access_settings:
             return None
         return {

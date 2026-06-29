@@ -40,3 +40,10 @@ class Callback(MaxoType):
             obj=self,
             attr="payload",
         )
+
+    # Подражание aiogram
+    @property
+    def data(self) -> Omittable[str]:
+        return self.payload
+
+    unsafe_data = unsafe_payload  # Подражание aiogram

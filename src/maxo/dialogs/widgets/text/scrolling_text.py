@@ -1,3 +1,6 @@
+from typing import Any
+
+from maxo.dialogs.api.internal import TextWidget
 from maxo.dialogs.api.protocols import DialogManager
 from maxo.dialogs.widgets.common import (
     BaseScroll,
@@ -11,7 +14,7 @@ from .base import Text
 class ScrollingText(Text, BaseScroll):
     def __init__(
         self,
-        text: Text,
+        text: TextWidget,
         id: str,
         page_size: int = 0,
         when: WhenCondition = None,
@@ -30,12 +33,12 @@ class ScrollingText(Text, BaseScroll):
 
     async def _render_contents(
         self,
-        data: dict,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> str:
         return await self.text.render_text(data, manager)
 
-    async def _render_text(self, data: dict, manager: DialogManager) -> str:
+    async def _render_text(self, data: dict[Any, Any], manager: DialogManager) -> str:
         text = await self._render_contents(data, manager)
         pages = self._get_page_count(text)
         page = await self.get_page(manager)
@@ -45,6 +48,6 @@ class ScrollingText(Text, BaseScroll):
 
         return text[page_offset : page_offset + self.page_size]
 
-    async def get_page_count(self, data: dict, manager: DialogManager) -> int:
+    async def get_page_count(self, data: dict[Any, Any], manager: DialogManager) -> int:
         text = await self._render_contents(data, manager)
         return self._get_page_count(text)
