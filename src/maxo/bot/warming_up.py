@@ -1,3 +1,4 @@
+import linecache
 from enum import Enum
 from typing import Any, TypeVar, assert_never
 
@@ -266,6 +267,12 @@ _methods = (
 _RetortT = TypeVar("_RetortT", bound=Retort)
 
 
+def _drop_generated_sources() -> None:
+    for filename in tuple(linecache.cache):
+        if filename.startswith("<adaptix generated "):
+            linecache.cache.pop(filename, None)
+
+
 def warming_up_retort(
     retort: _RetortT,
     warming_up: WarmingUpType | None = None,
@@ -286,4 +293,5 @@ def warming_up_retort(
     for tp in types:
         retort_method(tp)  # type: ignore[arg-type]
 
+    _drop_generated_sources()
     return retort

@@ -3,11 +3,14 @@ import typing
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from adaptix import Chain, P, Retort, dumper, loader
+from adaptix import Chain, DebugTrail, P, Retort, as_sentinel, dumper, loader
+from adaptix._internal.morphing.generic_provider import TypeHintTagsUnwrappingProvider
 from adaptix.type_tools import exec_type_checking
+from unihttp.http import UploadFile
 from unihttp.markers import QueryMarker
+from unihttp.omitted import Omitted as UnihttpOmitted
 from unihttp.serializers.adaptix.marker_tools import for_marker
-from unihttp.serializers.adaptix.serialize import DEFAULT_RETORT
+from unihttp.serializers.adaptix.provider import method_provider
 
 from maxo._internal.adaptix import concat_provider, has_tag_provider, is_subclass
 from maxo.bot.defaults import BotDefaults
@@ -84,6 +87,16 @@ from maxo.types import (
 if TYPE_CHECKING:
     from maxo import Bot
 
+
+_BASE_RETORT = Retort(
+    recipe=[
+        as_sentinel(UnihttpOmitted),
+        TypeHintTagsUnwrappingProvider(),
+        method_provider(),
+        dumper(UploadFile, lambda x: x.to_tuple()),
+    ],
+    debug_trail=DebugTrail.DISABLE,
+)
 
 TAG_PROVIDERS = concat_provider(
     # ---> UpdateType <---
@@ -177,7 +190,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
     exec_type_checking(base)
     exec_type_checking(message)
 
-    extended = DEFAULT_RETORT.extend(
+    return _BASE_RETORT.extend(
         recipe=[
             TAG_PROVIDERS,
             dumper(
@@ -205,7 +218,6 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
             loader(P[datetime], _load_datetime),
         ],
     )
-    return typing.cast(Retort, extended)
 
 
 def create_retort(
