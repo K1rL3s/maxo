@@ -1,4 +1,7 @@
+import gc
 import linecache
+from collections.abc import Iterator
+from contextlib import contextmanager
 from enum import Enum
 from typing import Any, TypeVar, assert_never
 
@@ -271,6 +274,39 @@ def _drop_generated_sources() -> None:
     for filename in tuple(linecache.cache):
         if filename.startswith("<adaptix generated "):
             linecache.cache.pop(filename, None)
+
+
+@contextmanager
+def eager_cycle_collection() -> Iterator[None]:
+    """
+    Заставляет сборщик циклов работать во время прогрева retort.
+
+    Кодогенерация adaptix оставляет много циклического мусора: исключения
+    `CannotProvide` с трейсбеками и фреймами. Полная сборка (поколение 2)
+    запускается, когда доля новых долгоживущих объектов превышает четверть от
+    всех долгоживущих. После `import maxo` их уже сотни тысяч, поэтому мусор
+    прогрева успевает дожить до второго поколения и копится там до конца
+    прогрева. Пик держит арены, которые CPython не отдаёт ОС, и этот пик
+    становится постоянным RSS процесса.
+
+    `gc.freeze()` переносит всё, что уже создано, в постоянное поколение.
+    Счётчик долгоживущих объектов обнуляется, полные сборки начинают
+    запускаться сразу, и мусор прогрева освобождается по ходу дела. На типах
+    MAX это около 10 MB RSS без заметной потери скорости.
+
+    Если процесс уже заморожен (типичный preload перед `fork` в gunicorn или
+    uwsgi), ничего не трогаем: во-первых, оптимизация там уже работает,
+    во-вторых, `gc.unfreeze()` сломал бы чужой copy-on-write.
+    """
+    if not gc.isenabled() or gc.get_freeze_count():
+        yield
+        return
+
+    gc.freeze()
+    try:
+        yield
+    finally:
+        gc.unfreeze()
 
 
 def warming_up_retort(

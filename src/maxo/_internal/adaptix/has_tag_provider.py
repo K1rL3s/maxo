@@ -1,9 +1,10 @@
 from typing import Any
 
-from adaptix import Chain, Provider, dumper, loader
+from adaptix import Chain, Provider
 from adaptix._internal.provider.loc_stack_filtering import Pred
 from adaptix.load_error import LoadError
 
+from maxo._internal.adaptix.chaining import chained_dumper, chained_loader
 from maxo._internal.adaptix.concat_provider import concat_provider
 
 
@@ -13,7 +14,7 @@ def _loader_has_tag(pred: Pred, tag: str, value: Any) -> Provider:
             return data
         raise LoadError(tag, data.get(tag), value)
 
-    return loader(pred, loader_fn, Chain.FIRST)
+    return chained_loader(pred, loader_fn, Chain.FIRST)
 
 
 def _dumper_has_tag(pred: Pred, tag: str, value: Any) -> Provider:
@@ -21,7 +22,7 @@ def _dumper_has_tag(pred: Pred, tag: str, value: Any) -> Provider:
         data[tag] = value
         return data
 
-    return dumper(pred, dumper_fn, Chain.LAST)
+    return chained_dumper(pred, dumper_fn, Chain.LAST)
 
 
 def has_tag_provider(pred: Pred, tag: str, value: Any) -> Provider:

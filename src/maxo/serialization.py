@@ -12,10 +12,20 @@ from unihttp.omitted import Omitted as UnihttpOmitted
 from unihttp.serializers.adaptix.marker_tools import for_marker
 from unihttp.serializers.adaptix.provider import method_provider
 
-from maxo._internal.adaptix import concat_provider, has_tag_provider, is_subclass
+from maxo._internal.adaptix import (
+    chained_dumper,
+    chained_loader,
+    concat_provider,
+    has_tag_provider,
+    is_subclass,
+)
 from maxo.bot.defaults import BotDefaults
 from maxo.bot.methods import EditMessage, SendMessage
-from maxo.bot.warming_up import WarmingUpType, warming_up_retort
+from maxo.bot.warming_up import (
+    WarmingUpType,
+    eager_cycle_collection,
+    warming_up_retort,
+)
 from maxo.enums import (
     AttachmentRequestType,
     AttachmentType,
@@ -205,19 +215,25 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
                 for_marker(QueryMarker, P[list[str]] | P[list[int]]),
                 lambda seq: ",".join(str(el) for el in seq),
             ),
-            dumper(
+            chained_dumper(
                 P[*typing.get_args(types_with_defaults)],
                 _set_method_defaults,
-                chain=Chain.FIRST,
+                Chain.FIRST,
             ),
-            dumper(
+            chained_dumper(
                 P[AttachmentsRequests | Attachments],
                 lambda x: x.to_request() if isinstance(x, Attachments) else x,
-                chain=Chain.FIRST,
+                Chain.FIRST,
             ),
             loader(P[datetime], _load_datetime),
         ],
     )
+
+
+def _warm_up(retort: Retort) -> Retort:
+    with eager_cycle_collection():
+        retort = warming_up_retort(retort, warming_up=WarmingUpType.TYPES)
+        return warming_up_retort(retort, warming_up=WarmingUpType.METHOD)
 
 
 def create_retort(
@@ -228,8 +244,7 @@ def create_retort(
     retort = _create_retort(defaults=defaults)
 
     if warming_up:
-        retort = warming_up_retort(retort, warming_up=WarmingUpType.TYPES)
-        retort = warming_up_retort(retort, warming_up=WarmingUpType.METHOD)
+        retort = _warm_up(retort)
 
     return retort
 
@@ -246,11 +261,10 @@ def create_retort_with_bot(
     retort = _create_retort(defaults=defaults)
 
     retort = retort.extend(
-        recipe=[loader(is_subclass(base.MaxoType), _load_bot, Chain.LAST)],
+        recipe=[chained_loader(is_subclass(base.MaxoType), _load_bot, Chain.LAST)],
     )
 
     if warming_up:
-        retort = warming_up_retort(retort, warming_up=WarmingUpType.TYPES)
-        retort = warming_up_retort(retort, warming_up=WarmingUpType.METHOD)
+        retort = _warm_up(retort)
 
     return retort
