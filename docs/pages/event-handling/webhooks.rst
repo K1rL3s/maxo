@@ -182,6 +182,44 @@ Webhooks
 
 Если не передать ``security`` в движок, проверка токена производиться не будет.
 
+Помимо секретного токена, в ``Security`` можно передать дополнительные проверки
+(``SecurityCheck``). Например, ``IPCheck`` пропускает запросы только с указанных
+IP-адресов и подсетей, учитывая заголовок ``X-Forwarded-For`` за обратным прокси.
+MAX не публикует официальный список IP-адресов вебхука, поэтому разрешённые
+адреса и сети нужно задавать явно.
+
+.. code-block:: python
+
+    from maxo.transport.webhook.security import IPCheck, Security, StaticSecretToken
+
+    security = Security(
+        IPCheck("203.0.113.0/24", "198.51.100.7"),
+        secret_token=StaticSecretToken("your-super-secret-token"),
+    )
+
+Мульти-бот приложения
+---------------------
+
+Для приложений, обслуживающих несколько ботов за одним эндпоинтом, используйте
+``TokenEngine`` вместо ``SimpleEngine``. Он извлекает токен бота из запроса через
+``TokenRouting`` (``PathRouting`` или ``QueryRouting``), создаёт и кеширует
+экземпляры ``Bot`` по мере поступления запросов.
+
+.. code-block:: python
+
+    from maxo.transport.webhook.config.bot import BotConfig
+    from maxo.transport.webhook.engines import TokenEngine
+    from maxo.transport.webhook.routing import PathRouting
+
+    engine = TokenEngine(
+        dispatcher,
+        web_adapter=AiohttpWebAdapter(),
+        routing=PathRouting(url="https://example.com/webhook/{bot_token}"),
+        bot_config=BotConfig(),
+    )
+
+Вебхук для каждого бота устанавливается через ``engine.set_webhook(token)``.
+
 Запуск и остановка
 ------------------
 

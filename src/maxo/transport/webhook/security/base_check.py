@@ -1,18 +1,17 @@
-from abc import ABC, abstractmethod
-from typing import Any
+# ruff: noqa: E402
 
-from maxo import Bot
-from maxo.transport.webhook.adapters.base_adapter import BoundRequest
+import warnings
 
+warnings.warn(
+    "`SecurityCheck` был перенесён из "
+    "`maxo.transport.webhook.security.base_check` в "
+    "`maxo.transport.webhook.security.checks.check`. "
+    "Пожалуйста, обновите импорты на "
+    "`from maxo.transport.webhook.security.checks.check import SecurityCheck`.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class SecurityCheck(ABC):
-    """Abstract class for security check on webhook requests."""
+from maxo.transport.webhook.security.checks.check import SecurityCheck
 
-    @abstractmethod
-    async def verify(self, bot: Bot, bound_request: BoundRequest[Any]) -> bool:
-        """
-        Perform a security check.
-
-        :return: True if the check passes, False otherwise.
-        """
-        raise NotImplementedError
+__all__ = ("SecurityCheck",)

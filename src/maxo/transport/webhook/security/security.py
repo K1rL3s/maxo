@@ -3,7 +3,7 @@ from typing import Any
 from maxo import Bot
 from maxo.omit import Omittable, Omitted
 from maxo.transport.webhook.adapters.base_adapter import BoundRequest
-from maxo.transport.webhook.security.base_check import SecurityCheck
+from maxo.transport.webhook.security.checks.check import SecurityCheck
 from maxo.transport.webhook.security.secret_token import SecretToken
 
 

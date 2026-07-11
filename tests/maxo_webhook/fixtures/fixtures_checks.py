@@ -2,7 +2,7 @@ from typing import Any
 
 from maxo import Bot
 from maxo.transport.webhook.adapters.base_adapter import BoundRequest
-from maxo.transport.webhook.security.base_check import SecurityCheck
+from maxo.transport.webhook.security.checks.check import SecurityCheck
 
 
 class PassingCheck(SecurityCheck):
