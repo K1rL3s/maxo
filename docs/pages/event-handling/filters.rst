@@ -31,13 +31,11 @@
 
 .. code-block:: python
 
-    from magic_filter import F
-
-    from maxo.integrations.magic_filter import MagicFilter
+    from maxo.integrations.magic_filter import F
     from maxo.types import MessageCreated
 
     # Обработка команды /admin ИЛИ сообщения с текстом "secret"
-    @dispatcher.message_created(Command("admin") | MagicFilter(F.text == "secret"))
+    @dispatcher.message_created(Command("admin") | (F.text == "secret"))
     async def admin_area(update: MessageCreated):
         ...
 
@@ -50,18 +48,16 @@
 
 .. code-block:: python
 
-    from magic_filter import F
-
-    from maxo.integrations.magic_filter import MagicFilter
+    from maxo.integrations.magic_filter import F
     from maxo.routing.filters import Command
     from maxo.types import MessageCreated
 
     # Эти две регистрации эквивалентны
-    @dispatcher.message_created(Command("start"), MagicFilter(F.text == "hello"))
+    @dispatcher.message_created(Command("start"), F.text == "hello")
     async def start(update: MessageCreated):
         ...
 
-    @dispatcher.message_created(Command("start") & MagicFilter(F.text == "hello"))
+    @dispatcher.message_created(Command("start") & (F.text == "hello"))
     async def start_explicit(update: MessageCreated):
         ...
 
@@ -72,40 +68,90 @@
     dispatcher.message_created.handler(
         start,
         Command("start"),
-        MagicFilter(F.text == "hello"),
+        F.text == "hello",
     )
     dispatcher.message_created.register(
         start,
         Command("start"),
-        MagicFilter(F.text == "hello"),
+        F.text == "hello",
     )
     dispatcher.message_created.filter(
         Command("start"),
-        MagicFilter(F.text == "hello"),
+        F.text == "hello",
     )
 
 Magic Filter
 ------------
 
-Библиотека интегрирована с ``magic_filter``. Это позволяет писать выразительные условия прямо в коде, обращаясь к атрибутам обновления через объект ``F``.
+Библиотека интегрирована с ``magic_filter``. Это позволяет писать выразительные условия прямо в коде, обращаясь к атрибутам обновления через объект ``F``. Импортируйте его из интеграции - обычный ``F`` из пакета ``magic_filter`` фильтром **maxo** не является.
 
 .. code-block:: python
 
-    from magic_filter import F
-
-    from maxo.integrations.magic_filter import MagicFilter
+    from maxo.integrations.magic_filter import F
     from maxo.routing.ctx import Ctx
     from maxo.types import MessageCreated
 
     # Сработает, если текст сообщения равен "hello"
-    @dispatcher.message_created(MagicFilter(F.text == "hello"))
+    @dispatcher.message_created(F.text == "hello")
     async def hello(update: MessageCreated, ctx: Ctx):
         ...
 
     # Сработает, если у отправителя имя "Kirill"
-    @dispatcher.message_created(MagicFilter(F.message.sender.first_name == "Kirill"))
+    @dispatcher.message_created(F.message.sender.first_name == "Kirill")
     async def kirill_handler(update: MessageCreated, ctx: Ctx):
         ...
+
+Фильтром является **любой** узел магии, а не только результат сравнения: ``F.text`` (в значении «есть текст») - такой же фильтр, как ``F.text == "hello"``. Как фильтр магия резолвится по апдейту, а результат приводится к ``bool``.
+
+.. code-block:: python
+
+    # Сработает на любом сообщении с текстом
+    @dispatcher.message_created(F.message.body.text)
+    async def any_text(update: MessageCreated):
+        ...
+
+    # Цепочки собираются как обычно
+    @dispatcher.message_created(F.text.casefold() == "отмена")
+    async def cancel(update: MessageCreated):
+        ...
+
+    @dispatcher.message_created(F.text.regexp(r"^\d+$"))
+    async def digits(update: MessageCreated):
+        ...
+
+Магия комбинируется и с магией, и с обычными фильтрами **maxo**:
+
+.. code-block:: python
+
+    @dispatcher.message_created((F.text == "да") | (F.text == "нет"))
+    async def answer(update: MessageCreated):
+        ...
+
+    @dispatcher.message_created(Command("start") & F.message.body.text)
+    async def start_with_text(update: MessageCreated):
+        ...
+
+Если результат магии нужен в обработчике, задайте ``result_key`` - значение доедет до него как аргумент:
+
+.. code-block:: python
+
+    from maxo.integrations.magic_filter import F, MagicData, MagicFilter
+
+    @dispatcher.message_created(MagicFilter(F.message.body.text, result_key="text"))
+    async def with_text(update: MessageCreated, text: str):
+        ...
+
+``MagicData`` работает так же, но резолвит магию не по апдейту, а по контексту.
+
+Магия из интеграции подходит и диалогам: это полноценный ``magic_filter``, поэтому ее можно передавать в ``when`` виджетов ``maxo.dialogs``.
+
+.. code-block:: python
+
+    from maxo.dialogs.widgets.text import Format
+    from maxo.integrations.magic_filter import F
+
+    Format("Выбрано: {selected}", when=F["selected"])
+    Format("Ничего не выбрано", when=~F["selected"])
 
 SyncFilter (синхронные предикаты)
 ---------------------------------
