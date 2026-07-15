@@ -3,14 +3,12 @@ import logging
 import os
 from pathlib import Path
 
-from magic_filter import F
-
 from maxo import Bot, Dispatcher, Router
 from maxo.fsm.context import FSMContext
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.state import State, StatesGroup
 from maxo.fsm.storages.redis import RedisStorage
-from maxo.integrations.magic_filter import MagicFilter
+from maxo.integrations.magic_filter import F
 from maxo.routing.filters import Command, CommandObject, CommandStart
 from maxo.transport.long_polling import LongPolling
 from maxo.types import CallbackButton, MessageCallback, MessageCreated
@@ -86,7 +84,7 @@ async def handle_deeplink(
         await message.send_message(text="Использование: /link <shared_id>")
 
 
-@router.message_callback(MagicFilter(F.payload == "to_state_1"))
+@router.message_callback(F.payload == "to_state_1")
 async def to_state_1(callback: MessageCallback, fsm_context: FSMContext) -> None:
     await fsm_context.set_state(MyStates.state1)
     current_state = await fsm_context.get_state()
@@ -96,7 +94,7 @@ async def to_state_1(callback: MessageCallback, fsm_context: FSMContext) -> None
     )
 
 
-@router.message_callback(MagicFilter(F.payload == "to_state_2"))
+@router.message_callback(F.payload == "to_state_2")
 async def to_state_2(callback: MessageCallback, fsm_context: FSMContext) -> None:
     await fsm_context.set_state(MyStates.state2)
     current_state = await fsm_context.get_state()
@@ -106,7 +104,7 @@ async def to_state_2(callback: MessageCallback, fsm_context: FSMContext) -> None
     )
 
 
-@router.message_callback(MagicFilter(F.payload == "clear_state"))
+@router.message_callback(F.payload == "clear_state")
 async def clear_state(callback: MessageCallback, fsm_context: FSMContext) -> None:
     await fsm_context.clear()
     current_state = await fsm_context.get_state()

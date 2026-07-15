@@ -14,7 +14,6 @@ from bot_dialogs.multi_widget import multiwidget_dialog
 from bot_dialogs.scrolls import scroll_dialog
 from bot_dialogs.select import selects_dialog
 from bot_dialogs.switch import switch_dialog
-from magic_filter import F
 
 from maxo import Bot, Dispatcher, Router
 from maxo.dialogs import DialogManager, ShowMode, StartMode, setup_dialogs
@@ -22,7 +21,7 @@ from maxo.dialogs.api.exceptions import UnknownIntent
 from maxo.errors import MaxBotApiError
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.storages.memory import MemoryStorage
-from maxo.integrations.magic_filter import MagicFilter
+from maxo.integrations.magic_filter import F
 from maxo.routing.filters import ExceptionTypeFilter
 from maxo.transport.long_polling import LongPolling
 from maxo.types import ErrorEvent, MessageCallback, MessageCreated
@@ -93,7 +92,7 @@ def setup_dp() -> Dispatcher:
     storage = MemoryStorage(key_builder)
 
     dp = Dispatcher(storage=storage)
-    dp.message.register(start, MagicFilter(F.text == "/start"))
+    dp.message.register(start, F.text == "/start")
     dp.errors.register(
         on_unknown_intent,
         ExceptionTypeFilter(UnknownIntent),

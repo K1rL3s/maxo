@@ -3,11 +3,9 @@ import os
 from collections.abc import MutableMapping
 from typing import Any
 
-from magic_filter import F
-
 from maxo import Bot, Dispatcher
 from maxo.fsm import FSMContext, State, StateFilter, StatesGroup
-from maxo.integrations.magic_filter import MagicFilter
+from maxo.integrations.magic_filter import F
 from maxo.routing.filters import AndFilter, CommandStart
 from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageButton, MessageCreated
@@ -31,7 +29,7 @@ async def command_start(message: MessageCreated, fsm_context: FSMContext) -> Non
     await message.answer_text("Привет! Как тебя зовут?")
 
 
-@dp.message_created(MagicFilter(F.text.casefold() == "отмена"))
+@dp.message_created(F.text.casefold() == "отмена")
 async def cancel_handler(message: MessageCreated, fsm_context: FSMContext) -> None:
     current_state = await fsm_context.get_state()
     if current_state is None:
@@ -63,7 +61,7 @@ async def process_name(
 @dp.message_created(
     AndFilter(
         StateFilter(Form.like_bots),
-        MagicFilter(F.text.casefold() == "нет"),
+        F.text.casefold() == "нет",
     ),
 )
 async def process_dont_like_write_bots(
@@ -79,7 +77,7 @@ async def process_dont_like_write_bots(
 @dp.message_created(
     AndFilter(
         StateFilter(Form.like_bots),
-        MagicFilter(F.text.casefold() == "да"),
+        F.text.casefold() == "да",
     ),
 )
 async def process_like_write_bots(

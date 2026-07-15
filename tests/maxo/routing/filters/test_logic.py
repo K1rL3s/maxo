@@ -48,11 +48,11 @@ def test_or_inlining() -> None:
     assert or_filter._filters == [f1, f2, f3]
 
 
-def test_invert_inlining() -> None:
+async def test_invert_inlining() -> None:
     f1 = TrueF()
-    inverted_filter = InvertFilter(InvertFilter(f1))
-    assert inverted_filter._filter is f1
-    assert inverted_filter._inlined is True
+
+    assert await InvertFilter(InvertFilter(f1))(BaseUpdate(), Ctx({})) is True
+    assert await InvertFilter(InvertFilter(InvertFilter(f1)))(BaseUpdate(), Ctx({})) is False
 
 
 def test_combine_filters_empty_returns_always_true() -> None:

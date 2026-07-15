@@ -5,8 +5,9 @@ except ImportError as e:
     e.add_note(" * Please run `pip install maxo[magic_filter]`")
     raise
 
-from collections.abc import Mapping, Sequence
+from collections.abc import MutableMapping, Sequence
 from typing import Any, Final
+from warnings import warn
 
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters.base import BaseFilter
@@ -54,34 +55,38 @@ class MagicFilter(OriginMagicFilter, BaseFilter[Any]):
 
     __slots__ = ("_result_key",)
 
+    __hash__ = object.__hash__
+
     def __init__(
         self,
         operations: Sequence[BaseOperation] | OriginMagicFilter = (),
         result_key: str | None = None,
     ) -> None:
         if isinstance(operations, OriginMagicFilter):
+            warn(
+                "MagicFilter(...) устарел; передавайте F-выражение напрямую.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             operations = operations._operations  # noqa: SLF001
 
         super().__init__(tuple(operations))
         self._result_key = result_key
 
-    # `__call__` у магии занят под `CallOperation` (`F.text.casefold()`), поэтому
-    # вызов фильтра отличаем по аргументам: два позиционных, второй - контекст.
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        if self._is_filter_call(args, kwargs):
-            return self._check(*args)
+        if len(args) == _FILTER_CALL_ARGS and isinstance(args[1], MutableMapping):
+            return self._check(args[0], args[1])
 
         return self._extend(CallOperation(args=args, kwargs=kwargs))
 
-    @staticmethod
-    def _is_filter_call(args: tuple[Any, ...], kwargs: dict[str, Any]) -> bool:
-        return (
-            not kwargs
-            and len(args) == _FILTER_CALL_ARGS
-            and isinstance(args[1], Mapping)
-        )
+    # magic_filter объявляет `_new` classmethod, но result_key принадлежит узлу.
+    def _new(  # type: ignore[override]
+        self,
+        operations: tuple[BaseOperation, ...],
+    ) -> "MagicFilter":
+        return type(self)(operations, result_key=self._result_key)
 
-    async def _check(self, update: Any, ctx: Ctx) -> bool:
+    async def _check(self, update: Any, ctx: MutableMapping[str, Any]) -> bool:
         result = self.resolve(update)
         if not result:
             return False

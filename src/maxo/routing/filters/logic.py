@@ -8,6 +8,7 @@ from typing import Generic, TypeVar
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters.always import AlwaysTrueFilter
 from maxo.routing.filters.base import BaseFilter
+from maxo.routing.filters.filter_object import unwrap_filter, wrap_filter
 from maxo.routing.interfaces.filter import Filter
 from maxo.types.base import BaseUpdate
 
@@ -60,11 +61,12 @@ class AndFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
     def _inlining(self) -> None:
         inlined_filters: list[Filter[_UpdateT]] = []
 
-        for filter in self._filters:
-            if isinstance(filter, AndFilter):
-                inlined_filters.extend(filter._filters)
+        for filter_ in self._filters:
+            inner = unwrap_filter(filter_)
+            if isinstance(inner, AndFilter):
+                inlined_filters.extend(inner._filters)
             else:
-                inlined_filters.append(filter)
+                inlined_filters.append(wrap_filter(inner))
 
         self._filters = inlined_filters
 
@@ -93,17 +95,18 @@ class OrFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
     def _inlining(self) -> None:
         inlined_filters: list[Filter[_UpdateT]] = []
 
-        for filter in self._filters:
-            if isinstance(filter, OrFilter):
-                inlined_filters.extend(filter._filters)
+        for filter_ in self._filters:
+            inner = unwrap_filter(filter_)
+            if isinstance(inner, OrFilter):
+                inlined_filters.extend(inner._filters)
             else:
-                inlined_filters.append(filter)
+                inlined_filters.append(wrap_filter(inner))
 
         self._filters = inlined_filters
 
 
 class InvertFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
-    _inlined: bool
+    _negate: bool
 
     def __init__(
         self,
@@ -114,16 +117,19 @@ class InvertFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
 
     async def _reduce(self, update: _UpdateT, ctx: Ctx) -> bool:
         filter_result = await self._filter(update, ctx)
-        if self._inlined:
-            return filter_result
-        return not filter_result
+        if self._negate:
+            return not filter_result
+        return filter_result
 
     def _inlining(self) -> None:
-        if isinstance(self._filter, InvertFilter):
-            self._filter = self._filter._filter
-            self._inlined = True
-        else:
-            self._inlined = False
+        inner = unwrap_filter(self._filter)
+        negate = True
+        if isinstance(inner, InvertFilter):
+            negate ^= inner._negate
+            inner = unwrap_filter(inner._filter)
+
+        self._negate = negate
+        self._filter = wrap_filter(inner)
 
 
 and_f = AndFilter
@@ -137,5 +143,5 @@ def combine_filters(*filters: Filter[_UpdateT] | None) -> Filter[_UpdateT]:
     if not real_filters:
         return AlwaysTrueFilter()
     if len(real_filters) == 1:
-        return real_filters[0]
-    return AndFilter(*real_filters)
+        return wrap_filter(real_filters[0])
+    return wrap_filter(AndFilter(*real_filters))

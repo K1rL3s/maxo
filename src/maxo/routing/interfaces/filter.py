@@ -12,7 +12,15 @@ class Filter(Protocol[_UpdateT]):
     __slots__ = ()
 
     @abstractmethod
-    async def __call__(self, update: _UpdateT, ctx: Ctx) -> bool:
+    async def __call__(
+        self,
+        update: _UpdateT,
+        ctx: Ctx,
+        /,
+        *args: Any,
+        **kwargs: Any,
+    ) -> bool:
+        """Проверить апдейт и при необходимости получить зависимости из контекста."""
         raise NotImplementedError
 
     @abstractmethod

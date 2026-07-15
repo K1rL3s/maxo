@@ -1,3 +1,4 @@
+import warnings
 from unittest.mock import MagicMock
 
 from magic_filter import F as OriginF, MagicFilter as OriginMagicFilter
@@ -11,6 +12,7 @@ from maxo.integrations.magic_filter import F, MagicData, MagicFilter
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.filters import AlwaysFalseFilter, AlwaysTrueFilter
 from maxo.routing.filters.logic import AndFilter, OrFilter
+from maxo.routing.interfaces import Filter
 from maxo.routing.sentinels import UNHANDLED
 from maxo.types import Message, MessageBody, MessageCreated, Recipient, User
 from tests.constants import NOW
@@ -34,6 +36,19 @@ def make_update(text: str | None = "hi") -> MessageCreated:
     )
 
 
+async def test_wrapping_magic_filter_warns_and_keeps_result_key() -> None:
+    ctx = Ctx({})
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        magic_filter = MagicFilter(F["value"].cast(str), result_key="value")
+
+    assert len(caught) == 1
+    assert caught[0].category is DeprecationWarning
+    assert await magic_filter({"value": 42}, ctx) is True
+    assert ctx["value"] == "42"
+
+
 async def test_magic_data_custom_cast() -> None:
     magic_data = MagicData(F["item"].cast(str), result_key="result")
 
@@ -55,6 +70,7 @@ def test_every_magic_node_is_a_maxo_filter() -> None:
 
     # И при этом остается магией `magic_filter`
     assert isinstance(F.text, OriginMagicFilter)
+    assert isinstance(F.text, Filter)
     assert F is not OriginF
 
 
@@ -164,7 +180,7 @@ async def test_magic_works_as_handler_filter() -> None:
     dp = Dispatcher()
     handled: list[str] = []
 
-    @dp.message_created(F.message.body.text == "hi")
+    @dp.message_created(F.text)
     async def handler(update: MessageCreated) -> str:
         handled.append(update.message.body.text or "")
         return "ok"
@@ -172,7 +188,7 @@ async def test_magic_works_as_handler_filter() -> None:
     bot = make_bot()
 
     assert await dp.feed_update(make_update("hi"), bot) == "ok"
-    assert await dp.feed_update(make_update("bye"), bot) is UNHANDLED
+    assert await dp.feed_update(make_update(None), bot) is UNHANDLED
     assert handled == ["hi"]
 
 

@@ -4,12 +4,10 @@
 import logging
 import os
 
-from magic_filter import F
-
 from maxo import Bot, Dispatcher, Router
 from maxo.enums import TextFormat
 from maxo.fsm import FSMContext, State, StateFilter, StatesGroup
-from maxo.integrations.magic_filter import MagicFilter
+from maxo.integrations.magic_filter import F
 from maxo.routing.filters import CommandStart
 from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageCreated
@@ -30,7 +28,7 @@ async def start_handler(update: MessageCreated, state: FSMContext) -> None:
 
 
 @router.message_created(
-    MagicFilter(F.message.body.text)
+    F.message.body.text
     & StateFilter(UserRegistrationStatesGroup.INPUT_NAME),
 )
 async def input_name_handler(update: MessageCreated, state: FSMContext) -> None:
@@ -52,7 +50,7 @@ async def input_name_handler(update: MessageCreated, state: FSMContext) -> None:
 
 
 @router.message_created(
-    MagicFilter(F.message.body.text)
+    F.message.body.text
     & StateFilter(UserRegistrationStatesGroup.INPUT_AGE),
 )
 async def input_age_handler(update: MessageCreated, state: FSMContext) -> None:

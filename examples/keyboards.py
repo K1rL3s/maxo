@@ -4,10 +4,8 @@
 import logging
 import os
 
-from magic_filter import F
-
 from maxo import Bot, Dispatcher, Router
-from maxo.integrations.magic_filter import MagicFilter
+from maxo.integrations.magic_filter import F
 from maxo.routing.filters import CommandStart
 from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageCallback, MessageCreated
@@ -36,7 +34,7 @@ async def start_handler(update: MessageCreated) -> None:
     )
 
 
-@router.message_callback(MagicFilter(F.payload == "click_me"))
+@router.message_callback(F.payload == "click_me")
 async def click_me_handler(update: MessageCallback) -> None:
     await update.callback_answer("Ты кликнул на меня")
 

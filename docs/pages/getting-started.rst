@@ -112,10 +112,8 @@
           import logging
           import os
 
-          from magic_filter import F
-
           from maxo import Bot, Dispatcher, Router
-          from maxo.integrations.magic_filter import MagicFilter
+          from maxo.integrations.magic_filter import F
           from maxo.routing.filters import CommandStart
           from maxo.types import MessageCallback, MessageCreated
           from maxo.transport.long_polling import LongPolling
@@ -139,7 +137,7 @@
                   keyboard=keyboard,
               )
 
-          @router.message_callback(MagicFilter(F.payload == "my_callback"))
+          @router.message_callback(F.payload == "my_callback")
           async def button_handler(
               callback: MessageCallback,
               bot: Bot,
