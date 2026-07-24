@@ -5,7 +5,7 @@ from typing import Any
 
 from adaptix.load_error import LoadError
 
-from maxo import Bot, Dispatcher
+from maxo import Bot, Dispatcher, loggers
 from maxo.bot.methods.base import MaxoMethod
 from maxo.routing.signals import MaxoUpdate
 from maxo.transport.webhook.adapters.base_adapter import BoundRequest, WebAdapter
@@ -140,6 +140,32 @@ class WebhookEngine(ABC):
             self._background_feed_update(bot=bot, update=update),
         )
         self._background_feed_update_tasks.add(feed_update_task)
-        feed_update_task.add_done_callback(self._background_feed_update_tasks.discard)
+        feed_update_task.add_done_callback(
+            self._finalize_background_feed_update_task,
+        )
 
         return self.web_adapter.create_json_response(status=200, payload={})
+
+    def _finalize_background_feed_update_task(self, task: asyncio.Task[Any]) -> None:
+        self._background_feed_update_tasks.discard(task)
+        if task.cancelled():
+            return
+
+        exception = task.exception()
+        if exception is not None:
+            loggers.webhook.error(
+                "Background update handling failed",
+                exc_info=exception,
+            )
+
+    async def _drain_background_feed_update_tasks(self) -> None:
+        """
+        Дожидается завершения фоновых задач обработки апдейтов.
+
+        Вызывается в `on_shutdown()` конкретных движков до закрытия бота,
+        чтобы фоновые задачи не оставались брошенными при остановке.
+        """
+        while self._background_feed_update_tasks:
+            tasks = tuple(self._background_feed_update_tasks)
+            await asyncio.gather(*tasks, return_exceptions=True)
+            self._background_feed_update_tasks.difference_update(tasks)

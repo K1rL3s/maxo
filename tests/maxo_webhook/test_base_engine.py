@@ -1,7 +1,10 @@
+import asyncio
+import logging
 from json import JSONDecodeError
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from adaptix.load_error import LoadError
 
 from maxo import Bot, Dispatcher
@@ -163,6 +166,66 @@ async def test_handle_request_background_tracks_task() -> None:
     await task
 
     assert engine._background_feed_update_tasks == set()
+
+
+async def test_drain_background_tasks_waits_pending_updates() -> None:
+    dispatcher = Dispatcher()
+    finished = asyncio.Event()
+
+    async def slow_feed(*args: Any, **kwargs: Any) -> None:
+        await asyncio.sleep(0.01)
+        finished.set()
+
+    dispatcher.feed_max_update = slow_feed  # type: ignore[method-assign]
+    engine = DummyEngine(
+        dispatcher,
+        DummyAdapter(),
+        bot=make_bot(),
+        handle_in_background=True,
+    )
+
+    await engine.handle_request(JsonBoundRequest({"update": "payload"}))
+    assert len(engine._background_feed_update_tasks) == 1
+
+    await engine._drain_background_feed_update_tasks()
+
+    assert finished.is_set()
+    assert engine._background_feed_update_tasks == set()
+
+
+async def test_drain_background_tasks_without_tasks_is_noop() -> None:
+    engine = DummyEngine(Dispatcher(), DummyAdapter(), bot=make_bot())
+
+    await engine._drain_background_feed_update_tasks()
+
+    assert engine._background_feed_update_tasks == set()
+
+
+async def test_background_task_error_is_logged(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dispatcher = Dispatcher()
+
+    async def failing_feed(*args: Any, **kwargs: Any) -> None:
+        raise RuntimeError("boom")
+
+    dispatcher.feed_max_update = failing_feed  # type: ignore[method-assign]
+    engine = DummyEngine(
+        dispatcher,
+        DummyAdapter(),
+        bot=make_bot(),
+        handle_in_background=True,
+    )
+
+    with caplog.at_level(logging.ERROR, logger="maxo.webhook"):
+        await engine.handle_request(JsonBoundRequest({"update": "payload"}))
+        await engine._drain_background_feed_update_tasks()
+
+    assert engine._background_feed_update_tasks == set()
+    assert any(
+        record.exc_info and isinstance(record.exc_info[1], RuntimeError)
+        for record in caplog.records
+    )
 
 
 def test_register_delegates_to_adapter() -> None:

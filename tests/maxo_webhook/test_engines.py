@@ -1,3 +1,5 @@
+import asyncio
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -112,3 +114,29 @@ class TestSimpleEngine:
             dispatcher.feed_signal.await_args_list[1].args[0],
             AfterShutdown,
         )
+
+    async def test_on_shutdown_drains_background_tasks_before_bot_close(
+        self,
+        engine: SimpleEngine,
+        dispatcher: Dispatcher,
+        bot: MagicMock,
+    ) -> None:
+        dispatcher.feed_signal = AsyncMock()  # type: ignore[method-assign]
+        events: list[str] = []
+
+        async def slow_feed(*args: Any, **kwargs: Any) -> None:
+            await asyncio.sleep(0.01)
+            events.append("update_handled")
+
+        dispatcher.feed_max_update = slow_feed  # type: ignore[method-assign]
+
+        async def close_bot() -> None:
+            events.append("bot_closed")
+
+        bot.close = AsyncMock(side_effect=close_bot)
+
+        await engine._handle_request_background(bot=bot, update=MagicMock())
+        await engine.on_shutdown(app=MagicMock())
+
+        assert events == ["update_handled", "bot_closed"]
+        assert engine._background_feed_update_tasks == set()

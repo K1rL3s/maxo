@@ -89,6 +89,8 @@ class SimpleEngine(WebhookEngine):
 
         await self.dispatcher.feed_signal(BeforeShutdown(), self.bot)
 
+        # Фоновые задачи должны завершиться до закрытия бота
+        await self._drain_background_feed_update_tasks()
         await self.bot.close()
 
         await self.dispatcher.feed_signal(AfterShutdown(), self.bot)
