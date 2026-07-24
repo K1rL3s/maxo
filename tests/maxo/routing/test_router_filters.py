@@ -337,6 +337,71 @@ async def test_handler_no_filters_runs_handler(ctx: Ctx) -> None:
     assert ctx["execution_order"] == ["handler"]
 
 
+async def test_failed_handler_filter_chain_does_not_leak_ctx(ctx: Ctx) -> None:
+    dp = Dispatcher()
+
+    class WritingFilter(BaseFilter[MessageCreated]):
+        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+            ctx["command"] = "start"
+            return True
+
+    class FalseFilter(BaseFilter[MessageCreated]):
+        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+            return False
+
+    leaked: dict[str, bool] = {}
+
+    async def fallback_handler(_: Any, ctx: Ctx) -> str:
+        leaked["command"] = "command" in ctx
+        return "OK"
+
+    dp.message_created.handler(handler, WritingFilter(), FalseFilter())
+    dp.message_created.handler(fallback_handler)
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert leaked["command"] is False
+    assert "command" not in ctx
+
+
+async def test_failed_child_router_filter_does_not_leak_ctx(ctx: Ctx) -> None:
+    dp = Dispatcher()
+    first_child = Router("first_child")
+    second_child = Router("second_child")
+    dp.include(first_child)
+    dp.include(second_child)
+
+    class WritingFilter(BaseFilter[MessageCreated]):
+        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+            ctx["command"] = "start"
+            return True
+
+    class FalseFilter(BaseFilter[MessageCreated]):
+        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+            return False
+
+    leaked: dict[str, bool] = {}
+
+    async def fallback_handler(_: Any, ctx: Ctx) -> str:
+        leaked["command"] = "command" in ctx
+        return "OK"
+
+    first_child.message_created.filter(WritingFilter(), FalseFilter())
+    first_child.message_created.handler(handler)
+    second_child.message_created.handler(fallback_handler)
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert leaked["command"] is False
+    assert "command" not in ctx
+
+
 async def test_skip_handler_in_parent_falls_through_to_child(ctx: Ctx) -> None:
     dp = Dispatcher()
     parent_router = Router("parent")

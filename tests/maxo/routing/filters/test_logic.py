@@ -1,5 +1,5 @@
 from maxo.routing.ctx import Ctx
-from maxo.routing.filters import AlwaysFalseFilter, AlwaysTrueFilter
+from maxo.routing.filters import AlwaysFalseFilter, AlwaysTrueFilter, BaseFilter
 from maxo.routing.filters.logic import (
     AndFilter,
     InvertFilter,
@@ -11,6 +11,17 @@ from maxo.types.base import BaseUpdate
 
 TrueF = AlwaysTrueFilter
 FalseF = AlwaysFalseFilter
+
+
+class WritingFilter(BaseFilter[BaseUpdate]):
+    def __init__(self, key: str, value: str, *, result: bool = True) -> None:
+        self._key = key
+        self._value = value
+        self._result = result
+
+    async def __call__(self, update: BaseUpdate, ctx: Ctx) -> bool:
+        ctx[self._key] = self._value
+        return self._result
 
 
 async def test_and_filter() -> None:
@@ -30,6 +41,68 @@ async def test_or_filter() -> None:
 async def test_invert_filter() -> None:
     assert await InvertFilter(TrueF())(BaseUpdate(), Ctx({})) is False
     assert await InvertFilter(FalseF())(BaseUpdate(), Ctx({})) is True
+
+
+async def test_and_filter_failed_chain_does_not_leak_ctx() -> None:
+    ctx = Ctx({})
+
+    result = await AndFilter(WritingFilter("command", "start"), FalseF())(
+        BaseUpdate(),
+        ctx,
+    )
+
+    assert result is False
+    assert "command" not in ctx
+
+
+async def test_and_filter_passed_chain_commits_ctx() -> None:
+    ctx = Ctx({})
+
+    result = await AndFilter(WritingFilter("command", "start"), TrueF())(
+        BaseUpdate(),
+        ctx,
+    )
+
+    assert result is True
+    assert ctx["command"] == "start"
+
+
+async def test_and_filter_passed_chain_overwrites_existing_key() -> None:
+    ctx = Ctx({"command": "old"})
+
+    result = await AndFilter(WritingFilter("command", "new"), TrueF())(
+        BaseUpdate(),
+        ctx,
+    )
+
+    assert result is True
+    assert ctx["command"] == "new"
+
+
+async def test_or_filter_failed_branch_does_not_leak_ctx() -> None:
+    ctx = Ctx({})
+
+    result = await OrFilter(
+        WritingFilter("first", "1", result=False),
+        WritingFilter("second", "2"),
+    )(BaseUpdate(), ctx)
+
+    assert result is True
+    assert "first" not in ctx
+    assert ctx["second"] == "2"
+
+
+async def test_or_filter_all_branches_failed_does_not_leak_ctx() -> None:
+    ctx = Ctx({})
+
+    result = await OrFilter(
+        WritingFilter("first", "1", result=False),
+        WritingFilter("second", "2", result=False),
+    )(BaseUpdate(), ctx)
+
+    assert result is False
+    assert "first" not in ctx
+    assert "second" not in ctx
 
 
 def test_and_inlining() -> None:

@@ -21,9 +21,10 @@ class BaseLogicFilter(BaseFilter[_UpdateT], Generic[_UpdateT]):
         self._inlining()
 
     async def __call__(self, update: _UpdateT, ctx: Ctx) -> bool:
+        # Фильтры пишут в копию: общий ctx обновляется только если фильтр прошёл
         copied_ctx = copy(ctx)
 
-        reduce_result = await self._reduce(update, ctx)
+        reduce_result = await self._reduce(update, copied_ctx)
         if reduce_result:
             ctx.update(copied_ctx)
 
