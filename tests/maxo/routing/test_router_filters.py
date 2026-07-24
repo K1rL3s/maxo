@@ -13,6 +13,8 @@ from maxo.types import Message, MessageBody, Recipient, User
 from maxo.types.message_created import MessageCreated
 from tests.constants import NOW
 
+from .conftest import FalseFilter, WritingFilter
+
 
 @pytest.fixture
 def update() -> MessageCreated:
@@ -340,15 +342,6 @@ async def test_handler_no_filters_runs_handler(ctx: Ctx) -> None:
 async def test_failed_handler_filter_chain_does_not_leak_ctx(ctx: Ctx) -> None:
     dp = Dispatcher()
 
-    class WritingFilter(BaseFilter[MessageCreated]):
-        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
-            ctx["command"] = "start"
-            return True
-
-    class FalseFilter(BaseFilter[MessageCreated]):
-        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
-            return False
-
     leaked: dict[str, bool] = {}
 
     async def fallback_handler(_: Any, ctx: Ctx) -> str:
@@ -373,15 +366,6 @@ async def test_failed_child_router_filter_does_not_leak_ctx(ctx: Ctx) -> None:
     second_child = Router("second_child")
     dp.include(first_child)
     dp.include(second_child)
-
-    class WritingFilter(BaseFilter[MessageCreated]):
-        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
-            ctx["command"] = "start"
-            return True
-
-    class FalseFilter(BaseFilter[MessageCreated]):
-        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
-            return False
 
     leaked: dict[str, bool] = {}
 
