@@ -105,6 +105,42 @@ async def test_or_filter_all_branches_failed_does_not_leak_ctx() -> None:
     assert "second" not in ctx
 
 
+async def test_combine_filters_single_failed_does_not_leak_ctx() -> None:
+    ctx = Ctx({})
+
+    result = await combine_filters(WritingFilter("command", "start", result=False))(
+        BaseUpdate(),
+        ctx,
+    )
+
+    assert result is False
+    assert "command" not in ctx
+
+
+async def test_combine_filters_single_passed_commits_ctx() -> None:
+    ctx = Ctx({})
+
+    result = await combine_filters(WritingFilter("command", "start"))(
+        BaseUpdate(),
+        ctx,
+    )
+
+    assert result is True
+    assert ctx["command"] == "start"
+
+
+async def test_invert_filter_failed_inner_does_not_leak_ctx() -> None:
+    ctx = Ctx({})
+
+    result = await InvertFilter(WritingFilter("command", "start", result=False))(
+        BaseUpdate(),
+        ctx,
+    )
+
+    assert result is True
+    assert "command" not in ctx
+
+
 def test_and_inlining() -> None:
     f1 = TrueF()
     f2 = FalseF()
@@ -138,14 +174,18 @@ def test_combine_filters_only_none_returns_always_true() -> None:
     assert isinstance(combined, AlwaysTrueFilter)
 
 
-def test_combine_filters_single_returns_same_filter() -> None:
+def test_combine_filters_single_wraps_in_and_filter() -> None:
     f1 = FalseF()
-    assert combine_filters(f1) is f1
+    combined = combine_filters(f1)
+    assert isinstance(combined, AndFilter)
+    assert combined._filters == [f1]
 
 
 def test_combine_filters_single_ignores_none() -> None:
     f1 = FalseF()
-    assert combine_filters(None, f1, None) is f1
+    combined = combine_filters(None, f1, None)
+    assert isinstance(combined, AndFilter)
+    assert combined._filters == [f1]
 
 
 def test_combine_filters_multiple_returns_and_filter() -> None:

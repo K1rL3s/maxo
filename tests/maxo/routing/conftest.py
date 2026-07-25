@@ -23,6 +23,14 @@ class FalseFilter(BaseFilter[MessageCreated]):
         return False
 
 
+class WritingFalseFilter(BaseFilter[MessageCreated]):
+    """Фильтр, который пишет в ctx, но не проходит."""
+
+    async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+        ctx["command"] = "start"
+        return False
+
+
 @pytest.fixture
 def bot() -> MockBot:
     return MockBot()

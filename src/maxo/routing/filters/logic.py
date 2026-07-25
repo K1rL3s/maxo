@@ -1,7 +1,7 @@
 # ruff: noqa: SLF001
 
 from abc import abstractmethod
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from copy import copy
 from typing import Generic, TypeVar
 
@@ -21,14 +21,7 @@ class BaseLogicFilter(BaseFilter[_UpdateT], Generic[_UpdateT]):
         self._inlining()
 
     async def __call__(self, update: _UpdateT, ctx: Ctx) -> bool:
-        # Фильтры пишут в копию: общий ctx обновляется только если фильтр прошёл
-        copied_ctx = copy(ctx)
-
-        reduce_result = await self._reduce(update, copied_ctx)
-        if reduce_result:
-            ctx.update(copied_ctx)
-
-        return reduce_result
+        return await run_isolated(self._reduce, update, ctx)
 
     @abstractmethod
     async def _reduce(self, update: _UpdateT, ctx: Ctx) -> bool:
@@ -48,13 +41,8 @@ class AndFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
 
     async def _reduce(self, update: _UpdateT, ctx: Ctx) -> bool:
         for filter_ in self._filters:
-            loop_copied_ctx = copy(ctx)
-
-            filter_result = await filter_(update, loop_copied_ctx)
-            if not filter_result:
+            if not await filter_(update, ctx):
                 return False
-
-            ctx.update(loop_copied_ctx)
 
         return True
 
@@ -82,11 +70,7 @@ class OrFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
 
     async def _reduce(self, update: _UpdateT, ctx: Ctx) -> bool:
         for filter_ in self._filters:
-            loop_copied_ctx = copy(ctx)
-
-            filter_result = await filter_(update, loop_copied_ctx)
-            if filter_result:
-                ctx.update(loop_copied_ctx)
+            if await run_isolated(filter_, update, ctx):
                 return True
 
         return False
@@ -114,10 +98,9 @@ class InvertFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
         super().__init__()
 
     async def _reduce(self, update: _UpdateT, ctx: Ctx) -> bool:
-        filter_result = await self._filter(update, ctx)
         if self._inlined:
-            return filter_result
-        return not filter_result
+            return await self._filter(update, ctx)
+        return not await self._filter(update, copy(ctx))
 
     def _inlining(self) -> None:
         if isinstance(self._filter, InvertFilter):
@@ -133,10 +116,32 @@ invert_f = InvertFilter
 
 
 def combine_filters(*filters: Filter[_UpdateT] | None) -> Filter[_UpdateT]:
-    """Склеивает фильтры в один фильтр по правилу `И`."""
+    """
+    Склеивает фильтры в один фильтр по правилу `И`.
+
+    Даже единственный фильтр оборачивается в ``AndFilter``, чтобы его записи в
+    ``ctx`` проходили ту же изоляцию: они попадают в общий ``ctx`` только если
+    фильтр прошёл.
+    """
     real_filters = [filter_ for filter_ in filters if filter_ is not None]
     if not real_filters:
         return AlwaysTrueFilter()
-    if len(real_filters) == 1:
-        return real_filters[0]
     return AndFilter(*real_filters)
+
+
+async def run_isolated(
+    filter_: Callable[[_UpdateT, Ctx], Awaitable[bool]],
+    update: _UpdateT,
+    ctx: Ctx,
+) -> bool:
+    """
+    Прогоняет фильтр на копии ``ctx``.
+
+    Записи фильтра попадают в общий ``ctx`` только если он вернул ``True``.
+    Если фильтр не прошёл, его изменения отбрасываются и не видны никому дальше.
+    """
+    copied_ctx = copy(ctx)
+    if await filter_(update, copied_ctx):
+        ctx.update(copied_ctx)
+        return True
+    return False
