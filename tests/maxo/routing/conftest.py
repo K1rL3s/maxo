@@ -16,13 +16,6 @@ class WritingFilter(BaseFilter[MessageCreated]):
         return True
 
 
-class FalseFilter(BaseFilter[MessageCreated]):
-    """Фильтр, который всегда не проходит."""
-
-    async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
-        return False
-
-
 class WritingFalseFilter(BaseFilter[MessageCreated]):
     """Фильтр, который пишет в ctx, но не проходит."""
 

@@ -5,7 +5,7 @@ import pytest
 from maxo.enums import ChatType
 from maxo.routing.ctx import Ctx
 from maxo.routing.dispatcher import Dispatcher
-from maxo.routing.filters import BaseFilter
+from maxo.routing.filters import AlwaysFalseFilter, BaseFilter
 from maxo.routing.routers.simple import Router
 from maxo.routing.sentinels import UNHANDLED, SkipHandler
 from maxo.routing.signals import BeforeStartup
@@ -13,7 +13,7 @@ from maxo.types import Message, MessageBody, Recipient, User
 from maxo.types.message_created import MessageCreated
 from tests.constants import NOW
 
-from .conftest import FalseFilter, WritingFalseFilter, WritingFilter
+from .conftest import WritingFalseFilter, WritingFilter
 
 
 @pytest.fixture
@@ -348,7 +348,7 @@ async def test_failed_handler_filter_chain_does_not_leak_ctx(ctx: Ctx) -> None:
         leaked["command"] = "command" in ctx
         return "OK"
 
-    dp.message_created.handler(handler, WritingFilter(), FalseFilter())
+    dp.message_created.handler(handler, WritingFilter(), AlwaysFalseFilter())
     dp.message_created.handler(fallback_handler)
 
     await dp.feed_signal(BeforeStartup())
@@ -373,7 +373,7 @@ async def test_failed_child_router_filter_does_not_leak_ctx(ctx: Ctx) -> None:
         leaked["command"] = "command" in ctx
         return "OK"
 
-    first_child.message_created.filter(WritingFilter(), FalseFilter())
+    first_child.message_created.filter(WritingFilter(), AlwaysFalseFilter())
     first_child.message_created.handler(handler)
     second_child.message_created.handler(fallback_handler)
 

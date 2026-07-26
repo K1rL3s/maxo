@@ -21,7 +21,7 @@ class BaseLogicFilter(BaseFilter[_UpdateT], Generic[_UpdateT]):
         self._inlining()
 
     async def __call__(self, update: _UpdateT, ctx: Ctx) -> bool:
-        return await run_isolated(self._reduce, update, ctx)
+        return await _run_isolated(self._reduce, update, ctx)
 
     @abstractmethod
     async def _reduce(self, update: _UpdateT, ctx: Ctx) -> bool:
@@ -70,7 +70,7 @@ class OrFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
 
     async def _reduce(self, update: _UpdateT, ctx: Ctx) -> bool:
         for filter_ in self._filters:
-            if await run_isolated(filter_, update, ctx):
+            if await _run_isolated(filter_, update, ctx):
                 return True
 
         return False
@@ -103,9 +103,14 @@ class InvertFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
         return not await self._filter(update, copy(ctx))
 
     def _inlining(self) -> None:
-        if isinstance(self._filter, InvertFilter):
-            self._filter = self._filter._filter
-            self._inlined = True
+        inner = self._filter
+        if isinstance(inner, InvertFilter):
+            # `~~f` эквивалентно `f`, поэтому цепочка инверсий схлопывается в
+            # один узел. Чётность считаем по вложенному фильтру: если он сам уже
+            # схлопнут в тождество (`_inlined is True`), то текущая инверсия
+            # снова становится настоящей.
+            self._inlined = not inner._inlined
+            self._filter = inner._filter
         else:
             self._inlined = False
 
@@ -129,7 +134,7 @@ def combine_filters(*filters: Filter[_UpdateT] | None) -> Filter[_UpdateT]:
     return AndFilter(*real_filters)
 
 
-async def run_isolated(
+async def _run_isolated(
     filter_: Callable[[_UpdateT, Ctx], Awaitable[bool]],
     update: _UpdateT,
     ctx: Ctx,

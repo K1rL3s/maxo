@@ -141,6 +141,62 @@ async def test_invert_filter_failed_inner_does_not_leak_ctx() -> None:
     assert "command" not in ctx
 
 
+async def test_double_invert_behaves_as_inner_filter() -> None:
+    assert await InvertFilter(InvertFilter(TrueF()))(BaseUpdate(), Ctx({})) is True
+    assert await InvertFilter(InvertFilter(FalseF()))(BaseUpdate(), Ctx({})) is False
+
+
+async def test_triple_invert_behaves_as_single_invert() -> None:
+    triple_true = InvertFilter(InvertFilter(InvertFilter(TrueF())))
+    triple_false = InvertFilter(InvertFilter(InvertFilter(FalseF())))
+
+    assert await triple_true(BaseUpdate(), Ctx({})) is False
+    assert await triple_false(BaseUpdate(), Ctx({})) is True
+
+
+async def test_invert_operator_chain_keeps_parity() -> None:
+    filter_ = TrueF()
+
+    assert await (~filter_)(BaseUpdate(), Ctx({})) is False
+    assert await (~~filter_)(BaseUpdate(), Ctx({})) is True
+    assert await (~~~filter_)(BaseUpdate(), Ctx({})) is False
+    assert await (~~~~filter_)(BaseUpdate(), Ctx({})) is True
+
+
+async def test_double_invert_passed_inner_commits_ctx() -> None:
+    ctx = Ctx({})
+
+    result = await InvertFilter(InvertFilter(WritingFilter("command", "start")))(
+        BaseUpdate(),
+        ctx,
+    )
+
+    assert result is True
+    assert ctx["command"] == "start"
+
+
+async def test_double_invert_failed_inner_does_not_leak_ctx() -> None:
+    ctx = Ctx({})
+
+    result = await InvertFilter(
+        InvertFilter(WritingFilter("command", "start", result=False)),
+    )(BaseUpdate(), ctx)
+
+    assert result is False
+    assert "command" not in ctx
+
+
+async def test_triple_invert_failed_inner_does_not_leak_ctx() -> None:
+    ctx = Ctx({})
+
+    result = await InvertFilter(
+        InvertFilter(InvertFilter(WritingFilter("command", "start", result=False))),
+    )(BaseUpdate(), ctx)
+
+    assert result is True
+    assert "command" not in ctx
+
+
 def test_and_inlining() -> None:
     f1 = TrueF()
     f2 = FalseF()
@@ -162,6 +218,13 @@ def test_invert_inlining() -> None:
     inverted_filter = InvertFilter(InvertFilter(f1))
     assert inverted_filter._filter is f1
     assert inverted_filter._inlined is True
+
+
+def test_invert_inlining_odd_chain_stays_inverting() -> None:
+    f1 = TrueF()
+    inverted_filter = InvertFilter(InvertFilter(InvertFilter(f1)))
+    assert inverted_filter._filter is f1
+    assert inverted_filter._inlined is False
 
 
 def test_combine_filters_empty_returns_always_true() -> None:
