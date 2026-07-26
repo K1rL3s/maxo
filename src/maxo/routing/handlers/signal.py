@@ -8,6 +8,7 @@ from maxo.routing.filters.logic import combine_filters
 from maxo.routing.interfaces.filter import Filter
 from maxo.routing.interfaces.handler import Handler
 from maxo.routing.signals.base import BaseSignal
+from maxo.routing.utils.callback_params import get_callback_params
 
 _SignalT = TypeVar("_SignalT", bound=BaseSignal)
 _ReturnT_co = TypeVar("_ReturnT_co", covariant=True)
@@ -41,9 +42,7 @@ class SignalHandler(Handler[_SignalT, _ReturnT_co], Generic[_SignalT, _ReturnT_c
         self._awaitable = inspect.isawaitable(
             handler_fn,
         ) or inspect.iscoroutinefunction(handler_fn)
-        spec = inspect.getfullargspec(handler_fn)
-        self._params = {*spec.args, *spec.kwonlyargs}
-        self._varkw = spec.varkw is not None
+        self._params, self._varkw = get_callback_params(handler_fn)
 
     def __repr__(self) -> str:
         return (

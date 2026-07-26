@@ -174,3 +174,38 @@ SyncFilter (синхронные предикаты)
         text_length: int,
     ):
         await update.answer_text(f"Длинное сообщение! ({text_length} символов)")
+
+Зависимости фильтра из контекста
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Обычный фильтр принимает ``update`` и ``ctx``. С
+:func:`maxo.routing.utils.inline_ctx` их можно не объявлять: декоратор получает
+``ctx`` служебно и разворачивает его значения в именованные параметры callback.
+
+.. code-block:: python
+
+    from maxo import Bot, Ctx
+    from maxo.fsm import FSMContext
+    from maxo.routing.filters import BaseFilter
+    from maxo.routing.utils import inline_ctx
+    from maxo.types import MessageCreated
+
+    class IsAdminFilter(BaseFilter[MessageCreated]):
+        @inline_ctx
+        async def __call__(
+            self,
+            update: MessageCreated,
+            bot: Bot,
+            fsm_context: FSMContext,
+        ) -> bool:
+            ...
+
+Декоратор передаст ``bot`` и ``fsm_context`` из ``ctx`` по именам.
+Его также можно применять к обработчикам, когда зависимости из ``ctx`` нужны в их собственном callback.
+
+.. note::
+
+    Значение подставляется, только если ключ есть в контексте. Если зависимость
+    появляется не всегда (например, ``fsm_context`` есть не у каждого апдейта),
+    объявите параметр со значением по умолчанию - иначе вызов упадет с
+    ``TypeError``.

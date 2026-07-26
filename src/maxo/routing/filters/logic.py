@@ -60,11 +60,11 @@ class AndFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
     def _inlining(self) -> None:
         inlined_filters: list[Filter[_UpdateT]] = []
 
-        for filter in self._filters:
-            if isinstance(filter, AndFilter):
-                inlined_filters.extend(filter._filters)
+        for filter_ in self._filters:
+            if isinstance(filter_, AndFilter):
+                inlined_filters.extend(filter_._filters)
             else:
-                inlined_filters.append(filter)
+                inlined_filters.append(filter_)
 
         self._filters = inlined_filters
 
@@ -93,17 +93,18 @@ class OrFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
     def _inlining(self) -> None:
         inlined_filters: list[Filter[_UpdateT]] = []
 
-        for filter in self._filters:
-            if isinstance(filter, OrFilter):
-                inlined_filters.extend(filter._filters)
+        for filter_ in self._filters:
+            if isinstance(filter_, OrFilter):
+                inlined_filters.extend(filter_._filters)
             else:
-                inlined_filters.append(filter)
+                inlined_filters.append(filter_)
 
         self._filters = inlined_filters
 
 
 class InvertFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
     _inlined: bool
+    _filter: Filter[_UpdateT]
 
     def __init__(
         self,

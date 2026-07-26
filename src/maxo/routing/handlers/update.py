@@ -7,6 +7,7 @@ from maxo.routing.ctx import Ctx
 from maxo.routing.filters.logic import combine_filters
 from maxo.routing.interfaces.filter import Filter
 from maxo.routing.interfaces.handler import Handler
+from maxo.routing.utils.callback_params import get_callback_params
 from maxo.types.base import BaseUpdate
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
@@ -46,9 +47,7 @@ class UpdateHandler(
         self._awaitable = inspect.isawaitable(
             handler_fn,
         ) or inspect.iscoroutinefunction(handler_fn)
-        spec = inspect.getfullargspec(handler_fn)
-        self._params = {*spec.args, *spec.kwonlyargs}
-        self._varkw = spec.varkw is not None
+        self._params, self._varkw = get_callback_params(handler_fn)
 
     def __repr__(self) -> str:
         return (

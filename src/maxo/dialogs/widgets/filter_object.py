@@ -7,6 +7,7 @@ from typing import Any, cast
 
 from maxo.dialogs.integrations.magic_filter import DialogMagic
 from maxo.routing.interfaces import Filter
+from maxo.routing.utils.callback_params import get_callback_params
 
 CallbackType = Callable[..., Any]
 CallbackVariant = CallbackType | DialogMagic
@@ -29,9 +30,7 @@ class CallableObject:
         self.awaitable = inspect.isawaitable(callback) or inspect.iscoroutinefunction(
             callback,
         )
-        spec = inspect.getfullargspec(callback)
-        self.params = {*spec.args, *spec.kwonlyargs}
-        self.varkw = spec.varkw is not None
+        self.params, self.varkw = get_callback_params(callback)
 
     def _prepare_kwargs(self, kwargs: dict[str, Any]) -> dict[str, Any]:
         if self.varkw:
