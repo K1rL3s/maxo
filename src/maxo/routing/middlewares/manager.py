@@ -56,11 +56,6 @@ class MiddlewareManager(Generic[_UpdateT]):
         self.add(middleware)
         return middleware
 
-    def unregister(self, middleware: BaseMiddleware[_UpdateT]) -> None:
-        """Убрать мидлварь. Бросает `ValueError`, если она не зарегистрирована."""
-        self.state.ensure_remove_middleware()
-        self.middlewares.remove(middleware)
-
     def wrap_middlewares(
         self,
         trigger: Callable[[Ctx], Awaitable[_ReturnT]],
@@ -106,7 +101,3 @@ class MiddlewareManagerFacade(Generic[_UpdateT]):
     ) -> BaseMiddleware[_UpdateT]:
         """Зарегистрировать inner-мидлварь и вернуть ее же."""
         return self.inner.register(middleware)
-
-    def unregister(self, middleware: BaseMiddleware[_UpdateT]) -> None:
-        """Убрать inner-мидлварь."""
-        self.inner.unregister(middleware)

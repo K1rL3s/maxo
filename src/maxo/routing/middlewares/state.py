@@ -9,22 +9,12 @@ class MiddlewareManagerState(Protocol):
     def ensure_add_middleware(self) -> None:
         raise NotImplementedError
 
-    @abstractmethod
-    def ensure_remove_middleware(self) -> None:
-        raise NotImplementedError
-
 
 class EmptyMiddlewareManagerState(MiddlewareManagerState):
     def ensure_add_middleware(self) -> None:
-        return None
-
-    def ensure_remove_middleware(self) -> None:
         return None
 
 
 class StartedMiddlewareManagerState(MiddlewareManagerState):
     def ensure_add_middleware(self) -> None:
         raise StateError("Can't add middleware after startup")
-
-    def ensure_remove_middleware(self) -> None:
-        raise StateError("Can't remove middleware after startup")

@@ -39,33 +39,6 @@ def test_outer_register_adds_outer_and_returns_middleware() -> None:
     assert list(dp.message_created.middleware.outer.middlewares) == [middleware]
 
 
-def test_unregister_removes_inner_middleware() -> None:
-    dp = Dispatcher()
-    middleware = NoopMiddleware()
-    dp.message_created.middleware.register(middleware)
-
-    dp.message_created.middleware.unregister(middleware)
-
-    assert list(dp.message_created.middleware.inner.middlewares) == []
-
-
-def test_unregister_removes_outer_middleware() -> None:
-    dp = Dispatcher()
-    middleware = NoopMiddleware()
-    dp.message_created.outer_middleware.register(middleware)
-
-    dp.message_created.outer_middleware.unregister(middleware)
-
-    assert list(dp.message_created.middleware.outer.middlewares) == []
-
-
-def test_unregister_unknown_middleware_raises() -> None:
-    dp = Dispatcher()
-
-    with pytest.raises(ValueError):  # noqa: PT011
-        dp.message_created.middleware.unregister(NoopMiddleware())
-
-
 def test_call_without_arguments_returns_inner_decorator() -> None:
     dp = Dispatcher()
     middleware = NoopMiddleware()
@@ -86,17 +59,13 @@ def test_call_without_arguments_returns_outer_decorator() -> None:
     assert list(dp.message_created.middleware.outer.middlewares) == [middleware]
 
 
-async def test_unregister_after_startup_reports_removal() -> None:
+async def test_register_after_startup_reports_addition() -> None:
     dp = Dispatcher()
-    inner = NoopMiddleware()
-    outer = NoopMiddleware()
-    dp.message_created.middleware.register(inner)
-    dp.message_created.outer_middleware.register(outer)
 
     await dp.feed_signal(BeforeStartup())
 
-    with pytest.raises(StateError, match="Can't remove middleware after startup"):
-        dp.message_created.middleware.unregister(inner)
+    with pytest.raises(StateError, match="Can't add middleware after startup"):
+        dp.message_created.middleware.register(NoopMiddleware())
 
-    with pytest.raises(StateError, match="Can't remove middleware after startup"):
-        dp.message_created.outer_middleware.unregister(outer)
+    with pytest.raises(StateError, match="Can't add middleware after startup"):
+        dp.message_created.outer_middleware.register(NoopMiddleware())

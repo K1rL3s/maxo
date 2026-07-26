@@ -41,10 +41,10 @@
     dispatcher.message_created.outer_middleware(LoggingMiddleware())  # outer
 
     middleware = dispatcher.message_created.middleware.register(TransactionMiddleware())
-    dispatcher.message_created.middleware.unregister(middleware)
 
-Вызов без аргументов возвращает декоратор - как в ``aiogram``. Декорировать нужно
-готовый объект мидлвари или функцию с той же сигнатурой, а не класс.
+Вызов без аргументов возвращает декоратор - как в ``aiogram``. Скобки обязательны.
+Декорировать нужно готовый объект мидлвари или функцию с той же сигнатурой,
+а не класс.
 
 .. code-block:: python
 
