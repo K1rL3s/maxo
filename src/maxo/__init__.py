@@ -1,3 +1,4 @@
+from maxo import enums, methods, types
 from maxo.__meta__ import __version__
 from maxo.bot.bot import Bot
 from maxo.routing.ctx import Ctx
@@ -8,8 +9,6 @@ from maxo.utils.text_decorations import (
     html_decoration as html,
     markdown_decoration as md,
 )
-
-from . import enums, methods, types
 
 __all__ = (
     "BaseMiddleware",

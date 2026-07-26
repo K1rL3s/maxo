@@ -33,7 +33,10 @@ def test_top_level_modules() -> None:
 
 
 def test_methods_module_mirrors_bot_methods() -> None:
-    # `__all__` берется из `maxo.bot.methods`, поэтому проверяем,
-    # что звездный импорт действительно привязал каждое имя.
+    # Список имен в `maxo.methods` продублирован вручную, поэтому проверяем
+    # и совпадение состава, и то, что каждое имя ведет на тот же объект.
+    assert methods.__all__
+    assert set(methods.__all__) == set(bot_package.methods.__all__)
+
     for name in methods.__all__:
         assert getattr(methods, name) is getattr(bot_package.methods, name)

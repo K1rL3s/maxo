@@ -485,8 +485,14 @@ TAG_PROVIDERS = concat_provider(
   Набор повторяет корень `aiogram`, чтобы упростить портирование ботов.
 - Не расширяй top-level `maxo` без причины. Менее частые объекты должны
   импортироваться из своих публичных модулей.
-- `maxo.methods` - тонкий реэкспорт `maxo.bot.methods` через звездный импорт.
-  Список имен ведется только в `maxo.bot.methods.__all__`.
+- `maxo.methods` - тонкий реэкспорт `maxo.bot.methods` с явным списком имен.
+  При добавлении метода Bot API обнови оба `__all__`; расхождение ловит
+  `tests/maxo/test_public_api.py`.
+- `maxo.exceptions` и `maxo.filters` - постоянные алиасы `maxo.errors` и
+  `maxo.routing.filters` для портирования ботов с `aiogram`. Они не
+  предупреждают при импорте и не планируются к удалению. Не путай их с
+  переездами внутри пакета (`maxo.routing.updates`, `maxo.utils.facades`,
+  `maxo.utils.long_polling`) - те остаются с `DeprecationWarning`.
 - Документация и примеры должны импортировать из публичных модулей, а не из
   `maxo._internal`.
 - При добавлении публичного символа обновляй ближайший `__init__.py` и
