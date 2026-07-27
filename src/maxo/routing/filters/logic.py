@@ -5,7 +5,7 @@ from collections.abc import Awaitable, Callable, Sequence
 from copy import copy
 from typing import Generic, TypeVar
 
-from maxo.routing.ctx import Ctx
+from maxo.routing.ctx import CTX_KEY, Ctx
 from maxo.routing.filters.always import AlwaysTrueFilter
 from maxo.routing.filters.base import BaseFilter
 from maxo.routing.interfaces.filter import Filter
@@ -146,7 +146,16 @@ async def _run_isolated(
     Если фильтр не прошёл, его изменения отбрасываются и не видны никому дальше.
     """
     copied_ctx = copy(ctx)
-    if await filter_(update, copied_ctx):
-        ctx.update(copied_ctx)
-        return True
-    return False
+
+    has_self_ref = CTX_KEY in copied_ctx
+    if has_self_ref:
+        copied_ctx[CTX_KEY] = copied_ctx
+
+    if not await filter_(update, copied_ctx):
+        return False
+
+    if has_self_ref:
+        copied_ctx[CTX_KEY] = ctx
+
+    ctx.update(copied_ctx)
+    return True

@@ -3,7 +3,7 @@ from typing import Any
 import pytest
 
 from maxo.enums import ChatType
-from maxo.routing.ctx import Ctx
+from maxo.routing.ctx import CTX_KEY, Ctx
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.filters import AlwaysFalseFilter, BaseFilter
 from maxo.routing.routers.simple import Router
@@ -13,7 +13,7 @@ from maxo.types import Message, MessageBody, Recipient, User
 from maxo.types.message_created import MessageCreated
 from tests.constants import NOW
 
-from .conftest import WritingFalseFilter, WritingFilter
+from .conftest import SelfRefWritingFalseFilter, WritingFalseFilter, WritingFilter
 
 
 @pytest.fixture
@@ -405,6 +405,28 @@ async def test_failed_single_handler_filter_does_not_leak_ctx(ctx: Ctx) -> None:
     assert result == "OK"
     assert leaked["command"] is False
     assert "command" not in ctx
+
+
+async def test_failed_filter_does_not_leak_ctx_through_self_reference(ctx: Ctx) -> None:
+    dp = Dispatcher()
+
+    leaked: dict[str, bool] = {}
+
+    async def fallback_handler(_: Any, ctx: Ctx) -> str:
+        leaked["command"] = "command" in ctx
+        return "OK"
+
+    dp.message_created.handler(handler, SelfRefWritingFalseFilter())
+    dp.message_created.handler(fallback_handler)
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert leaked["command"] is False
+    assert "command" not in ctx
+    assert ctx[CTX_KEY] is ctx
 
 
 async def test_failed_single_child_router_filter_does_not_leak_ctx(ctx: Ctx) -> None:

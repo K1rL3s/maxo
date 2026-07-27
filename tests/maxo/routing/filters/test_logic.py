@@ -1,4 +1,4 @@
-from maxo.routing.ctx import Ctx
+from maxo.routing.ctx import CTX_KEY, Ctx
 from maxo.routing.filters import AlwaysFalseFilter, AlwaysTrueFilter, BaseFilter
 from maxo.routing.filters.logic import (
     AndFilter,
@@ -22,6 +22,36 @@ class WritingFilter(BaseFilter[BaseUpdate]):
     async def __call__(self, update: BaseUpdate, ctx: Ctx) -> bool:
         ctx[self._key] = self._value
         return self._result
+
+
+class SelfRefWritingFilter(BaseFilter[BaseUpdate]):
+    """Пишет в ``ctx`` через self-ссылку, а не напрямую."""
+
+    def __init__(self, key: str, value: str, *, result: bool = True) -> None:
+        self._key = key
+        self._value = value
+        self._result = result
+
+    async def __call__(self, update: BaseUpdate, ctx: Ctx) -> bool:
+        ctx[CTX_KEY][self._key] = self._value
+        return self._result
+
+
+class SelfRefProbeFilter(BaseFilter[BaseUpdate]):
+    """Запоминает, на что смотрит self-ссылка внутри фильтра."""
+
+    def __init__(self) -> None:
+        self.points_to_own_ctx: bool | None = None
+
+    async def __call__(self, update: BaseUpdate, ctx: Ctx) -> bool:
+        self.points_to_own_ctx = ctx[CTX_KEY] is ctx
+        return True
+
+
+def self_ref_ctx() -> Ctx:
+    ctx = Ctx({})
+    ctx[CTX_KEY] = ctx
+    return ctx
 
 
 async def test_and_filter() -> None:
@@ -195,6 +225,59 @@ async def test_triple_invert_failed_inner_does_not_leak_ctx() -> None:
 
     assert result is True
     assert "command" not in ctx
+
+
+async def test_self_reference_points_to_copy_inside_filter() -> None:
+    ctx = self_ref_ctx()
+    probe = SelfRefProbeFilter()
+
+    assert await combine_filters(probe)(BaseUpdate(), ctx) is True
+    assert probe.points_to_own_ctx is True
+
+
+async def test_failed_filter_does_not_leak_through_self_reference() -> None:
+    ctx = self_ref_ctx()
+
+    result = await combine_filters(
+        SelfRefWritingFilter("command", "start", result=False),
+    )(BaseUpdate(), ctx)
+
+    assert result is False
+    assert "command" not in ctx
+
+
+async def test_passed_filter_commits_through_self_reference() -> None:
+    ctx = self_ref_ctx()
+
+    result = await combine_filters(SelfRefWritingFilter("command", "start"))(
+        BaseUpdate(),
+        ctx,
+    )
+
+    assert result is True
+    assert ctx["command"] == "start"
+
+
+async def test_passed_filter_keeps_self_reference_intact() -> None:
+    ctx = self_ref_ctx()
+
+    assert await combine_filters(WritingFilter("command", "start"))(
+        BaseUpdate(),
+        ctx,
+    )
+
+    assert ctx[CTX_KEY] is ctx
+
+
+async def test_ctx_without_self_reference_does_not_gain_one() -> None:
+    ctx = Ctx({})
+
+    assert await combine_filters(WritingFilter("command", "start"))(
+        BaseUpdate(),
+        ctx,
+    )
+
+    assert CTX_KEY not in ctx
 
 
 def test_and_inlining() -> None:
