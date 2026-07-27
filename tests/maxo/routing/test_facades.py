@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from maxo.enums import ChatType
+from maxo.errors import AttributeIsEmptyError
 from maxo.routing.facades import (
     BotAddedToChatFacade,
     BotRemovedFromChatFacade,
@@ -63,10 +64,10 @@ def message() -> Message:
     )
 
 
-def callback_update() -> MessageCallback:
+def callback_update(msg: Message | None = None) -> MessageCallback:
     return MessageCallback(
         timestamp=NOW,
-        message=message(),
+        message=msg,
         callback=Callback(
             callback_id="cb",
             user=user(),
@@ -150,7 +151,7 @@ CASES: list[tuple[Any, Any, tuple[str, ...]]] = [
     ),
     (
         MessageCallbackFacade,
-        callback_update(),
+        callback_update(message()),
         ("message", "callback", "user_locale", "callback_id", "payload", "user"),
     ),
 ]
@@ -170,6 +171,32 @@ def test_facade_delegates_properties(
 
     for name in properties:
         assert getattr(facade, name) == getattr(update, name), name
+
+
+def test_callback_facade_message_is_none_without_message() -> None:
+    """MAX присылает `message=null`, если сообщение удалили до колбэка."""
+    facade = MessageCallbackFacade(bot=MagicMock(), update=callback_update())
+
+    assert facade.message is None
+
+    with pytest.raises(AttributeIsEmptyError):
+        _ = facade.unsafe_message
+
+
+async def test_callback_facade_methods_raise_without_message() -> None:
+    """Методы миксина ходят в сообщение через фасадную пропертю `message`."""
+    facade = MessageCallbackFacade(bot=MagicMock(), update=callback_update())
+
+    with pytest.raises(AttributeIsEmptyError):
+        await facade.send_message("hi")
+
+
+def test_callback_facade_unsafe_message_returns_message() -> None:
+    update = callback_update(message())
+
+    facade = MessageCallbackFacade(bot=MagicMock(), update=update)
+
+    assert facade.unsafe_message is update.message
 
 
 def test_base_facade_exposes_update() -> None:

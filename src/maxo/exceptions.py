@@ -1,14 +1,4 @@
-# ruff: noqa: E402
-
-import warnings
-
-warnings.warn(
-    "Алиас `maxo.exceptions` сделан для удобного портирования ботов с `aiogram` "
-    "и будет удален в будущих версиях. "
-    "Пожалуйста, обновите импорты на 'from maxo.errors import ...'",
-    FutureWarning,
-    stacklevel=2,
-)
+"""Исключения maxo. Алиас `maxo.errors` для портирования ботов с `aiogram`."""
 
 from maxo.errors.api import (
     MaxBotApiError,

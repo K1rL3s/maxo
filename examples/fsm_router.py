@@ -11,7 +11,6 @@ from maxo.enums import TextFormat
 from maxo.fsm import FSMContext, State, StateFilter, StatesGroup
 from maxo.integrations.magic_filter import MagicFilter
 from maxo.routing.filters import CommandStart
-from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageCreated
 
 router = Router(__name__)
@@ -88,7 +87,7 @@ def main() -> None:
 
     dp.include(router)
 
-    LongPolling(dp).run(bot)
+    dp.run_polling(bot)
 
 
 if __name__ == "__main__":

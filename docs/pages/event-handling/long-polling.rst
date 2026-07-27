@@ -18,14 +18,13 @@ Long Polling (длинный опрос) - простой способ полу�
 Использование
 -------------
 
-Для запуска поллинга используется класс :class:`~maxo.transport.long_polling.LongPolling`.
+Проще всего запустить поллинг прямо с диспетчера - методом ``run_polling``.
 
 .. code-block:: python
 
     import os
 
     from maxo import Bot, Dispatcher
-    from maxo.transport.long_polling import LongPolling
 
     bot = Bot(token=os.environ["TOKEN"])
     dispatcher = Dispatcher()
@@ -33,35 +32,44 @@ Long Polling (длинный опрос) - простой способ полу�
     # ... регистрация хендлеров ...
 
     if __name__ == "__main__":
-        # Запуск поллинга
-        LongPolling(dispatcher).run(bot)
+        # Запуск поллинга: поднимает свой event loop
+        dispatcher.run_polling(bot)
 
-Если вы уже находитесь в асинхронном контексте, используйте метод ``start`` вместо ``run``:
+Если вы уже находитесь в асинхронном контексте, используйте ``start_polling``:
+
+.. code-block:: python
+
+    await dispatcher.start_polling(bot)
+
+Под капотом оба метода зовут :class:`~maxo.transport.long_polling.LongPolling`. Этот класс остается публичным: он нужен, когда требуется свой ``backoff_config`` или несколько поллеров в одном процессе.
 
 .. code-block:: python
 
     from maxo.transport.long_polling import LongPolling
 
-    await LongPolling(dispatcher).start(bot)
+    LongPolling(dispatcher, backoff_config=my_backoff).run(bot)
 
 Параметры запуска
 -----------------
 
-Метод ``run`` принимает несколько аргументов для настройки поллинга:
+``run_polling`` и ``start_polling`` принимают те же аргументы, что и ``LongPolling``:
 
 - ``timeout`` (int, по умолчанию 30) - время в секундах, которое сервер будет держать соединение открытым, ожидая новых событий. Чем больше значение, тем меньше «пустых» запросов делает бот.
 - ``limit`` (int, по умолчанию 100) - максимальное количество обновлений, которое сервер вернет за один запрос.
 - ``drop_pending_updates`` (bool, по умолчанию False) - если ``True``, бот при запуске пропустит все обновления, которые накопились, пока он был выключен. Полезно при разработке.
-- ``types`` (list[str], опционально) - список типов обновлений, которые вы хотите получать. Если не указано, **maxo** автоматически определит этот список на основе зарегистрированных обработчиков.
+- ``types`` (Sequence[str], опционально) - список типов обновлений, которые вы хотите получать. Если не указано, **maxo** автоматически определит этот список на основе зарегистрированных обработчиков.
+- ``marker`` (int, опционально) - маркер, с которого продолжить чтение обновлений. Если не указан, сервер сам решит, откуда начать.
+- ``auto_close_bot`` (bool, по умолчанию True) - закрывать ли сессию бота после остановки поллинга.
+
+Все, что не входит в этот список, попадает в ``workflow_data`` и доезжает до хендлеров как контекст.
 
 .. code-block:: python
 
-    from maxo.transport.long_polling import LongPolling
-
-    LongPolling(dispatcher).run(
+    dispatcher.run_polling(
         bot,
         timeout=60,
         drop_pending_updates=True,
+        pool=my_db_pool,  # доедет до хендлеров как аргумент `pool`
     )
 
 Пропуск старых обновлений
@@ -71,9 +79,14 @@ Long Polling (длинный опрос) - простой способ полу�
 
 .. code-block:: python
 
-    from maxo.transport.long_polling import LongPolling
+    dispatcher.run_polling(bot, drop_pending_updates=True)
 
-    LongPolling(dispatcher).run(bot, drop_pending_updates=True)
+Остановка
+---------
+
+Поллинг не перехватывает ``SIGINT`` и ``SIGTERM`` и не глушит ``KeyboardInterrupt`` с ``SystemExit``: остановкой процесса управляет ваше приложение, а не фреймворк.
+
+По Ctrl+C ``run_polling`` завершается так же, как любой ``asyncio.run``: главная задача отменяется, обработчики обновлений на лету получают ``CancelledError``, сессия бота закрывается, а ``KeyboardInterrupt`` доходит до вызывающего кода. Сигналы ``before_shutdown`` и ``after_shutdown`` при таком выходе не прогоняются, поэтому не полагайтесь на них для сброса состояния на диск - делайте это в самих обработчиках или во внешнем супервизоре.
 
 Автоматическая обработка ошибок
 -------------------------------

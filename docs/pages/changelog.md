@@ -3,6 +3,102 @@
 История релизов автоматически собирается из [GitHub Releases](https://github.com/K1rL3s/maxo/releases) при каждой сборке документации.
 
 
+## [0.8.0](https://github.com/K1rL3s/maxo/releases/tag/v0.8.0) - 2026-07-12
+
+### What's Changed
+* Typing/mypy fix errors by @begezyan in https://github.com/K1rL3s/maxo/pull/127
+* Сваггер на 17.06.2026 by @K1rL3s in https://github.com/K1rL3s/maxo/pull/129
+* feat: hide_link - превью-ссылка через ShareAttachment by @biradrags in https://github.com/K1rL3s/maxo/pull/132
+* Алиас `MediaAttachment.file_id` к `media_id` by @K1rL3s in https://github.com/K1rL3s/maxo/pull/135
+* Запуск тестов на минимальных и максимальных версиях зависимостей by @K1rL3s in https://github.com/K1rL3s/maxo/pull/134
+* Исправил `BgManager._load` by @K1rL3s in https://github.com/K1rL3s/maxo/pull/138
+* `platform-api2` и сертификат Минцифры by @K1rL3s in https://github.com/K1rL3s/maxo/pull/137
+* `ConfirmButton` - кнопка с двойным подтверждением by @K1rL3s in https://github.com/K1rL3s/maxo/pull/130
+* Добавил `OpenAppButton` в `KeyboardBuilder` by @K1rL3s in https://github.com/K1rL3s/maxo/pull/139
+* feat: SyncFilter - синхронная функция как фильтр by @biradrags in https://github.com/K1rL3s/maxo/pull/131
+* Фикс пустого `MessageCreated.message` by @K1rL3s in https://github.com/K1rL3s/maxo/pull/140
+* Генерация слопа by @K1rL3s in https://github.com/K1rL3s/maxo/pull/142
+* add payload in dialogs WebApp by @cwerti in https://github.com/K1rL3s/maxo/pull/141
+* Поддержка `*filters` при регистрации обработчика by @K1rL3s in https://github.com/K1rL3s/maxo/pull/143
+* Щедрый фикс всех линтеров от курсорыча, куклода и кукодекса by @tsk8r in https://github.com/K1rL3s/maxo/pull/145
+* Умная нейрослоп задержка загрузки файлов by @K1rL3s in https://github.com/K1rL3s/maxo/pull/144
+* Сваггер на 10.07.2026 by @K1rL3s in https://github.com/K1rL3s/maxo/pull/148
+* feat: CallbackAnswerMiddleware - авто-ответ на колбэк by @biradrags in https://github.com/K1rL3s/maxo/pull/133
+* Перенос апдейтов в типы by @K1rL3s in https://github.com/K1rL3s/maxo/pull/149
+* Чистка перед релизом by @K1rL3s in https://github.com/K1rL3s/maxo/pull/155
+
+### New Contributors
+* @cwerti made their first contribution in https://github.com/K1rL3s/maxo/pull/141
+
+### Нейро release notes
+
+Главное в релизе: переход на `platform-api2.max.ru` с сертификатом Минцифры, умная загрузка медиа вместо фиксированной паузы, переезд апдейтов в `maxo.types` и несколько портов удобных вещей из `aiogram`
+
+#### Критические изменения
+
+- **Апдейты переехали из `maxo.routing.updates` в `maxo.types`.** Старые импорты продолжают работать, но кидают `DeprecationWarning`. Обновите импорты на `from maxo.types import MessageCreated, MessageCallback, ...`
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/149
+- **Фильтры при регистрации обработчика стали строго позиционными** (`*filters`). Вызов `@router.message_created(filter=MyFilter())` больше не работает - пишите `@router.message_created(MyFilter())`. Зато теперь можно передать несколько фильтров сразу, они склеиваются по `И`
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/143
+- **Базовый URL сменился на `https://platform-api2.max.ru/`**, а `MaxApiClient` теперь ходит в апи с сертификатом Минцифры (сертификат вшит в пакет)
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/137
+- **Удалён нерабочий `maxo.types.chat_button.ChatButton`**
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/148
+- **`GET /chats` доживает последние дни.** С июня 2026 апи перестаёт отдавать список чатов бота; собирайте `chat_id` из событий `bot_added` / `bot_started` и храните у себя. Подробности - в docstring `GetChats`
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/148
+
+#### Новое
+
+- **Умная загрузка файлов.** Вместо фиксированной паузы `0.5` секунды после загрузки вложений появился `UploadConfig` с режимами `AUTO`, `SINGLE` и `RESUMABLE`. Большие файлы льются чанками и не читаются в память целиком, задержка перед отправкой оценивается по типу и размеру файла, а ошибка `attachment.not.ready` ретраится с backoff через `AttachmentNotReadyRetryMiddleware`. Настраивается через `Bot(upload_config=...)`.
+  Closes #10
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/144
+- **`CallbackAnswerMiddleware`** - автоматический ответ на колбэк до или после хендлера. Механизма flags в maxo нет, поэтому конфигурация идёт через мутабельный `CallbackAnswer` в `ctx`: объявите параметр `callback_answer: CallbackAnswer` в хендлере и меняйте поведение на лету.
+  Closes #67
+  by @biradrags in https://github.com/K1rL3s/maxo/pull/133
+- **`SyncFilter`** - синхронная функция или лямбда в качестве фильтра, с флагами `run_in_thread` (для блокирующих предикатов) и `exceptions_as_false`.
+  Closes #66
+  by @biradrags in https://github.com/K1rL3s/maxo/pull/131
+- **`hide_link`** - Max-аналог одноимённого хелпера из aiogram. В отличие от aiogram возвращает не строку для вставки в текст, а `ShareAttachmentRequest`, который кладётся в `attachments`.
+  Closes #65
+  by @biradrags in https://github.com/K1rL3s/maxo/pull/132
+- **`ConfirmButton`** - кнопка с двойным подтверждением для диалогов, без отдельного окна под подтверждение. Состояние не хранится в dialog data, поэтому между переключениями окон кнопка сбрасывается в исходный вид
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/130
+- **`KeyboardBuilder.add_open_app`** - шорткат для `OpenAppButton`
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/139
+- **`payload` у WebApp в диалогах**
+  by @cwerti in https://github.com/K1rL3s/maxo/pull/141
+- **`MessageCallback.answer` как `callback_answer`**, а также алиасы для привычек из aiogram: `Callback.data` рядом с `payload`, `MediaAttachment.file_id` как алиас к `media_id`
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/135
+- **Типизированные сетевые ошибки**: `MaxBotNetworkError` и `MaxBotTimeoutError` - транспортные ошибки `aiohttp` и `unihttp` больше не протекают наружу как есть
+
+#### Исправления
+
+- Фикс загрузки `MessageCreated` с пустым `message` - ломалось на голосовых сообщениях
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/140
+- Фикс `BgManager._load`: для диалогов нельзя использовать `bot.get_members`, да и вызывался он неправильно
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/138
+- `ChatsIterator` и `ChatMembersIterator` больше не зацикливаются: `marker=None` означает последнюю страницу, а не запрос первой
+- `KeyboardBuilder.add()` больше не содержит мёртвой закомментированной валидации
+- `maxo.utils.callback_answer` не тянет за собой deprecated-шим и не кидает чужой `DeprecationWarning`
+- Исправлено описание `disable_link_preview`: превью отключается при `true`, а не при `false`
+
+#### Внутреннее, CI и типизация
+
+- Обновление типов, методов, енумов и апдейтов по сваггеру на 17.06.2026 и 10.07.2026. `SetAdmins` стал алиасом к `PostAdmins`
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/129, https://github.com/K1rL3s/maxo/pull/148
+- Починены все ошибки `mypy` в `src/maxo`, `tests` и `examples`, плюс конфиги `codespell` / `slotscheck` / `bandit`
+  by @tsk8r in https://github.com/K1rL3s/maxo/pull/145
+- Аннотации типов в тестах
+  by @begezyan in https://github.com/K1rL3s/maxo/pull/127
+- Тесты гоняются на минимальных и максимальных версиях зависимостей
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/134
+- Скиллы для ИИ-агентов
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/142
+
+
+**Full Changelog**: https://github.com/K1rL3s/maxo/compare/v0.7.0...v0.8.0
+
+
 ## [0.7.0](https://github.com/K1rL3s/maxo/releases/tag/v0.7.0) - 2026-06-03
 
 ### What's Changed

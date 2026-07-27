@@ -5,7 +5,6 @@ from typing import Any
 from maxo import Bot, Ctx, Dispatcher
 from maxo.routing.filters.base import BaseFilter
 from maxo.routing.interfaces import BaseMiddleware, NextMiddleware
-from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageCreated
 
 
@@ -68,7 +67,7 @@ async def echo_handler(_: MessageCreated) -> None:
 def main() -> None:
     logging.basicConfig(level=logging.DEBUG)
     bot = Bot(os.environ["TOKEN"])
-    LongPolling(dp).run(bot)
+    dp.run_polling(bot)
 
 
 if __name__ == "__main__":

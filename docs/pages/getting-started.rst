@@ -61,7 +61,6 @@
 
           from maxo import Bot, Dispatcher
           from maxo.types import MessageCreated
-          from maxo.transport.long_polling import LongPolling
 
           bot = Bot(os.environ["TOKEN"])
           dispatcher = Dispatcher()
@@ -72,7 +71,7 @@
               await update.answer_text(text)
 
           logging.basicConfig(level=logging.INFO)
-          LongPolling(dispatcher).run(bot)
+          dispatcher.run_polling(bot)
 
     .. tab-item:: Команды
 
@@ -85,7 +84,6 @@
           from maxo import Bot, Dispatcher, Router
           from maxo.routing.filters import CommandStart
           from maxo.types import MessageCreated
-          from maxo.transport.long_polling import LongPolling
 
           bot = Bot(os.environ["TOKEN"])
           router = Router()
@@ -99,7 +97,7 @@
               logging.basicConfig(level=logging.INFO)
               dispatcher = Dispatcher()
               dispatcher.include(router)
-              LongPolling(dispatcher).run(bot)
+              dispatcher.run_polling(bot)
 
           if __name__ == "__main__":
               main()
@@ -118,7 +116,6 @@
           from maxo.integrations.magic_filter import MagicFilter
           from maxo.routing.filters import CommandStart
           from maxo.types import MessageCallback, MessageCreated
-          from maxo.transport.long_polling import LongPolling
           from maxo.utils.builders import KeyboardBuilder
 
           bot = Bot(os.environ["TOKEN"])
@@ -154,7 +151,7 @@
               logging.basicConfig(level=logging.INFO)
               dispatcher = Dispatcher()
               dispatcher.include(router)
-              LongPolling(dispatcher).run(bot)
+              dispatcher.run_polling(bot)
 
           if __name__ == "__main__":
               main()

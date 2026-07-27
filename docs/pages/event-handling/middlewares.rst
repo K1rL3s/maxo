@@ -33,6 +33,29 @@
     # Внутренняя мидлварь для callback-кнопок в конкретном роутере
     shop_router.message_callback.middleware.inner(TransactionMiddleware())
 
+Для совместимости с привычками из ``aiogram`` есть короткие формы. Вызов ``.middleware(...)`` добавляет **inner**-мидлварь, ``.outer_middleware(...)`` - **outer**. Метод ``.register(...)`` делает то же самое и возвращает саму мидлварь.
+
+.. code-block:: python
+
+    dispatcher.message_created.middleware(TransactionMiddleware())  # inner
+    dispatcher.message_created.outer_middleware(LoggingMiddleware())  # outer
+
+    middleware = dispatcher.message_created.middleware.register(TransactionMiddleware())
+
+Вызов без аргументов возвращает декоратор - как в ``aiogram``. Скобки обязательны.
+Декорировать нужно готовый объект мидлвари или функцию с той же сигнатурой,
+а не класс.
+
+.. code-block:: python
+
+    @dispatcher.message_created.outer_middleware()
+    async def logging_middleware(
+        update: MessageCreated,
+        ctx: Ctx,
+        next: NextMiddleware[MessageCreated],
+    ) -> Any:
+        return await next(ctx)
+
 Написание своей мидлвари
 ------------------------
 

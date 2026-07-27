@@ -9,7 +9,6 @@ from maxo import Bot, Dispatcher
 from maxo.fsm import FSMContext, State, StateFilter, StatesGroup
 from maxo.integrations.magic_filter import MagicFilter
 from maxo.routing.filters import AndFilter, CommandStart
-from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageButton, MessageCreated
 from maxo.utils.builders import KeyboardBuilder
 
@@ -129,7 +128,7 @@ async def show_summary(
 def main() -> None:
     logging.basicConfig(level=logging.DEBUG)
     bot = Bot(token=os.environ["TOKEN"])
-    LongPolling(dp).run(bot)
+    dp.run_polling(bot)
 
 
 if __name__ == "__main__":

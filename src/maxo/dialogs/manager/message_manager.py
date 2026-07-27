@@ -3,17 +3,22 @@ from collections.abc import Sequence
 from typing import Any, cast
 
 from maxo import Bot, loggers
-from maxo.dialogs.api.entities import MediaAttachment, NewMessage, OldMessage, ShowMode
+from maxo.dialogs.api.entities import (
+    MediaAttachment,
+    MediaId,
+    NewMessage,
+    OldMessage,
+    ShowMode,
+)
 from maxo.dialogs.api.protocols import (
     MediaIdStorageProtocol,
     MessageManagerProtocol,
     MessageNotModified,
 )
-from maxo.dialogs.manager.attachment_facade import DialogAttachmentsFacade
 from maxo.enums import AttachmentType, UploadType
 from maxo.errors import MaxBotApiError, MaxBotBadRequestError
 from maxo.omit import Omitted
-from maxo.routing.mixins import MediaInput
+from maxo.routing.mixins import AttachmentsFacade, MediaInput
 from maxo.types import (
     Attachments,
     AttachmentsRequests,
@@ -22,12 +27,11 @@ from maxo.types import (
     FileAttachmentRequest,
     InlineButtons,
     MediaAttachments,
-    MediaAttachmentsRequests,
     Message,
     PhotoAttachmentRequest,
     VideoAttachmentRequest,
 )
-from maxo.utils.upload_media import FSInputFile, InputFile
+from maxo.utils.upload_media import FSInputFile
 
 SEND_METHODS = {
     AttachmentType.AUDIO: "send_audio",
@@ -95,11 +99,7 @@ class MessageManager(MessageManagerProtocol):
         ):
             return True
 
-        if self.had_media(old_message) != self.need_media(new_message):
-            return True
-        if not self.need_media(new_message):
-            return False
-        return False
+        return self.had_media(old_message) or self.need_media(new_message)
 
     def _can_edit(self, new_message: NewMessage, old_message: OldMessage) -> bool:
         return True
@@ -233,16 +233,41 @@ class MessageManager(MessageManagerProtocol):
                 return await self.send_message(bot, new_message)
             raise
 
+    def _need_two_step_media_edit(
+        self,
+        new_message: NewMessage,
+        old_message: OldMessage,
+    ) -> bool:
+        return (
+            new_message.two_step_media_edit
+            and self.had_media(old_message)
+            and self.need_media(new_message)
+        )
+
     async def edit_message(
         self,
         bot: Bot,
         new_message: NewMessage,
         old_message: OldMessage,
     ) -> Message:
+        if self._need_two_step_media_edit(new_message, old_message):
+            await self._edit(bot, new_message, old_message, media=[])
+        await self._edit(bot, new_message, old_message, media=new_message.media)
+        message = await bot.get_message_by_id(message_id=old_message.message_id)
+        await self._save_media_ids(new_message, message)
+        return message
+
+    async def _edit(
+        self,
+        bot: Bot,
+        new_message: NewMessage,
+        old_message: OldMessage,
+        media: list[MediaAttachment],
+    ) -> None:
         attachments = await self._build_attachments(
             bot,
             new_message.keyboard,
-            new_message.media,
+            media,
         )
         await bot.edit_message(
             link=new_message.link_to,
@@ -254,7 +279,6 @@ class MessageManager(MessageManagerProtocol):
             ),
             format=new_message.parse_mode,
         )
-        return await bot.get_message_by_id(message_id=old_message.message_id)
 
     async def send_message(self, bot: Bot, new_message: NewMessage) -> Message:
         if new_message.link_preview_options:
@@ -283,6 +307,7 @@ class MessageManager(MessageManagerProtocol):
             format=new_message.parse_mode,
             disable_link_preview=disable_link_preview,
         )
+        await self._save_media_ids(new_message, result.message)
         return result.message
 
     async def _build_attachments(
@@ -291,17 +316,36 @@ class MessageManager(MessageManagerProtocol):
         keyboard: Sequence[Sequence[InlineButtons]] | None,
         media: list[MediaAttachment],
     ) -> Sequence[AttachmentsRequests]:
-        converted_media = [self._convert_media(m) for m in media]
-        base: list[MediaAttachmentsRequests] = []
-        files: list[InputFile] = []
-        for attach in converted_media:
-            if isinstance(attach, InputFile):
-                files.append(attach)
-            elif isinstance(attach, MediaAttachmentsRequests):
-                base.append(attach)
+        converted_media = [
+            converted
+            for item in media
+            if (converted := self._convert_media(item)) is not None
+        ]
+        return await AttachmentsFacade(bot).build_attachments(
+            base=[],
+            keyboard=keyboard,
+            files=converted_media,
+        )
 
-        facade = DialogAttachmentsFacade(bot, media_id_storage=self.media_id_storage)
-        return await facade.build_attachments(base=base, keyboard=keyboard, files=files)
+    async def _save_media_ids(
+        self,
+        new_message: NewMessage,
+        sent_message: Message,
+    ) -> None:
+        sent_media = [
+            attach
+            for attach in (sent_message.body.attachments or [])
+            if isinstance(attach, MediaAttachments)
+        ]
+        for media, sent in zip(new_message.media, sent_media, strict=False):
+            if media.path is None and media.url is None:
+                continue
+            await self.media_id_storage.save_media_id(
+                path=media.path,
+                url=media.url,
+                type=media.type,
+                media_id=MediaId(token=sent.payload.token),
+            )
 
     def _convert_media(self, media: MediaAttachment) -> MediaInput | None:
         if media.media_id:

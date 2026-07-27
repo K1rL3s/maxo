@@ -29,6 +29,7 @@ from maxo.dialogs.context.intent_middleware import (
     IntentMiddlewareFactory,
     event_context_from_aiogd,
     event_context_from_bot_started,
+    event_context_from_callback,
     event_context_from_error,
     event_context_from_user_added_to_chat,
 )
@@ -75,6 +76,15 @@ def make_ctx(bot: Any = None) -> dict[Any, Any]:
     }
 
 
+def make_callback(payload: str = "data") -> Callback:
+    return Callback(
+        callback_id="c",
+        user=make_user(),
+        timestamp=NOW,
+        payload=payload,
+    )
+
+
 def make_message_callback(payload: str = "data") -> MessageCallback:
     return MessageCallback(
         timestamp=NOW,
@@ -83,12 +93,16 @@ def make_message_callback(payload: str = "data") -> MessageCallback:
             recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=10, user_id=1),
             body=MessageBody(mid="m", seq=1),
         ),
-        callback=Callback(
-            callback_id="c",
-            user=make_user(),
-            timestamp=NOW,
-            payload=payload,
-        ),
+        callback=make_callback(payload),
+    )
+
+
+def make_message_callback_without_message(payload: str = "data") -> MessageCallback:
+    """Колбэк с удалённым исходным сообщением: `message` приходит как `null`."""
+    return MessageCallback(
+        timestamp=NOW,
+        message=None,
+        callback=make_callback(payload),
     )
 
 
@@ -216,6 +230,23 @@ class TestEventContextBuilders:
         assert context.chat_id == 10
         assert context.user_id == 1
 
+    def test_from_callback(self) -> None:
+        context = event_context_from_callback(make_message_callback(), make_ctx())  # type: ignore[arg-type]
+
+        assert context.chat_id == 10
+        assert context.chat_type is ChatType.DIALOG
+        assert context.user_id == 1
+
+    def test_from_callback_without_message(self) -> None:
+        event = make_message_callback_without_message()
+
+        context = event_context_from_callback(event, make_ctx())  # type: ignore[arg-type]
+
+        assert context.chat_id is None
+        assert context.chat_type is None
+        assert context.user_id == 1
+        assert context.user is event.callback.user
+
 
 class TestEventContextFromError:
     @pytest.mark.parametrize(
@@ -223,6 +254,7 @@ class TestEventContextFromError:
         [
             make_message_created,
             make_message_callback,
+            make_message_callback_without_message,
             make_aiogd_event,
             make_bot_started,
             make_bot_stopped,
@@ -308,6 +340,20 @@ class TestIntentMiddlewareFactory:
 
         assert ctx[PAYLOAD_KEY] == "plain"
         assert ctx[CALLBACK_DATA_KEY] == "plain"
+
+    async def test_process_callback_without_message(self) -> None:
+        ctx = make_ctx()
+        next_ = AsyncMock(return_value="ok")
+
+        result = await make_factory().process_callback(
+            make_message_callback_without_message("plain"),
+            ctx,  # type: ignore[arg-type]
+            next_,
+        )
+
+        assert result == "ok"
+        next_.assert_awaited_once()
+        assert ctx[EVENT_CONTEXT_KEY].chat_id is None
 
     async def test_process_aiogd_update_by_stack(self) -> None:
         ctx = make_ctx()

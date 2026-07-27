@@ -4,7 +4,6 @@ import os
 from maxo import Bot, Dispatcher
 from maxo.errors import MaxoError
 from maxo.routing.filters import Command, ExceptionTypeFilter
-from maxo.transport.long_polling import LongPolling
 from maxo.types import ErrorEvent, MessageCreated
 
 logger = logging.getLogger(__name__)
@@ -89,7 +88,7 @@ async def handle_set_name(message: MessageCreated) -> None:
 def main() -> None:
     logging.basicConfig(level=logging.DEBUG)
     bot = Bot(token=os.environ["TOKEN"])
-    LongPolling(dp).run(bot)
+    dp.run_polling(bot)
 
 
 if __name__ == "__main__":

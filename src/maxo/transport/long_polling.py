@@ -100,7 +100,6 @@ class LongPolling:
                 with contextlib.suppress(KeyboardInterrupt):
                     async with asyncio.TaskGroup() as tg:
                         async for update in updates_poller:
-                            # Задача отслеживается TaskGroup, ссылка не нужна.
                             tg.create_task(  # type: ignore[unused-awaitable]
                                 dispatcher.feed_max_update(update, bot),
                             )

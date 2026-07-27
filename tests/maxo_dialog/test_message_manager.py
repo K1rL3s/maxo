@@ -14,7 +14,7 @@ from maxo.dialogs.api.entities import (
     OldMessage,
     ShowMode,
 )
-from maxo.dialogs.api.protocols import MessageNotModified
+from maxo.dialogs.api.protocols import MediaIdStorageProtocol, MessageNotModified
 from maxo.dialogs.manager.message_manager import MessageManager
 from maxo.enums import AttachmentRequestType, AttachmentType, ChatType, UploadType
 from maxo.errors import MaxBotApiError, MaxBotBadRequestError
@@ -47,12 +47,19 @@ KEYBOARD_MEDIA_ID = "keyboard-id"
 
 
 class StaticAttachmentsMessageManager(MessageManager):
+    """Стаб _build_attachments; записывает медиа каждого рендера в built_media."""
+
+    def __init__(self, media_id_storage: MediaIdStorageProtocol) -> None:
+        super().__init__(media_id_storage)
+        self.built_media: list[list[MediaAttachment]] = []
+
     async def _build_attachments(
         self,
         bot: object,
         keyboard: object,
-        media: object,
+        media: list[MediaAttachment],
     ) -> Sequence[AttachmentsRequests]:
+        self.built_media.append(list(media))
         return []
 
 
@@ -89,6 +96,46 @@ def _make_new_message(
         text=text,
         show_mode=show_mode,
     )
+
+
+def _make_old_media_message(
+    mid: str = "55",
+    token: str = "old-token",  # noqa: S107
+) -> OldMessage:
+    return _make_old_message(
+        mid=mid,
+        text="old",
+        attachments=[
+            PhotoAttachment.factory(
+                photo_id=1,
+                token=token,
+                url="http://e.com/old.png",
+            ),
+        ],
+    )
+
+
+def _make_new_media_message(
+    show_mode: ShowMode = ShowMode.EDIT,
+    two_step_media_edit: bool = True,
+    media: list[MediaAttachment] | None = None,
+) -> NewMessage:
+    if media is None:
+        media = [MediaAttachment(type=AttachmentType.IMAGE, url="http://e.com/new.png")]
+    return NewMessage(
+        recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1, chat_id=1),
+        text="new",
+        show_mode=show_mode,
+        two_step_media_edit=two_step_media_edit,
+        media=media,
+    )
+
+
+def _media_with_token(
+    token: str,
+    media_type: AttachmentType = AttachmentType.IMAGE,
+) -> MediaAttachment:
+    return MediaAttachment(media_type, media_id=MediaId(token=token))
 
 
 def _make_message(mid: str = "77", text: str | None = "sent") -> Message:
@@ -442,22 +489,22 @@ class TestMessageChanged:
             _make_old_message(text="old"),
         )
 
-    def test_same_media_is_not_a_change(self) -> None:
+    def test_media_present_is_always_a_change(self) -> None:
+        # Токены не сравниваем (payload.token уникален на отправку) -> любое
+        # медиа в новом сообщении считаем изменением, даже при том же тексте.
         manager = MessageManager(media_id_storage=AsyncMock())
         new = _make_new_message("old")
-        new.media = [MediaAttachment(type=AttachmentType.IMAGE, url="http://e.com/a")]
-        old = _make_old_message(
-            text="old",
-            attachments=[
-                PhotoAttachment.factory(
-                    photo_id=1,
-                    token="t",  # noqa: S106
-                    url="http://e.com/a",
-                ),
-            ],
-        )
+        new.media = [_media_with_token("tok")]
+        old = _make_old_media_message()  # старое тоже с медиа
 
-        assert not manager._message_changed(new, old)
+        assert manager._message_changed(new, old)
+
+    def test_media_removed_is_a_change(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+        new = _make_new_message("old")  # без медиа
+        old = _make_old_media_message()  # раньше было медиа
+
+        assert manager._message_changed(new, old)
 
     def test_can_edit_is_always_true(self) -> None:
         manager = MessageManager(media_id_storage=AsyncMock())
@@ -561,8 +608,160 @@ class TestEditMessageSafe:
         assert result is expected
 
 
+class TestTwoStepMediaEdit:
+    """Двойной рендер медиа при редактировании на iOS. См. issue #156."""
+
+    async def test_two_step_when_flag_and_edit_and_media_to_media(self) -> None:
+        manager = StaticAttachmentsMessageManager(media_id_storage=AsyncMock())
+        bot = AsyncMock()
+        bot.get_message_by_id = AsyncMock(return_value=_make_message("55", "new"))
+
+        await manager.edit_message(
+            bot,
+            _make_new_media_message(),
+            _make_old_media_message(),
+        )
+
+        assert bot.edit_message.await_count == 2
+        assert manager.built_media[0] == []  # шаг 1 - без медиа
+        assert len(manager.built_media[1]) == 1  # шаг 2 - медиа вернулось
+
+    @pytest.mark.parametrize(
+        ("new_message", "old_message"),
+        [
+            (
+                _make_new_media_message(two_step_media_edit=False),
+                _make_old_media_message(),
+            ),
+            (_make_new_media_message(), _make_old_message()),
+            (_make_new_media_message(media=[]), _make_old_media_message()),
+        ],
+    )
+    async def test_single_step_otherwise(
+        self,
+        new_message: NewMessage,
+        old_message: OldMessage,
+    ) -> None:
+        manager = StaticAttachmentsMessageManager(media_id_storage=AsyncMock())
+        bot = AsyncMock()
+        bot.get_message_by_id = AsyncMock(return_value=_make_message("55", "new"))
+
+        await manager.edit_message(
+            bot,
+            new_message,
+            old_message,
+        )
+
+        assert bot.edit_message.await_count == 1
+
+    async def test_show_message_triggers_two_step_in_auto_mode(self) -> None:
+        manager = StaticAttachmentsMessageManager(media_id_storage=AsyncMock())
+        bot = AsyncMock()
+        bot.get_message_by_id = AsyncMock(return_value=_make_message("55", "new"))
+        new = _make_new_media_message(show_mode=ShowMode.AUTO)
+        new.text = "old"
+
+        await manager.show_message(
+            bot,
+            new,
+            _make_old_media_message(),
+        )
+
+        assert bot.edit_message.await_count == 2
+
+class TestSaveMediaIds:
+    """Кэширование payload-токена из отправленного сообщения для path и url."""
+
+    def _sent_with_photo(self, token: str, url: str) -> Message:
+        return Message(
+            body=MessageBody(
+                mid="1",
+                seq=1,
+                text="new",
+                attachments=[PhotoAttachment.factory(photo_id=1, token=token, url=url)],
+            ),
+            recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1, chat_id=1),
+            timestamp=NOW,
+        )
+
+    async def test_caches_payload_token_by_url(self) -> None:
+        storage = AsyncMock()
+        manager = MessageManager(media_id_storage=storage)
+        new = _make_new_media_message(
+            media=[MediaAttachment(AttachmentType.IMAGE, url="http://e.com/a.png")],
+        )
+
+        await manager._save_media_ids(
+            new,
+            self._sent_with_photo("server-tok", "http://e.com/a.png"),
+        )
+
+        storage.save_media_id.assert_awaited_once_with(
+            path=None,
+            url="http://e.com/a.png",
+            type=AttachmentType.IMAGE,
+            media_id=MediaId(token="server-tok"),  # noqa: S106
+        )
+
+    async def test_skips_media_without_path_or_url(self) -> None:
+        # media_id-only медиа нельзя ключевать по path/url -> не кэшируем
+        storage = AsyncMock()
+        manager = MessageManager(media_id_storage=storage)
+        new = _make_new_media_message(media=[_media_with_token("explicit")])
+
+        await manager._save_media_ids(
+            new,
+            self._sent_with_photo("server-tok", "http://e.com/a.png"),
+        )
+
+        storage.save_media_id.assert_not_awaited()
+
+    async def test_send_message_caches_media_id(self) -> None:
+        storage = AsyncMock()
+        manager = StaticAttachmentsMessageManager(media_id_storage=storage)
+        bot = AsyncMock()
+        bot.send_message = AsyncMock(
+            return_value=SendMessageResult(
+                message=self._sent_with_photo("srv", "http://e.com/new.png"),
+            ),
+        )
+
+        await manager.send_message(bot, _make_new_media_message())
+
+        storage.save_media_id.assert_awaited_once()
+
+    async def test_caches_by_request_order_for_mixed_album(self) -> None:
+        storage = AsyncMock()
+        manager = MessageManager(media_id_storage=storage)
+        path_media = MediaAttachment(AttachmentType.IMAGE, path="pic.png")
+        url_media = MediaAttachment(AttachmentType.IMAGE, url="http://e.com/u.png")
+        new = _make_new_media_message(media=[path_media, url_media])
+        sent = Message(
+            body=MessageBody(
+                mid="1",
+                seq=1,
+                text="new",
+                attachments=[
+                    PhotoAttachment.factory(2, "path-tok", "http://e.com/p.png"),
+                    PhotoAttachment.factory(1, "url-tok", "http://e.com/u.png"),
+                ],
+            ),
+            recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1, chat_id=1),
+            timestamp=NOW,
+        )
+
+        await manager._save_media_ids(new, sent)
+
+        cached = {
+            call.kwargs["url"] or call.kwargs["path"]: call.kwargs["media_id"].token
+            for call in storage.save_media_id.await_args_list
+        }
+        assert cached["http://e.com/u.png"] == "url-tok"
+        assert cached["pic.png"] == "path-tok"
+
+
 class TestBuildAttachments:
-    async def test_splits_files_and_ready_attachments(self, tmp_path: Path) -> None:
+    async def test_preserves_media_order(self, tmp_path: Path) -> None:
         manager = MessageManager(media_id_storage=AsyncMock())
         bot = AsyncMock()
         media = [
@@ -575,12 +774,13 @@ class TestBuildAttachments:
         ]
 
         with patch(
-            "maxo.dialogs.manager.message_manager.DialogAttachmentsFacade",
+            "maxo.dialogs.manager.message_manager.AttachmentsFacade",
         ) as facade_cls:
             facade_cls.return_value.build_attachments = AsyncMock(return_value=[])
             await manager._build_attachments(bot, keyboard=None, media=media)
 
         kwargs = facade_cls.return_value.build_attachments.await_args.kwargs
-        assert len(kwargs["files"]) == 1
-        assert all(isinstance(f, FSInputFile) for f in kwargs["files"])
-        assert len(kwargs["base"]) == 2
+        assert kwargs["base"] == []
+        assert isinstance(kwargs["files"][0], PhotoAttachmentRequest)
+        assert isinstance(kwargs["files"][1], FSInputFile)
+        assert isinstance(kwargs["files"][2], PhotoAttachmentRequest)

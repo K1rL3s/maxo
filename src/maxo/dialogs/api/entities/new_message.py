@@ -54,3 +54,4 @@ class NewMessage(MaxoType):
     show_mode: ShowMode = ShowMode.AUTO
     text: str | None = None
     link_to: NewMessageLink | None = None
+    two_step_media_edit: bool = False

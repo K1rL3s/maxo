@@ -10,8 +10,8 @@ InlineButtons = (
     CallbackButton
     | ClipboardButton
     | LinkButton
-    | RequestGeoLocationButton
-    | RequestContactButton
-    | OpenAppButton
     | MessageButton
+    | OpenAppButton
+    | RequestContactButton
+    | RequestGeoLocationButton
 )

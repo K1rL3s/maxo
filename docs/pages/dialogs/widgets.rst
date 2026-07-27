@@ -4,6 +4,13 @@
 
 Виджеты - компоненты, из которых строится содержимое окна (``Window``). Все виджеты делятся на текстовые, клавиатурные, медиа-виджеты и поля ввода.
 
+.. note::
+
+    В обработчиках ``on_click`` ``callback.message`` может быть ``None``, если
+    исходное сообщение удалили до того, как бот получил колбэк - тогда
+    ``unsafe_message`` бросит ``AttributeIsEmptyError``.
+    Подробнее в :ref:`разделе про unsafe_* <message-callback-none>`.
+
 Текстовые виджеты
 =================
 
@@ -214,14 +221,14 @@ ConfirmButton
         widget: ConfirmButton,
         manager: DialogManager,
     ) -> None:
-        await callback.message.answer("Действие подтверждено!")
+        await callback.unsafe_message.answer("Действие подтверждено!")
 
     async def on_cancel(
         callback: MessageCallback,
         widget: ConfirmButton,
         manager: DialogManager,
     ) -> None:
-        await callback.message.answer("Действие отменено.")
+        await callback.unsafe_message.answer("Действие отменено.")
 
     # Режим с предупредительным текстом (2 шага):
     # primary → warning + [Отмена] [Подтвердить] → on_confirm / on_cancel

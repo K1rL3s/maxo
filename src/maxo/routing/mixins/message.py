@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, cast
 
 from maxo.enums import MessageLinkType, TextFormat
+from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
 from maxo.routing.mixins.attachments import MediaInput
 from maxo.routing.mixins.chat import ChatMethodsFacade
@@ -23,18 +24,34 @@ class MessageMethodsFacade(ChatMethodsFacade):
 
         @property
         @abstractmethod
-        def message(self) -> "Message":
+        def message(self) -> "Message | None":
             raise NotImplementedError
 
     else:
-        message: "Message"
+        message: "Message | None"
+
+    @property
+    def unsafe_message(self) -> "Message":
+        """
+        Сообщение апдейта. Кидает ошибку, если сообщения нет.
+
+        Сообщения может не быть только у `MessageCallback`: MAX присылает
+        `null`, если исходное сообщение удалили до получения колбэка.
+        """
+        if is_defined(self.message):
+            return self.message
+
+        raise AttributeIsEmptyError(
+            obj=self,
+            attr="message",
+        )
 
     @property
     def chat_id(self) -> int:
-        return self.message.recipient.unsafe_chat_id
+        return self.unsafe_message.recipient.unsafe_chat_id
 
     async def delete_message(self) -> SimpleQueryResult:
-        message_id = self.message.body.mid
+        message_id = self.unsafe_message.body.mid
         return await self.bot.delete_message(message_id=message_id)
 
     async def send_message(
@@ -48,8 +65,9 @@ class MessageMethodsFacade(ChatMethodsFacade):
         media: Sequence[MediaInput] | None = None,
         attachments: Sequence[AttachmentsRequests] | None = None,
     ) -> "Message":
-        recipient = self.message.recipient
-        sender = self.message.sender
+        message = self.unsafe_message
+        recipient = message.recipient
+        sender = message.sender
         chat_id, user_id = calculate_chat_id_and_user_id(
             chat_id=recipient.chat_id,
             user_id=sender.user_id if is_defined(sender) else None,
@@ -164,10 +182,11 @@ class MessageMethodsFacade(ChatMethodsFacade):
         format: Omittable[TextFormat | None] = Omitted(),
         attachments: Sequence[AttachmentsRequests] | None = None,
     ) -> SimpleQueryResult:
-        message_id = self.message.body.mid
+        message = self.unsafe_message
+        message_id = message.body.mid
 
         if text is None:
-            text = self.message.body.text
+            text = message.body.text
 
         if attachments is None and keyboard is None and media is None:
             # Для случая, когда не надо редачить аттачменты
@@ -194,7 +213,7 @@ class MessageMethodsFacade(ChatMethodsFacade):
     def _make_new_message_link(self, type: MessageLinkType) -> NewMessageLink:
         return NewMessageLink(
             type=type,
-            mid=self.message.body.mid,
+            mid=self.unsafe_message.body.mid,
         )
 
     async def get_message_by_id(self, message_id: str) -> "Message":

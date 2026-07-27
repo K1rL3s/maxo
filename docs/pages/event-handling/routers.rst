@@ -15,7 +15,6 @@
     from maxo import Bot, Dispatcher
     from maxo.routing.ctx import Ctx
     from maxo.types import MessageCreated
-    from maxo.transport.long_polling import LongPolling
 
     bot = Bot(token=os.environ["TOKEN"])
     dispatcher = Dispatcher()
@@ -26,7 +25,7 @@
         await update.answer_text(update.message.body.text or "Текста нет")
 
     # Запуск
-    LongPolling(dispatcher).run(bot)
+    dispatcher.run_polling(bot)
 
 Роутеры (Routers)
 -----------------

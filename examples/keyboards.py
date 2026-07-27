@@ -9,7 +9,6 @@ from magic_filter import F
 from maxo import Bot, Dispatcher, Router
 from maxo.integrations.magic_filter import MagicFilter
 from maxo.routing.filters import CommandStart
-from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageCallback, MessageCreated
 from maxo.utils.builders import KeyboardBuilder
 
@@ -48,7 +47,7 @@ def main() -> None:
     dp = Dispatcher()
     dp.include(router)
 
-    LongPolling(dp).run(bot)
+    dp.run_polling(bot)
 
 
 if __name__ == "__main__":

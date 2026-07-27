@@ -26,7 +26,7 @@ class MessageCallback(MaxUpdate, CallbackMethodsFacade, MessageMethodsFacade):  
 
     callback: Callback
 
-    message: Message | None = None  # type: ignore[assignment]
+    message: Message | None = None
     """Изначальное сообщение, содержащее встроенную клавиатуру. Может быть `null`, если оно было удалено к моменту, когда бот получил это событие"""
 
     user_locale: Omittable[str | None] = Omitted()

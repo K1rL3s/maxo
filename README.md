@@ -81,7 +81,6 @@ dependencies = [
 ```python
 from maxo import Bot, Dispatcher
 from maxo.types import MessageCreated
-from maxo.transport.long_polling import LongPolling
 
 bot = Bot("TOKEN")
 dp = Dispatcher()
@@ -91,7 +90,7 @@ async def echo_handler(message: MessageCreated) -> None:
     text = message.text or "Текста нет"
     await message.answer(text)
 
-LongPolling(dp).run(bot)
+dp.run_polling(bot)
 ```
 
 ### Команды
@@ -99,7 +98,6 @@ LongPolling(dp).run(bot)
 ```python
 from maxo import Bot, Dispatcher
 from maxo.routing.filters import Command, DeeplinkFilter
-from maxo.transport.long_polling import LongPolling
 from maxo.types import BotStarted, MessageCreated
 
 bot = Bot("TOKEN")
@@ -117,7 +115,7 @@ async def start_handler(bot_started: BotStarted) -> None:
 async def help_handler(message: MessageCreated) -> None:
     await message.send_message("За помощью обращайтесь в t.me/maxo_py")
 
-LongPolling(dp).run(bot)
+dp.run_polling(bot)
 ```
 
 ### Клавиатуры
@@ -128,7 +126,6 @@ from magic_filter import F
 from maxo import Bot, Dispatcher
 from maxo.integrations.magic_filter import MagicFilter
 from maxo.routing.filters import CommandStart
-from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageCallback, MessageCreated
 from maxo.utils.builders import KeyboardBuilder
 
@@ -154,7 +151,7 @@ async def start_handler(message: MessageCreated) -> None:
 async def button_handler(callback: MessageCallback) -> None:
     await callback.callback_answer("Вы нажали на кнопку!")
 
-LongPolling(dp).run(bot)
+dp.run_polling(bot)
 ```
 
 ### Диалоги
@@ -171,7 +168,6 @@ from maxo.dialogs.widgets.text import Const
 from maxo.fsm import State, StatesGroup
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.routing.filters import CommandStart
-from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageCallback, MessageCreated
 
 bot = Bot("TOKEN")
@@ -206,7 +202,7 @@ async def start_handler(
 dp.include(dialog)
 setup_dialogs(dp)
 
-LongPolling(dp).run(bot)
+dp.run_polling(bot)
 ```
 
 ### Вебхук

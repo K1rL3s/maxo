@@ -4,7 +4,6 @@ from typing import cast
 
 from maxo import Bot, Dispatcher
 from maxo.omit import Omitted
-from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageCreated, UpdateContext
 from maxo.types.attachments import Attachments, AttachmentsRequests
 from maxo.utils.upload_media import FSInputFile
@@ -55,7 +54,7 @@ async def attachments_handler(
 def main() -> None:
     logging.basicConfig(level=logging.DEBUG)
     bot = Bot(token=os.environ["TOKEN"])
-    LongPolling(dp).run(bot)
+    dp.run_polling(bot)
 
 
 if __name__ == "__main__":

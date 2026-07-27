@@ -4,7 +4,6 @@ import logging
 import os
 
 from maxo import Bot, Dispatcher
-from maxo.transport.long_polling import LongPolling
 from maxo.types import (
     BotAddedToChat,
     BotRemovedFromChat,
@@ -161,7 +160,7 @@ async def dialog_unmuted_handler(dialog_unmuted: DialogUnmuted) -> None:
 
 def main() -> None:
     logging.basicConfig(level=logging.DEBUG)
-    LongPolling(dp).run(bot)
+    dp.run_polling(bot)
 
 
 if __name__ == "__main__":

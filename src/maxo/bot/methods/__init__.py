@@ -1,4 +1,5 @@
 from .bots.edit_bot_info import EditBotInfo
+from .bots.edit_my_commands import EditMyCommands
 from .bots.get_my_info import GetMyInfo
 from .chats.add_members import AddMembers
 from .chats.delete_admin import DeleteAdmin
@@ -41,6 +42,7 @@ __all__ = (
     "EditBotInfo",
     "EditChat",
     "EditMessage",
+    "EditMyCommands",
     "GetAdmins",
     "GetChat",
     "GetChatByLink",

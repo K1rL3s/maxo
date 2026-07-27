@@ -1,16 +1,9 @@
-# ruff: noqa: E402
+"""
+Фильтры maxo. Алиас `maxo.routing.filters` для портирования ботов с `aiogram`.
 
-import warnings
-
-warnings.warn(
-    "Алиас `maxo.filters` сделан для удобного портирования ботов с `aiogram` "
-    "и будет удален в будущих версиях. "
-    "Пожалуйста, обновите импорты на 'from maxo.routing.filters import ...'",
-    FutureWarning,
-    stacklevel=2,
-)
-
-# `MagicFilter` and `MagicData` in maxo.integrations.magic_filter
+`MagicFilter` и `MagicData` живут в `maxo.integrations.magic_filter`,
+потому что `magic_filter` - опциональная зависимость.
+"""
 
 from maxo.routing.filters.always import AlwaysFalseFilter, AlwaysTrueFilter
 from maxo.routing.filters.base import BaseFilter

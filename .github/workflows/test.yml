@@ -49,13 +49,13 @@ jobs:
           just test --cov-report=xml
 
       - name: Upload coverage.xml artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-${{ matrix.python-version }}-${{ matrix.dependency-resolution }}
           path: coverage.xml
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml

@@ -12,7 +12,6 @@ from maxo.fsm.state import State, StatesGroup
 from maxo.fsm.storages.redis import RedisStorage
 from maxo.integrations.magic_filter import MagicFilter
 from maxo.routing.filters import Command, CommandObject, CommandStart
-from maxo.transport.long_polling import LongPolling
 from maxo.types import CallbackButton, MessageCallback, MessageCreated
 
 from ..ids import SharedId
@@ -141,8 +140,7 @@ async def main() -> None:
     dp.include(router)
 
     bot = Bot(token=token)
-    polling = LongPolling(dp)
-    await polling.start(bot)
+    await dp.start_polling(bot)
 
 
 if __name__ == "__main__":

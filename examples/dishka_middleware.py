@@ -21,7 +21,6 @@ from dishka import (
 from maxo import Bot, Ctx, Dispatcher
 from maxo.integrations.dishka import CONTAINER_NAME, setup_dishka
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
-from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageCreated
 
 
@@ -75,7 +74,7 @@ async def main() -> None:
     dp.message_created.middleware.outer(GreetingMiddleware())
     dp.message_created.handler(message_handler)
     try:
-        await LongPolling(dp).start(bot)
+        await dp.start_polling(bot)
     finally:
         await container.close()  # Обязательно закрыть контейнер при выходе
 

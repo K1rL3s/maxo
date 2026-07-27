@@ -10,7 +10,6 @@ import os
 from handlers import echo_router, start_router
 
 from maxo import Bot, Dispatcher
-from maxo.transport.long_polling import LongPolling
 
 
 def main() -> None:
@@ -23,7 +22,7 @@ def main() -> None:
     bot = Bot(token)
     dp = Dispatcher()
     dp.include(start_router, echo_router)
-    LongPolling(dp).run(bot)
+    dp.run_polling(bot)
 
 
 if __name__ == "__main__":

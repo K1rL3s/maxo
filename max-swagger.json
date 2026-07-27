@@ -93,7 +93,7 @@
                 ],
                 "summary": "Получение информации о боте",
                 "operationId": "getMyInfo",
-                "description": "Метод возвращает информацию о боте, который идентифицируется с помощью токена доступа `access_token`. В ответе приходит [объект User с вариантом наследования BotInfo](/docs-api/objects/User), который содержит идентификатор бота, его название, никнейм, время последней активности, описание и аватар (при наличии)\n\n#### Пример запроса:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/me\" \\\n  -H \"Authorization: {access_token}\"\n```",
+                "description": "Метод возвращает информацию о боте, который идентифицируется с помощью токена доступа `access_token`. В ответе приходит [объект User с вариантом наследования BotInfo](/docs-api/objects/User), который содержит идентификатор бота, его название, никнейм, время последней активности, описание и аватар (при наличии)\n\n#### Пример запроса:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/me/commands\" \\\n  -H \"Authorization: {access_token}\"\n```",
                 "responses": {
                     "200": {
                         "description": "Информация о боте",
@@ -101,6 +101,45 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/BotInfo"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                }
+            }
+        },
+        "/me/commands": {
+            "patch": {
+                "tags": [
+                    "bots"
+                ],
+                "summary": "Редактирование команд бота",
+                "operationId": "editMyCommands",
+                "description": "Метод добавляет, изменяет или удаляет команды бота\n\n Для удаления команд передайте пустой массив `commands`\n\n#### Пример запроса:\n```bash\ncurl -X  \"https://platform-api2.max.ru/me/commands\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n        \"commands\": [\n          {\n            \"name\": \"string\",\n            \"description\": \"string\"\n          }\n        ]\n      }'\n",
+                "requestBody": {
+                    "description": "Команды бота на выбор",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BotCommandsPatch"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Информация о командах бота",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BotCommandsInfo"
                                 }
                             }
                         }
@@ -1135,7 +1174,7 @@
                 ],
                 "operationId": "deleteMessage",
                 "summary": "Удалить сообщение",
-                "description": "Удаляет сообщение в диалоге или чате, если бот имеет разрешение на удаление сообщений\n\n#### Пример запроса:\n```bash\ncurl -X DELETE \"https://platform-api2.max.ru/messages?message_id={message_id}\" \\\n  -H \"Authorization: {access_token}\"\n```",
+                "description": "Удаляет сообщения в диалоге, групповом чате или канале\n\n #### Ограничения \n\n- Бот должен быть администратором и иметь право на удаление сообщений\n\n- Бот может удалять сообщения:\n\n  - в диалоге — только сообщения, отправленные самим ботом\n\n  - в групповом чате — любые сообщения\n\n  - в канале — любые сообщения\n\n- Можно удалять не более двух сообщений в секунду в одном диалоге, групповом чате или канале. При превышении этого лимита сообщения следует ставить в очередь или делать задержку перед удалением\n\n#### Пример запроса:\n```bash\ncurl -X DELETE \"https://platform-api2.max.ru/messages?message_id={message_id}\" \\\n  -H \"Authorization: {access_token}\"\n```",
                 "parameters": [
                     {
                         "name": "message_id",
@@ -1644,6 +1683,36 @@
                 "required": [
                     "name"
                 ]
+            },
+            "BotCommandsPatch": {
+                "type": "object",
+                "description": "Объект PATCH для обновления команд бота",
+                "properties": {
+                    "commands": {
+                        "description": "Команды, которые поддерживает бот",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BotCommand"
+                        },
+                        "maxItems": 32,
+                        "readOnly": false
+                    }
+                }
+            },
+            "BotCommandsInfo": {
+                "type": "object",
+                "description": "Информация о командах бота",
+                "properties": {
+                    "commands": {
+                        "description": "Команды, которые поддерживает бот",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BotCommand"
+                        },
+                        "maxItems": 32,
+                        "readOnly": false
+                    }
+                }
             },
             "Chat": {
                 "description": "Объект содержит общую информацию о групповом чате или канале: его тип, настройки отображения (название, аватар, описание, ссылка), публичную доступность, а также информацию об участниках (владельце, боте и других пользователях), времени их последней активности и событиях",

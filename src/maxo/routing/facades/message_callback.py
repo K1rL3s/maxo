@@ -14,8 +14,8 @@ class MessageCallbackFacade(  # type: ignore[misc]
     MessageMethodsFacade,
 ):
     @property
-    def message(self) -> Message:
-        return self._update.unsafe_message
+    def message(self) -> Message | None:
+        return self._update.message
 
     @property
     def callback(self) -> Callback:

@@ -12,6 +12,8 @@ from maxo.types.base import BaseUpdate
 _ReturnT = TypeVar("_ReturnT")
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 
+_MiddlewareDecorator = Callable[[BaseMiddleware[_UpdateT]], BaseMiddleware[_UpdateT]]
+
 
 def _partial_middleware(
     middleware: BaseMiddleware[_UpdateT],
@@ -33,12 +35,26 @@ class MiddlewareManager(Generic[_UpdateT]):
         self.middlewares = []
         self.state = EmptyMiddlewareManagerState()
 
-    def __call__(self, *middlewares: BaseMiddleware[_UpdateT]) -> None:
+    # Подражание aiogram: возвращаем декоратор, чтобы работал привычный
+    # `@router.message_created.outer_middleware()`
+    def __call__(
+        self,
+        *middlewares: BaseMiddleware[_UpdateT],
+    ) -> _MiddlewareDecorator[_UpdateT]:
         self.add(*middlewares)
+        return self.register
 
     def add(self, *middlewares: BaseMiddleware[_UpdateT]) -> None:
         self.state.ensure_add_middleware()
         self.middlewares.extend(middlewares)
+
+    def register(
+        self,
+        middleware: BaseMiddleware[_UpdateT],
+    ) -> BaseMiddleware[_UpdateT]:
+        """Зарегистрировать мидлварь и вернуть ее же."""
+        self.add(middleware)
+        return middleware
 
     def wrap_middlewares(
         self,
@@ -73,5 +89,15 @@ class MiddlewareManagerFacade(Generic[_UpdateT]):
     # Подражание aiogram,
     # чтобы по `router.message_created.middleware(MyMiddleware())`
     # он добавлялся в inner-мидлвари
-    def __call__(self, *middlewares: BaseMiddleware[_UpdateT]) -> None:
-        self.inner.add(*middlewares)
+    def __call__(
+        self,
+        *middlewares: BaseMiddleware[_UpdateT],
+    ) -> _MiddlewareDecorator[_UpdateT]:
+        return self.inner(*middlewares)
+
+    def register(
+        self,
+        middleware: BaseMiddleware[_UpdateT],
+    ) -> BaseMiddleware[_UpdateT]:
+        """Зарегистрировать inner-мидлварь и вернуть ее же."""
+        return self.inner.register(middleware)

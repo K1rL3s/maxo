@@ -28,7 +28,7 @@
 Порядок вызова
 --------------
 
-При запуске через ``LongPolling`` сигналы вызываются в следующем порядке:
+При запуске поллинга сигналы вызываются в следующем порядке:
 
 .. code-block:: text
 
@@ -61,7 +61,6 @@
     import os
 
     from maxo import Bot, Dispatcher
-    from maxo.transport.long_polling import LongPolling
 
     dispatcher = Dispatcher()
 
@@ -75,7 +74,7 @@
         print("Бот останавливается...")
 
     if __name__ == "__main__":
-        LongPolling(dispatcher).run(Bot(os.environ["TOKEN"]))
+        dispatcher.run_polling(Bot(os.environ["TOKEN"]))
 
 
 Через метод ``handler()``
@@ -104,7 +103,6 @@
     import os
 
     from maxo import Bot, Dispatcher, Router
-    from maxo.transport.long_polling import LongPolling
 
     router = Router()
 
@@ -120,7 +118,7 @@
     dispatcher.include(router)
 
     if __name__ == "__main__":
-        LongPolling(dispatcher).run(Bot(os.environ["TOKEN"]))
+        dispatcher.run_polling(Bot(os.environ["TOKEN"]))
 
 
 Типичные сценарии

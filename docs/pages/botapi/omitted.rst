@@ -197,6 +197,31 @@ Omitted в объектах ответа
 ``User`` (``last_name``, ``name``), ``VideoAttachment`` (``duration``, ``width``, ``height``)
 и многие другие.
 
+.. _message-callback-none:
+
+``unsafe_*`` есть и у полей, которые API возвращает как ``null``.
+Главный пример - ``MessageCallback.message``: MAX присылает ``null``, если
+исходное сообщение с клавиатурой удалили до того, как бот получил колбэк.
+
+.. code-block:: python
+
+    from maxo.types import MessageCallback
+
+    @dispatcher.message_callback()
+    async def handler(update: MessageCallback) -> None:
+        if update.message is None:
+            # Сообщения уже нет: остаётся только ответить на сам колбэк
+            await update.callback_answer(notification="Сообщение удалено")
+            return
+
+        # Дальше можно и update.unsafe_message, и методы апдейта
+        await update.answer_text("Кнопка нажата")
+
+Методы, которым нужно исходное сообщение (``send_message``, ``answer_text``,
+``reply``, ``edit_message``, ``delete_message``, а также свойство ``chat_id``),
+при ``message=None`` бросают ``AttributeIsEmptyError``.
+``callback_answer`` работает всегда.
+
 
 Примеры
 -------

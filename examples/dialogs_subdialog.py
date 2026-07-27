@@ -21,7 +21,6 @@ from maxo.fsm import State, StatesGroup
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.storages.memory import MemoryStorage, SimpleEventIsolation
 from maxo.routing.filters import CommandStart
-from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageCreated
 
 
@@ -69,7 +68,7 @@ def main() -> None:
 
     dp.include(main_dialog, settings_dialog)
     setup_dialogs(dp, events_isolation=events_isolation)
-    LongPolling(dp).run(bot)
+    dp.run_polling(bot)
 
 
 if __name__ == "__main__":

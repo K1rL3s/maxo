@@ -20,7 +20,6 @@ from dishka import (
 from maxo import Bot, Dispatcher
 from maxo.integrations.dishka import setup_dishka
 from maxo.routing.filters import CommandStart
-from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageCreated
 
 
@@ -63,7 +62,7 @@ async def main() -> None:
     setup_dishka(container, dp, auto_inject=True)
     dp.message_created.handler(start_handler, CommandStart())
     try:
-        await LongPolling(dp).start(bot)
+        await dp.start_polling(bot)
     finally:
         await container.close()  # Обязательно закрыть контейнер при выходе
 

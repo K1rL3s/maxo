@@ -83,6 +83,8 @@ from maxo.types import (
 )
 from tests.constants import NOW
 
+from .conftest import make_callback, make_message, make_user
+
 TOKEN = "attachment-token"  # noqa: S105
 PHOTO_ID = "photo-token"
 PHOTO_ATTACHMENT_ID = "photo-attachment"
@@ -91,18 +93,6 @@ UPLOAD_ID = "upload-token"
 UPLOADED_ID = "uploaded-token"
 VIDEO_ID = "video-token"
 DETAILS_ID = "details-token"
-
-
-def make_user() -> User:
-    return User(
-        user_id=1,
-        first_name="Alice",
-        last_name="Tester",
-        name="Alice T.",
-        username="alice",
-        is_bot=False,
-        last_activity_time=NOW,
-    )
 
 
 def make_chat(**kwargs: object) -> Chat:
@@ -116,16 +106,6 @@ def make_chat(**kwargs: object) -> Chat:
     }
     data.update(kwargs)
     return Chat(**data)  # type: ignore[arg-type]
-
-
-def make_message(**kwargs: object) -> Message:
-    data = {
-        "body": MessageBody(mid="mid", seq=7, text="hello"),
-        "recipient": Recipient(chat_type=ChatType.CHAT, chat_id=10),
-        "timestamp": NOW,
-    }
-    data.update(kwargs)
-    return Message(**data)  # type: ignore[arg-type]
 
 
 def test_user_accessors() -> None:
@@ -1276,15 +1256,6 @@ def test_missing_optional_fields_raise_for_unsafe_accessors() -> None:
         _ = message.unsafe_stat
     with pytest.raises(AttributeIsEmptyError):
         _ = message.unsafe_url
-
-
-def make_callback() -> Callback:
-    return Callback(
-        callback_id="cb",
-        timestamp=NOW,
-        user=make_user(),
-        payload="payload",
-    )
 
 
 def test_bot_stopped_unsafe_user_locale() -> None:
