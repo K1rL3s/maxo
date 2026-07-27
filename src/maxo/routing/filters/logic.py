@@ -100,7 +100,7 @@ class InvertFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
     async def _reduce(self, update: _UpdateT, ctx: Ctx) -> bool:
         if self._inlined:
             return await self._filter(update, ctx)
-        return not await self._filter(update, copy(ctx))
+        return not await self._filter(update, _isolated_copy(ctx))
 
     def _inlining(self) -> None:
         inner = self._filter
@@ -134,6 +134,14 @@ def combine_filters(*filters: Filter[_UpdateT] | None) -> Filter[_UpdateT]:
     return AndFilter(*real_filters)
 
 
+def _isolated_copy(ctx: Ctx) -> Ctx:
+    """Копия ``ctx``, в которой self-ссылка смотрит на саму копию."""
+    copied_ctx = copy(ctx)
+    if CTX_KEY in copied_ctx:
+        copied_ctx[CTX_KEY] = copied_ctx
+    return copied_ctx
+
+
 async def _run_isolated(
     filter_: Callable[[_UpdateT, Ctx], Awaitable[bool]],
     update: _UpdateT,
@@ -145,16 +153,12 @@ async def _run_isolated(
     Записи фильтра попадают в общий ``ctx`` только если он вернул ``True``.
     Если фильтр не прошёл, его изменения отбрасываются и не видны никому дальше.
     """
-    copied_ctx = copy(ctx)
-
-    has_self_ref = CTX_KEY in copied_ctx
-    if has_self_ref:
-        copied_ctx[CTX_KEY] = copied_ctx
+    copied_ctx = _isolated_copy(ctx)
 
     if not await filter_(update, copied_ctx):
         return False
 
-    if has_self_ref:
+    if CTX_KEY in ctx:
         copied_ctx[CTX_KEY] = ctx
 
     ctx.update(copied_ctx)

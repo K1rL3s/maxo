@@ -227,6 +227,28 @@ async def test_triple_invert_failed_inner_does_not_leak_ctx() -> None:
     assert "command" not in ctx
 
 
+async def test_invert_failed_inner_does_not_leak_through_self_reference() -> None:
+    ctx = self_ref_ctx()
+
+    result = await InvertFilter(
+        SelfRefWritingFilter("command", "start", result=False),
+    )(BaseUpdate(), ctx)
+
+    assert result is True
+    assert "command" not in ctx
+
+
+async def test_double_invert_passed_inner_commits_through_self_reference() -> None:
+    ctx = self_ref_ctx()
+
+    result = await InvertFilter(
+        InvertFilter(SelfRefWritingFilter("command", "start")),
+    )(BaseUpdate(), ctx)
+
+    assert result is True
+    assert ctx["command"] == "start"
+
+
 async def test_self_reference_points_to_copy_inside_filter() -> None:
     ctx = self_ref_ctx()
     probe = SelfRefProbeFilter()
