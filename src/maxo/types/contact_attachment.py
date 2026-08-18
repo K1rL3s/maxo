@@ -11,13 +11,14 @@ from maxo.types.user import User
 class ContactAttachment(Attachment):
     """
     Args:
-        payload:
+        payload: Результат загрузки данных контакта в сообщение
         type:
     """
 
     type: AttachmentType = AttachmentType.CONTACT
 
     payload: ContactAttachmentPayload
+    """Результат загрузки данных контакта в сообщение"""
 
     @classmethod
     def factory(

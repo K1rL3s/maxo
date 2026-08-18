@@ -10,13 +10,13 @@ class Subscription(MaxoType):
     Схема для описания подписки на WebHook
 
     Args:
-        time: Unix-время, когда была создана подписка
+        time: Unix timestamp в миллисекундах, когда была создана подписка
         update_types: Типы событий, на которые подписан бот
         url: URL вебхука
     """
 
     time: datetime
-    """Unix-время, когда была создана подписка"""
+    """Unix timestamp в миллисекундах, когда была создана подписка"""
     url: str
     """URL вебхука"""
 

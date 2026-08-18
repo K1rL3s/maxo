@@ -1,7 +1,7 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "version": "0.0.32",
+        "version": "0.0.33",
         "title": "Max Bot API",
         "license": {
             "name": "Apache 2.0"
@@ -93,7 +93,7 @@
                 ],
                 "summary": "Получение информации о боте",
                 "operationId": "getMyInfo",
-                "description": "Метод возвращает информацию о боте, который идентифицируется с помощью токена доступа `access_token`. В ответе приходит [объект User с вариантом наследования BotInfo](/docs-api/objects/User), который содержит идентификатор бота, его название, никнейм, время последней активности, описание и аватар (при наличии)\n\n#### Пример запроса:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/me/commands\" \\\n  -H \"Authorization: {access_token}\"\n```",
+                "description": "Метод возвращает информацию о боте, который идентифицируется с помощью токена доступа `access_token`. В ответе приходит [объект User с вариантом наследования BotInfo](/docs-api/objects/User), который содержит идентификатор бота, его название, никнейм, время последней активности, описание и аватар (при наличии)\n\n#### Пример запроса:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/me\" \\\n  -H \"Authorization: {access_token}\"\n```",
                 "responses": {
                     "200": {
                         "description": "Информация о боте",
@@ -210,12 +210,12 @@
                 ],
                 "x-opGroup": "chat",
                 "operationId": "editChat",
-                "description": "Позволяет редактировать информацию о групповом чате или канале, включая название, иконку и закреплённое сообщение\n\nБот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала \n\nПример запроса:\n```bash\ncurl -X PATCH \"https://platform-api2.max.ru/chats/{chatId}\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"icon\": { \"url\": \"https://example.com/image.jpg\" },\n  \"title\": \"Название чата\",\n  \"notify\": true\n}'\n```",
+                "description": "Позволяет редактировать информацию о групповом чате или канале, включая название, иконку и закреплённое сообщение или пост\n\nБот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала \n\nПример запроса:\n```bash\ncurl -X PATCH \"https://platform-api2.max.ru/chats/{chatId}\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"icon\": { \"url\": \"https://example.com/image.jpg\" },\n  \"title\": \"Название чата\",\n  \"notify\": true\n}'\n```",
                 "summary": "Изменение информации о групповом чате или канале",
                 "parameters": [
                     {
                         "name": "chatId",
-                        "description": "ID чата",
+                        "description": "ID чата или канала",
                         "required": true,
                         "in": "path",
                         "schema": {
@@ -237,7 +237,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "If success, returns updated chat object",
+                        "description": "Возвращается обновлённый объект чата или канала",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -308,7 +308,7 @@
                     "chats"
                 ],
                 "operationId": "getPinnedMessage",
-                "description": "Возвращает закреплённое сообщение в групповом чате или канале \n\nБот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала \n\nПример запроса:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/chats/{chatId}/pin\" \\\n  -H \"Authorization: {access_token}\"\n```",
+                "description": "Возвращает закреплённое сообщение в групповом чате или пост в канале \n\nБот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала \n\nПример запроса:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/chats/{chatId}/pin\" \\\n  -H \"Authorization: {access_token}\"\n```",
                 "summary": "Получение закреплённого сообщения в групповом чате или канале",
                 "parameters": [
                     {
@@ -353,7 +353,7 @@
                     "chats"
                 ],
                 "operationId": "pinMessage",
-                "description": "Закрепляет сообщение в групповом чате или канале \n\nБот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала \n\nПример запроса:\n```bash\ncurl -X PUT \"https://platform-api2.max.ru/chats/{chatId}/pin\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"message_id\": \"{message_id}\",\n  \"notify\": true\n}'\n```",
+                "description": "Закрепляет сообщение в групповом чате или пост в канале \n\nБот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала \n\nПример запроса:\n```bash\ncurl -X PUT \"https://platform-api2.max.ru/chats/{chatId}/pin\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"message_id\": \"{message_id}\",\n  \"notify\": true\n}'\n```",
                 "summary": "Закрепление сообщения в групповом чате или канале",
                 "parameters": [
                     {
@@ -401,7 +401,7 @@
                     "chats"
                 ],
                 "operationId": "unpinMessage",
-                "description": "Открепляет сообщение в групповом чате или канале \n\nБот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала \n\nПример запроса:\n```bash\ncurl -X DELETE \"https://platform-api2.max.ru/chats/{chatId}/pin\" \\\n  -H \"Authorization: {access_token}\"\n```",
+                "description": "Открепляет сообщение в групповом чате или пост в канале \n\nБот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала \n\nПример запроса:\n```bash\ncurl -X DELETE \"https://platform-api2.max.ru/chats/{chatId}/pin\" \\\n  -H \"Authorization: {access_token}\"\n```",
                 "summary": "Открепление сообщения в групповом чате или канале",
                 "parameters": [
                     {
@@ -418,7 +418,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "$ref": "#/components/responses/SuccessResponse"
+                        "description": "Объект удалён или запрос завершился ошибкой (причина ошибки описана в `message`)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SimpleQueryResult"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "$ref": "#/components/responses/Unauthorized"
@@ -505,7 +512,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "$ref": "#/components/responses/SuccessResponse"
+                        "description": "Объект удалён или запрос завершился ошибкой (причина ошибки описана в `message`)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SimpleQueryResult"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "$ref": "#/components/responses/Unauthorized"
@@ -529,7 +543,7 @@
                 ],
                 "operationId": "getAdmins",
                 "summary": "Получение списка администраторов группового чата или канала",
-                "description": "Возвращает список всех администраторов группового чата и канала (пользователей и ботов) и их данные, например: идентификатор, имя, никнейм, время последней активности, URL аватара, флаги администратора, владельца и бота, а также права на управление каналом или групповым чатом для пользователей-администраторов\n\nБот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала. Подробнее о правах — в описании объекта [`Chat`](/docs-api/objects/Chat)\n\nПример запроса:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/chats/{chatId}/members/admins\" \\\n  -H \"Authorization: {access_token}\"\n``",
+                "description": "Возвращает список всех администраторов группового чата и канала (пользователей и ботов) и их данные, например: идентификатор, имя, никнейм, время последней активности, URL аватара, флаги администратора, владельца и бота, а также права на управление каналом или групповым чатом для пользователей-администраторов\n\nБот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала. Подробнее о правах — в описании [`POST /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора)\n\nПример запроса:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/chats/{chatId}/members/admins\" \\\n  -H \"Authorization: {access_token}\"\n``",
                 "parameters": [
                     {
                         "name": "chatId",
@@ -573,7 +587,7 @@
                     "chats"
                 ],
                 "operationId": "postAdmins",
-                "description": "Выдаёт пользователям и ботам, которые являются участникам чата или подписчикам канала, права администратора \n\nБот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала с соответствующим правом `add_admins`. Чтобы получить информацию о правах бота, используйте [GET /chats/-chatId-/members/admins](/docs-api/methods/GET/chats/-chatId-/members/admins) \n\nПрава, которые можно назначить, зависят от того, где (канал или чат) и кому (пользователь или бот) выданы\n\n Список прав передаётся в теле запроса в массиве `admins.permissions`. Если вы хотите изменить назначенные права, вызовите повторно текущий метод: в теле запроса передайте обновлённый список прав. При повторном вызове логика работы метода соответствует `PUT`: права администратора будут обновлены полностью в соответствии с переданными в запросе \n\nПример запроса:\n```bash\ncurl -X POST \"https://platform-api2.max.ru/chats/{chatId}/members/admins\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"admins\": [\n    {\n      \"user_id\": \"{user_id}\",\n      \"permissions\": [\n        \"read_all_messages\",\n        \"add_remove_members\",\n        \"add_admins\",\n        \"change_chat_info\",\n        \"pin_message\",\n        \"write\"\n      ],\n      \"alias\": \"администраторам\"\n    }\n  ]\n}'\n``` \n\n## Доступные права администратора \n- `read_all_messages` — читать все сообщения в канале или групповом чате. Право можно назначить пользователям и ботам. Без этого права не получится управлять сообщениями: закреплять (`pin_message`), редактировать и удалять посты в каналах (`edit` и `delete`) и групповых чатах (`write`). Также это право важно при назначении ботов: без него тот не будет получать обновления через [Webhook](/docs-api/methods/POST/subscriptions). Управление `read_all_messages` в интерфейсе мессенджера доступно только для ботов в групповых чатах \n- `edit` — редактировать посты в каналах (для групповых чатов недоступно). Право можно назначить пользователям и ботам, только если уже есть право `read_all_messages` или вместе с ним — иначе вернётся ошибка. Ранее вместо `edit` в API использовалось `edit_message` — в ответе могут возвращаться оба значения, однако при назначении новых прав администраторов используйте `edit`. Управление `edit` также дублируется в интерфейсе мессенджера \n- `delete` — удалять посты (для групповых чатов недоступно). Право можно назначить пользователям и ботам, только если уже есть право `read_all_messages` или вместе с ним — иначе вернётся ошибка. Ранее вместо `delete` в API использовалось `delete_message` — в ответе могут возвращаться оба значения, однако при назначении новых прав администраторов используйте `delete`. Управление `delete` также дублируется в интерфейсе мессенджера \n- `write` — редактировать и удалять сообщения в групповых чатах, а также писать посты в каналах. Право можно назначить пользователям и ботам, только если уже есть право `read_all_messages` или вместе с ним — иначе вернётся ошибка. Ранее вместо `write` в API использовалось `post_edit_delete_message` — в ответе могут возвращаться оба значения, однако при назначении новых прав администраторам используйте `write`. Управление `write` также дублируется в интерфейсе мессенджера \n- `pin_message` — закреплять сообщение. Право можно назначить пользователям и ботам, только если уже есть право `read_all_messages` или вместе с ним — иначе вернётся ошибка \n- `change_chat_info` — изменять информацию о канале или групповом чате. Право доступно для пользователей и ботов\n- `add_remove_members` — добавлять и удалять участников группового чата или подписчиков канала. Право доступно для пользователей и в чатах, и в каналах, для ботов — **только в чатах**. Управление `add_remove_members` также дублируется в интерфейсе мессенджера \n- `add_admins` — добавлять и удалять администраторов группового чата или канала. Право доступно для пользователей и ботов. Управление `add_admins` дублируется в интерфейсе мессенджера\n- `edit_link` — изменять ссылку на групповой чат (для каналов недоступно). Право есть для пользователей и ботов. Управление `edit_link` также дублируется в интерфейсе мессенджера\n- `can_call` — звонить в групповом чате (для каналов недоступно). Право есть у пользователей и ботов — проставляется автоматически при назначении администратором. Управление `can_call` в интерфейсе мессенджера не дублируется \n- `view_stats` — право на просмотр статистики каналов (для групповых чатов недоступно). Назначается по умолчанию владельцам каналов. Для других пользователей-администраторов канала и ботов недоступно. Управление `view_stats` в интерфейсе мессенджера не дублируется",
+                "description": "Выдаёт пользователям и ботам, которые являются участникам чата или подписчикам канала, права администратора \n\nБот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала с соответствующим правом `add_admins`. Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](/docs-api/methods/GET/chats/-chatId-/members/admins) \n\nПрава, которые можно назначить, зависят от того, где (канал или чат) и кому (пользователь или бот) выданы\n\n Список прав передаётся в теле запроса в массиве `admins.permissions`. Если вы хотите изменить назначенные права, вызовите повторно текущий метод: в теле запроса передайте обновлённый список прав. При повторном вызове логика работы метода соответствует `PUT`: права администратора будут обновлены полностью в соответствии с переданными в запросе \n\nПример запроса:\n```bash\ncurl -X POST \"https://platform-api2.max.ru/chats/{chatId}/members/admins\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"admins\": [\n    {\n      \"user_id\": \"{user_id}\",\n      \"permissions\": [\n        \"read_all_messages\",\n        \"add_remove_members\",\n        \"add_admins\",\n        \"change_chat_info\",\n        \"pin_message\",\n        \"write\"\n      ],\n      \"alias\": \"администраторам\"\n    }\n  ]\n}'\n``` \n\n## Доступные права администратора \n- `read_all_messages` — читать все сообщения в групповом чате или посты в канале. Право можно назначить пользователям и ботам. Без этого права не получится управлять сообщениями: закреплять (`pin_message`), редактировать и удалять посты в каналах (`edit` и `delete`) и групповых чатах (`write`). Также это право важно при назначении ботов: без него тот не будет получать обновления через [Webhook](/docs-api/methods/POST/subscriptions). Управление `read_all_messages` в интерфейсе мессенджера доступно только для ботов в групповых чатах \n- `edit` — редактировать посты в каналах (для групповых чатов недоступно). Право можно назначить пользователям и ботам, только если уже есть право `read_all_messages` или вместе с ним — иначе вернётся ошибка. Ранее вместо `edit` в API использовалось `edit_message` — в ответе могут возвращаться оба значения, однако при назначении новых прав администраторов используйте `edit`. Управление `edit` также дублируется в интерфейсе мессенджера \n- `delete` — удалять посты (для групповых чатов недоступно). Право можно назначить пользователям и ботам, только если уже есть право `read_all_messages` или вместе с ним — иначе вернётся ошибка. Ранее вместо `delete` в API использовалось `delete_message` — в ответе могут возвращаться оба значения, однако при назначении новых прав администраторов используйте `delete`. Управление `delete` также дублируется в интерфейсе мессенджера \n- `write` — редактировать и удалять сообщения в групповых чатах, а также писать посты в каналах. Право можно назначить пользователям и ботам, только если уже есть право `read_all_messages` или вместе с ним — иначе вернётся ошибка. Ранее вместо `write` в API использовалось `post_edit_delete_message` — в ответе могут возвращаться оба значения, однако при назначении новых прав администраторам используйте `write`. Управление `write` также дублируется в интерфейсе мессенджера \n- `pin_message` — закреплять сообщение. Право можно назначить пользователям и ботам, только если уже есть право `read_all_messages` или вместе с ним — иначе вернётся ошибка \n- `change_chat_info` — изменять информацию о канале или групповом чате. Право доступно для пользователей и ботов\n- `add_remove_members` — добавлять и удалять участников группового чата или подписчиков канала. Право доступно для пользователей и в чатах, и в каналах, для ботов — **только в чатах**. Управление `add_remove_members` также дублируется в интерфейсе мессенджера \n- `add_admins` — добавлять и удалять администраторов группового чата или канала. Право доступно для пользователей и ботов. Управление `add_admins` дублируется в интерфейсе мессенджера\n- `edit_link` — изменять ссылку на групповой чат (для каналов недоступно). Право есть для пользователей и ботов. Управление `edit_link` также дублируется в интерфейсе мессенджера\n- `can_call` — звонить в групповом чате (для каналов недоступно). Право есть у пользователей и ботов — проставляется автоматически при назначении администратором. Управление `can_call` в интерфейсе мессенджера не дублируется \n- `view_stats` — право на просмотр статистики каналов (для групповых чатов недоступно). Назначается по умолчанию владельцам каналов. Для других пользователей-администраторов канала и ботов недоступно. Управление `view_stats` в интерфейсе мессенджера не дублируется",
                 "summary": "Назначить администратора группового чата или канала",
                 "parameters": [
                     {
@@ -616,8 +630,8 @@
                 "tags": [
                     "chats"
                 ],
-                "operationId": "deleteAdmin",
-                "description": "Лишает пользователя или бота прав администратора в групповом чате или канале. При этом из чата и канала они не исключаются \n\nБот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала с соответствующим правом `add_admins`. Чтобы получить информацию о правах бота, используйте [GET /chats/-chatId-/members/admins](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании объекта [`Chat`](/docs-api/objects/Chat) \n\nПример запроса:\n```bash\ncurl -X DELETE \"https://platform-api2.max.ru/chats/{chatId}/members/admins/{userId}\" \\\n  -H \"Authorization: {access_token}\"\n```",
+                "operationId": "deleteAdmins",
+                "description": "Лишает пользователя или бота прав администратора в групповом чате или канале. При этом из чата и канала они не исключаются \n\nБот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала с соответствующим правом `add_admins`. Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании [`POST /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора) \n\nПример запроса:\n```bash\ncurl -X DELETE \"https://platform-api2.max.ru/chats/{chatId}/members/admins/{userId}\" \\\n  -H \"Authorization: {access_token}\"\n```",
                 "summary": "Отменить права администратора в групповом чате или канале",
                 "parameters": [
                     {
@@ -644,7 +658,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "$ref": "#/components/responses/SuccessResponse"
+                        "description": "Права администратора отменены или запрос завершился ошибкой (причина ошибки описана в `message`)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SimpleQueryResult"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "$ref": "#/components/responses/Unauthorized"
@@ -662,7 +683,7 @@
                 ],
                 "operationId": "getMembers",
                 "summary": "Получение участников группового чата или канала",
-                "description": "Возвращает список участников группового чата и их данные, например: идентификатор, имя, никнейм, время последней активности, URL аватара, флаги администратора, владельца и бота, а также права на управление каналом или групповым чатом для пользователей-администраторов. Подробнее о правах — в описании объекта [`Chat`](/docs-api/objects/Chat)\n\nБот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала \n\nПример запроса:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/chats/{chatId}/members\" \\\n  -H \"Authorization: {access_token}\"\n``` ",
+                "description": "Возвращает список участников группового чата и их данные, например: идентификатор, имя, никнейм, время последней активности, URL аватара, флаги администратора, владельца и бота, а также права на управление каналом или групповым чатом для пользователей-администраторов. Подробнее о правах — в описании [`POST /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора)\n\nБот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала \n\nПример запроса:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/chats/{chatId}/members\" \\\n  -H \"Authorization: {access_token}\"\n``` ",
                 "parameters": [
                     {
                         "name": "chatId",
@@ -742,7 +763,7 @@
                     "chats"
                 ],
                 "operationId": "addMembers",
-                "description": "Добавляет участников в групповой чат\n\n Бот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата с соответствующим правом `add_remove_members`. Чтобы получить информацию о правах бота, используйте [GET /chats/-chatId-/members/admins](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании объекта [`Chat`](/docs-api/objects/Chat)\n\n >Добавить подписчиков в канал с помощью этого метода нельзя \n\n**Пример запроса**:\n```bash\ncurl -X POST \"https://platform-api2.max.ru/chats/{chatId}/members\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"user_ids\": [\"{user_id_1}\", \"{user_id_2}\"]\n}'\n```",
+                "description": "Добавляет участников в групповой чат\n\n Бот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата с соответствующим правом `add_remove_members`. Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании [`POST /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора)\n\n >Добавить подписчиков в канал с помощью этого метода нельзя \n\n**Пример запроса**:\n```bash\ncurl -X POST \"https://platform-api2.max.ru/chats/{chatId}/members\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"user_ids\": [\"{user_id_1}\", \"{user_id_2}\"]\n}'\n```",
                 "summary": "Добавление участников в групповой чат",
                 "parameters": [
                     {
@@ -769,7 +790,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Результат запроса на изменение списка участников чата",
+                        "description": "Успешный или неуспешный результат",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -797,7 +818,7 @@
                     "chats"
                 ],
                 "operationId": "removeMember",
-                "description": "Удаляет участника из группового чата или канала\n\n Бот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала с соответствующим правом `add_remove_members`. Чтобы получить информацию о правах бота, используйте [GET /chats/-chatId-/members/admins](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании объекта [`Chat`](/docs-api/objects/Chat) \n\nПример запроса:\n```bash\ncurl -X DELETE \"https://platform-api2.max.ru/chats/{chatId}/members?user_id={user_id}&block=true\" \\\n  -H \"Authorization: {access_token}\"\n```",
+                "description": "Удаляет участника из группового чата или канала\n\n Бот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала с соответствующим правом `add_remove_members`. Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании [`POST /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора) \n\nПример запроса:\n```bash\ncurl -X DELETE \"https://platform-api2.max.ru/chats/{chatId}/members?user_id={user_id}&block=true\" \\\n  -H \"Authorization: {access_token}\"\n```",
                 "summary": "Удаление участников из группового чата или канала",
                 "parameters": [
                     {
@@ -834,7 +855,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "$ref": "#/components/responses/SuccessResponse"
+                        "description": "Объект удалён или запрос завершился ошибкой (причина ошибки описана в `message`)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SimpleQueryResult"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "$ref": "#/components/responses/Unauthorized"
@@ -858,7 +886,7 @@
                 "summary": "Получение всех подписок через Webhook",
                 "responses": {
                     "200": {
-                        "description": "Ожидаемый результат",
+                        "description": "Список текущих подписок",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -924,7 +952,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "$ref": "#/components/responses/SuccessResponse"
+                        "description": "Бот отписан от обновлений или запрос завершился ошибкой (причина ошибки описана в `message`)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SimpleQueryResult"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "$ref": "#/components/responses/Unauthorized"
@@ -956,7 +991,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Возвращает URL для загрузки вложения",
+                        "description": "Возвращает URL для загрузки вложения и токен для загрузки медиафайла",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -980,11 +1015,11 @@
                     "messages"
                 ],
                 "operationId": "getMessages",
-                "description": "Метод возвращает информацию о сообщении или массив сообщений из чата. Для выполнения запроса нужно указать один из параметров — `chat_id` или `message_ids`:\n\n- `chat_id` — метод возвращает массив сообщений из указанного чата. Сообщения возвращаются в обратном порядке: последние сообщения будут первыми в массиве. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)\n\n- `message_ids` — метод возвращает информацию о запрошенных сообщениях. Можно указать один идентификатор или несколько\n\n#### Пример запроса с использованием `chat_id`:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/messages?chat_id={chat_id}\" \\\n  -H \"Authorization: {access_token}\"\n```\n\n#### Пример запроса с использованием `message_ids`:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/messages?message_ids={message_id1},{message_id2}\" \\\n  -H \"Authorization: {access_token}\"\n```",
-                "summary": "Получение сообщений",
+                "description": "Возвращает информацию о сообщении или массив сообщений из чата или посты из каналов. Для выполнения запроса нужно указать один из параметров — `chat_id` или `message_ids`:\n\n- `chat_id` — метод возвращает массив сообщений или постов из указанного чата или канала, только если чат-бот в них является администратором. Сообщения возвращаются в обратном порядке: последние сообщения будут первыми в массиве. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)\n\n- `message_ids` — метод возвращает информацию о запрошенных сообщениях или постах. Можно указать один идентификатор или несколько\n\n#### Пример запроса с использованием `chat_id`:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/messages?chat_id={chat_id}\" \\\n  -H \"Authorization: {access_token}\"\n```\n\n#### Пример запроса с использованием `message_ids`:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/messages?message_ids={message_id1},{message_id2}\" \\\n  -H \"Authorization: {access_token}\"\n```",
+                "summary": "Получение информации о сообщениях или постах",
                 "parameters": [
                     {
-                        "description": " ID чата, чтобы получить сообщения из определённого чата. Обязательный параметр, если не указан `message_ids`. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
+                        "description": "ID чата или канала, чтобы получить из него сообщения или посты. Обязательный параметр, если не указан `message_ids`. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                         "name": "chat_id",
                         "in": "query",
                         "schema": {
@@ -992,7 +1027,7 @@
                         }
                     },
                     {
-                        "description": "Список ID сообщений, которые нужно получить (через запятую). Обязательный параметр, если не указан `chat_id`",
+                        "description": "Список ID сообщений или постов, которые нужно получить (через запятую). Обязательный параметр, если не указан `chat_id`",
                         "name": "message_ids",
                         "in": "query",
                         "style": "simple",
@@ -1003,7 +1038,7 @@
                     },
                     {
                         "name": "from",
-                        "description": "Время, до которого будут запрошены все сообщения с начала чата (в формате Unix timestamp)",
+                        "description": "Время, до которого будут запрошены все сообщения или посты, начиная с первого опубликованного. Формат времени: Unix timestamp в миллисекундах",
                         "in": "query",
                         "schema": {
                             "$ref": "#/components/schemas/bigint"
@@ -1011,7 +1046,7 @@
                     },
                     {
                         "name": "to",
-                        "description": "Время, начиная с которого будут запрошены все сообщения до конца чата (в формате Unix timestamp)",
+                        "description": "Время, начиная с которого будут запрошены все сообщения или посты, — вплоть до последнего опубликованного. Формат времени: Unix timestamp в миллисекундах",
                         "in": "query",
                         "schema": {
                             "$ref": "#/components/schemas/bigint"
@@ -1019,7 +1054,7 @@
                     },
                     {
                         "name": "count",
-                        "description": "Максимальное количество сообщений в ответе",
+                        "description": "Максимальное количество сообщений или постов в ответе",
                         "in": "query",
                         "schema": {
                             "type": "integer",
@@ -1032,7 +1067,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Возвращает список сообщений",
+                        "description": "Информация о сообщении или массиве сообщений из чата",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1064,12 +1099,12 @@
                     "messages"
                 ],
                 "operationId": "sendMessage",
-                "description": "Отправляет сообщение в чат\n\n#### Пример запроса с одной кнопкой-ссылкой\n\nБольше примеров запросов с кнопками — [в разделе «Клавиатура»](/docs-api#Как%20добавить%20кнопки)\n````bash\ncurl -X POST \"https://platform-api2.max.ru/messages?user_id={user_id}\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"text\": \"Это сообщение с кнопкой-ссылкой\",\n  \"attachments\": [\n    {\n      \"type\": \"inline_keyboard\",\n      \"payload\": {\n        \"buttons\": [\n          [\n            {\n              \"type\": \"link\",\n              \"text\": \"Откройте сайт\",\n              \"url\": \"https://example.com\"\n            }\n          ]\n        ]\n      }\n    }\n  ]\n }'\n",
-                "summary": "Отправить сообщение",
+                "description": "Отправляет сообщение в диалог, групповой чат или канал\n\nКроме текста сообщения или посты могут содержать следующие типы вложений:\n\n- `image` — изображение (JPG, JPEG, PNG, GIF, TIFF, BMP, HEIC)\n\n- `video` — видео (MP4, MOV, MKV, WEBM, MATROSKA)\n\n- `audio` — аудио (MP3, WAV, M4A и другие)\n\n- `file` — файл для загрузки в (TXT, DOC и другие)\n\n- `sticker` — стикер\n\n- `contact` — контакт (данные контакта из телефонного справочника)\n\n- `inline_keyboard` — сообщение или пост с кнопкой\n\n- `share` — контент, прикрепленный по внешнему URL\n\n- `location` — локация\n\n#### Ограничения\n\nМожно отправлять не более двух сообщений в секунду в один диалог, групповой чат или канал. При превышении этого лимита сообщения следует ставить в очередь или делать задержку перед отправкой\n\n#### Пример запроса с одной кнопкой-ссылкой\n\nБольше примеров запросов с кнопками — [в разделе «Клавиатура»](/docs-api#Как%20добавить%20кнопки)\n````bash\ncurl -X POST \"https://platform-api2.max.ru/messages?user_id={user_id}\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"text\": \"Это сообщение с кнопкой-ссылкой\",\n  \"attachments\": [\n    {\n      \"type\": \"inline_keyboard\",\n      \"payload\": {\n        \"buttons\": [\n          [\n            {\n              \"type\": \"link\",\n              \"text\": \"Откройте сайт\",\n              \"url\": \"https://example.com\"\n            }\n          ]\n        ]\n      }\n    }\n  ]\n }'\n",
+                "summary": "Отправка сообщений",
                 "parameters": [
                     {
                         "name": "user_id",
-                        "description": "Если вы хотите отправить сообщение пользователю, укажите его ID",
+                        "description": "Если вы хотите отправить сообщение пользователю, укажите ID этого пользователя",
                         "in": "query",
                         "required": false,
                         "schema": {
@@ -1079,7 +1114,7 @@
                     },
                     {
                         "name": "chat_id",
-                        "description": "Если сообщение отправляется в чат, укажите его ID. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
+                        "description": "Если сообщение отправляется в чат или канал, укажите ID этого чата или канала. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                         "schema": {
                             "type": "integer",
                             "format": "int64"
@@ -1089,7 +1124,7 @@
                     },
                     {
                         "name": "disable_link_preview",
-                        "description": " Если `true`, сервер не будет генерировать превью для ссылок в тексте сообщения",
+                        "description": " Если `true`, сервер не будет генерировать превью для ссылок в тексте сообщения или поста",
                         "in": "query",
                         "required": false,
                         "schema": {
@@ -1110,7 +1145,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Возвращает информацию о созданном сообщении",
+                        "description": "Информация о созданном сообщении или опубликованном посте",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1132,8 +1167,8 @@
                     "messages"
                 ],
                 "operationId": "editMessage",
-                "description": "Метод позволяет редактировать сообщения, отправленные ботом\n\n  #### Ограничения при редактировании сообщений:\n\n- В диалогах с ботом:\n\n    - сообщения с кнопками [`inline_keyboard`](/docs-api#Как%20добавить%20кнопки) редактируются независимо от срока давности\n\n    - остальные сообщения редактируются, если они отправлены менее 7 суток назад\n\n- В групповых чатах и каналах любые сообщения редактируются независимо от срока давности\n\n#### Пример запроса:\n```bash\ncurl -X PUT \"https://platform-api2.max.ru/messages?message_id=message_id\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"text\": \"Изменённый текст\"\n}'\n```",
-                "summary": "Редактировать сообщение",
+                "description": "Редактирует сообщения и посты, отправленные ботом\n\n  #### Ограничения\n\n- Есть особенности редактирования сообщений в диалогах с ботом, связанные со сроком давности:\n\n    - сообщения с кнопками [`inline_keyboard`](/docs-api#Как%20добавить%20кнопки) редактируются независимо от срока давности\n\n    - остальные сообщения редактируются, если они отправлены менее 7 суток назад\n\n- В групповых чатах и каналах любые сообщения редактируются независимо от срока давности\n\n- Можно редактировать не более двух сообщений в секунду в одном диалоге, групповом чате или канале. При превышении этого лимита сообщения следует ставить в очередь или делать задержку перед редактированием\n\n#### Пример запроса:\n```bash\ncurl -X PUT \"https://platform-api2.max.ru/messages?message_id=message_id\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"text\": \"Изменённый текст\"\n}'\n```",
+                "summary": "Редактирование сообщений",
                 "parameters": [
                     {
                         "name": "message_id",
@@ -1173,7 +1208,7 @@
                     "messages"
                 ],
                 "operationId": "deleteMessage",
-                "summary": "Удалить сообщение",
+                "summary": "Удаление сообщений",
                 "description": "Удаляет сообщения в диалоге, групповом чате или канале\n\n #### Ограничения \n\n- Бот должен быть администратором и иметь право на удаление сообщений\n\n- Бот может удалять сообщения:\n\n  - в диалоге — только сообщения, отправленные самим ботом\n\n  - в групповом чате — любые сообщения\n\n  - в канале — любые сообщения\n\n- Можно удалять не более двух сообщений в секунду в одном диалоге, групповом чате или канале. При превышении этого лимита сообщения следует ставить в очередь или делать задержку перед удалением\n\n#### Пример запроса:\n```bash\ncurl -X DELETE \"https://platform-api2.max.ru/messages?message_id={message_id}\" \\\n  -H \"Authorization: {access_token}\"\n```",
                 "parameters": [
                     {
@@ -1189,7 +1224,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "$ref": "#/components/responses/SuccessResponse"
+                        "description": "Объект удалён или запрос завершился ошибкой (причина ошибки описана в `message`)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SimpleQueryResult"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "$ref": "#/components/responses/Unauthorized"
@@ -1209,11 +1251,11 @@
                     "messages"
                 ],
                 "operationId": "getMessageById",
-                "description": "Возвращает сообщение по его ID\n\n#### Пример запроса:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/messages/{messageId}\" \\\n  -H \"Authorization: {access_token}\"\n```",
-                "summary": "Получить сообщение",
+                "description": "Возвращает сообщение из канала или чата по его ID\n\n#### Пример запроса:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/messages/{messageId}\" \\\n  -H \"Authorization: {access_token}\"\n```",
+                "summary": "Получение сообщений",
                 "parameters": [
                     {
-                        "description": "ID сообщения (`mid`), чтобы получить одно сообщение в чате",
+                        "description": "ID сообщения (`mid`), чтобы получить одно сообщение в чате или канале",
                         "in": "path",
                         "name": "messageId",
                         "required": true,
@@ -1225,7 +1267,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Возвращает одно сообщение",
+                        "description": "Информация о сообщении с ID, указанным в запросе",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1259,8 +1301,8 @@
                     "messages"
                 ],
                 "operationId": "getVideoAttachmentDetails",
-                "description": "Возвращает подробную информацию о прикреплённом видео, URL-адреса воспроизведения и дополнительные метаданные\n\n#### Пример запроса:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/videos/{video_token}\" \\\n  -H \"Authorization: {access_token}\"",
-                "summary": "Получить информацию о видео",
+                "description": "Возвращает подробную информацию о видео, прикреплённом к сообщению в чате или канале, URL-адреса воспроизведения и дополнительные метаданные\n\n#### Пример запроса:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/videos/{video_token}\" \\\n  -H \"Authorization: {access_token}\"",
+                "summary": "Получение информации о видео, прикреплённом к сообщению",
                 "parameters": [
                     {
                         "description": "Токен видео-вложения",
@@ -1275,7 +1317,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Detailed video attachment info",
+                        "description": "Подробная информация о прикреплённом видео",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1312,8 +1354,8 @@
                     "messages"
                 ],
                 "operationId": "answerOnCallback",
-                "description": "Этот метод используется для отправки ответа после того, как пользователь нажал на кнопку. Ответом может быть обновленное сообщение и/или одноразовое уведомление для пользователя\n\n#### Пример запроса:\n```bash\ncurl -X POST \"https://platform-api2.max.ru/answers?callback_id=callback_id\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"message\": {\n      \"text\": \"Это сообщение с кнопкой-ссылкой\",\n      \"attachments\": [\n        {\n          \"type\": \"inline_keyboard\",\n          \"payload\": {\n            \"buttons\": [\n              [\n                {\n                  \"type\": \"link\",\n                  \"text\": \"Откройте сайт\",\n                  \"url\": \"https://example.com\"\n                }\n              ]\n            ]\n          }\n        }\n      ]\n    }\n  }'\n```",
-                "summary": "Ответ на callback",
+                "description": "Отправляет ответ после того, как пользователь нажал на кнопку. Ответом может быть обновленное сообщение и/или одноразовое уведомление для пользователя\n\n#### Ограничения\n\nМожно отправлять не более двух ответов в секунду в один диалог, групповой чат или канал. При превышении этого лимита сообщения следует ставить в очередь или делать задержку перед отправкой\n\n#### Пример запроса:\n```bash\ncurl -X POST \"https://platform-api2.max.ru/answers?callback_id=callback_id\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"message\": {\n      \"text\": \"Это сообщение с кнопкой-ссылкой\",\n      \"attachments\": [\n        {\n          \"type\": \"inline_keyboard\",\n          \"payload\": {\n            \"buttons\": [\n              [\n                {\n                  \"type\": \"link\",\n                  \"text\": \"Откройте сайт\",\n                  \"url\": \"https://example.com\"\n                }\n              ]\n            ]\n          }\n        }\n      ]\n    }\n  }'\n```",
+                "summary": "Отправка ответа на callback",
                 "parameters": [
                     {
                         "name": "callback_id",
@@ -1396,7 +1438,7 @@
                     },
                     {
                         "name": "types",
-                        "description": "Список типов событий, которые вы хотите получать, например: `message_created`, `message_callback`. Полный список возможных событий смотрите в описании [объекта `Update`](/docs-api/objects/Update)",
+                        "description": "Список типов событий, которые вы хотите получать. Полный список возможных событий смотрите в описании [объекта `Update`](/docs-api/objects/Update)",
                         "in": "query",
                         "example": "types=message_created,message_callback",
                         "schema": {
@@ -1412,7 +1454,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Список обновлений событий",
+                        "description": "Список обновлений событий с указателем на следующую страницу данных",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1465,7 +1507,7 @@
                 }
             },
             "Unauthorized": {
-                "description": "Ошибка авторизации. Не предоставлен `access_token` или токен недействителен",
+                "description": "Ошибка авторизации. Токен `access_token` указан некорректно или недействителен",
                 "content": {
                     "application/json": {
                         "schema": {
@@ -1537,7 +1579,7 @@
                         "type": "boolean"
                     },
                     "last_activity_time": {
-                        "description": "Время последней активности пользователя или бота в MAX (Unix-время в миллисекундах). Если пользователь отключил в настройках профиля мессенджера MAX возможность видеть, что он в сети онлайн, поле может не возвращаться",
+                        "description": "Время последней активности пользователя или бота в MAX (Unix timestamp в миллисекундах). Если пользователь отключил в настройках профиля мессенджера MAX возможность видеть, что он в сети онлайн, поле может не возвращаться",
                         "type": "integer",
                         "format": "int64"
                     },
@@ -1744,7 +1786,7 @@
                         "nullable": true
                     },
                     "icon": {
-                        "description": "Иконка чата или канала",
+                        "description": "Аватар группового чата или канала",
                         "nullable": true,
                         "allOf": [
                             {
@@ -1753,7 +1795,7 @@
                         ]
                     },
                     "last_event_time": {
-                        "description": "Время последнего события в чате или канале",
+                        "description": "Время последнего события в чате или канале в формате Unix timestamp в миллисекундах",
                         "type": "integer",
                         "format": "int64"
                     },
@@ -1770,7 +1812,7 @@
                         "readOnly": false
                     },
                     "participants": {
-                        "description": "Участники чата или канала с временем последней активности. Может быть `null`, если запрашивается список чатов",
+                        "description": "Список участников в формате ключ-значение, где ключ — идентификатор участника `user_id`, а значение — время его последней активности в чате или канале `last_event_time`. Может быть `null`, если запрашивается список чатов",
                         "nullable": true,
                         "readOnly": false,
                         "type": "object",
@@ -1780,7 +1822,7 @@
                         }
                     },
                     "is_public": {
-                        "description": "Доступен ли чат публично (для диалогов всегда `false`)",
+                        "description": "Параметр показывает, доступен ли групповой чат или канал публично. Для диалогов и приватных каналов — всегда `false`",
                         "type": "boolean"
                     },
                     "link": {
@@ -1805,7 +1847,7 @@
                         "readOnly": false
                     },
                     "messages_count": {
-                        "description": "Количество сообщений в групповых чатах и каналах",
+                        "description": "Количество сообщений в групповом чате или постов канале",
                         "nullable": true,
                         "readOnly": false,
                         "type": "integer"
@@ -1834,11 +1876,10 @@
                 ]
             },
             "ChatType": {
-                "description": "Тип чата: диалог, чат",
                 "enum": [
                     "chat",
-                    "dialog",
-                    "channel"
+                    "channel",
+                    "dialog"
                 ]
             },
             "ChatStatus": {
@@ -1874,6 +1915,7 @@
             "ChatPatch": {
                 "properties": {
                     "icon": {
+                        "description": "Данные для прикрепления изображения в качестве аватара чата или канала",
                         "readOnly": false,
                         "nullable": true,
                         "allOf": [
@@ -1890,7 +1932,7 @@
                         "nullable": true
                     },
                     "pin": {
-                        "description": "ID сообщения для закрепления в чате. Чтобы удалить закреплённое сообщение, используйте метод [unpin](/docs-api/methods/DELETE/chats/%7BchatId%7D/pin)",
+                        "description": "ID сообщения для закрепления в чате или канале. Чтобы удалить закреплённое сообщение, используйте метод [`DELETE /chats/{chatId}/pin`](/docs-api/methods/DELETE/chats/-chatId-/pin)",
                         "type": "string",
                         "readOnly": false,
                         "nullable": true
@@ -1928,7 +1970,7 @@
                             "join_time": {
                                 "type": "integer",
                                 "format": "int64",
-                                "description": "Дата присоединения к чату в формате Unix time"
+                                "description": "Дата присоединения к чату в формате Unix timestamp в миллисекундах"
                             },
                             "permissions": {
                                 "description": "Перечень прав доступа пользователя или бота, если тот является администратором группового чата или канала. Для обычных участников чата или канала поле не возвращается\n\n Если право назначается действующему администратору, то его текущие права будут обновлены в соответствии с переданным списком. Ниже приведено краткое описание всех прав — подробнее читайте [в разделе «Доступные права администратора»](/docs-api/methods/POST/chats/-chatId-/members/admins) \n\n **Краткое описание доступных прав администратора**: \n- `read_all_messages` — читать все сообщения в канале или групповом чате \n- `edit` — редактировать посты в каналах (для групповых чатов недоступно). Ранее вместо `edit` в API использовалось `edit_message` — в ответе могут возвращаться оба значения, однако при назначении новых прав администраторам используйте `edit` \n- `delete` — удалять посты (для групповых чатов недоступно). Ранее вместо `delete` в API использовалось `delete_message` — в ответе могут возвращаться оба значения, однако при назначении новых прав администраторам используйте `delete` \n- `write` — редактировать и удалять сообщения в групповых чатах, а также писать посты в каналах. Ранее вместо `write` в API использовалось `post_edit_delete_message` — в ответе могут возвращаться оба значения, однако при назначении новых прав администраторам используйте `write` \n- `pin_message` — закреплять сообщение \n- `change_chat_info` — изменять информацию о канале или групповом чате\n- `add_remove_members` — добавлять и удалять участников группового чата (доступно пользователям и ботам) или подписчиков канала (доступно только пользователям) \n- `add_admins` — добавлять и удалять администраторов группового чата или канала\n- `edit_link` — изменять ссылку на групповой чат (для каналов недоступно)\n- `can_call` — звонить в групповом чате (для каналов недоступно) \n- `view_stats` — право на просмотр статистики каналов (для групповых чатов недоступно). Назначается по умолчанию владельцам каналов. Для других пользователей-администраторов канала и ботов недоступно",
@@ -2069,7 +2111,7 @@
                         "type": "string"
                     },
                     "time": {
-                        "description": "Unix-время, когда была создана подписка",
+                        "description": "Unix timestamp в миллисекундах, когда была создана подписка",
                         "type": "integer",
                         "format": "int64"
                     },
@@ -2095,13 +2137,13 @@
                 "description": "Новый получатель сообщения. Может быть пользователем или чатом",
                 "properties": {
                     "chat_id": {
-                        "description": "ID чата. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
+                        "description": "ID чата или канала. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                         "type": "integer",
                         "format": "int64",
                         "nullable": true
                     },
                     "chat_type": {
-                        "description": "Тип чата",
+                        "description": "Тип чата:\n - `chat` — групповой чат\n - `channel` — канал\n - `dialog` — диалог",
                         "allOf": [
                             {
                                 "$ref": "#/components/schemas/ChatType"
@@ -2109,7 +2151,7 @@
                         ]
                     },
                     "user_id": {
-                        "description": "ID пользователя, если сообщение было отправлено пользователю",
+                        "description": "ID получателя сообщения в диалоге (пользователя или бота). Если сообщение отправлено в групповой чат или канал, то параметр отсутствует",
                         "type": "integer",
                         "format": "int64",
                         "nullable": true
@@ -2122,10 +2164,10 @@
                 ]
             },
             "Message": {
-                "description": "Сообщение в чате",
+                "description": "Содержит общую информацию о сообщении в чате или посте в канале: данные об отправителе и получателе, время создания сообщения, содержимое (текст и вложения), контекст связи с другими сообщениями (ответ или пересылка), а также публичную ссылку и статистику для постов в каналах\n\nВозвращается в ответ на вызовы методов группы [`/messages`](/docs-api/methods/GET/messages) и [`/chats/{chatId}/pin`](/docs-api/methods/PUT/chats/-chatId-/pin)",
                 "properties": {
                     "sender": {
-                        "description": "Пользователь, отправивший сообщение",
+                        "description": "Отправитель сообщения: пользователь или бот\n\n**Обратите внимание**:<br/>- Все параметры в объекте относятся к отправителю сообщения<br/>- Объект отсутствует, если сообщение отправлено в канал",
                         "allOf": [
                             {
                                 "$ref": "#/components/schemas/User"
@@ -2134,7 +2176,7 @@
                         "readOnly": false
                     },
                     "recipient": {
-                        "description": "Получатель сообщения. Может быть пользователем или чатом",
+                        "description": "Получатель сообщения: пользователь или бот (для диалога), канал или чат\n\n **Обратите внимание**: все параметры в объекте относятся к получателю сообщения",
                         "allOf": [
                             {
                                 "$ref": "#/components/schemas/Recipient"
@@ -2142,7 +2184,7 @@
                         ]
                     },
                     "timestamp": {
-                        "description": "Время создания сообщения в формате Unix-time",
+                        "description": "Время создания сообщения в формате Unix timestamp в миллисекундах",
                         "type": "integer",
                         "format": "int64"
                     },
@@ -2165,7 +2207,7 @@
                         ]
                     },
                     "stat": {
-                        "description": "Статистика сообщения. Возвращается только для постов в каналах",
+                        "description": "Статистика просмотров постов — возвращается только для каналов",
                         "allOf": [
                             {
                                 "$ref": "#/components/schemas/MessageStat"
@@ -2200,7 +2242,7 @@
                 ]
             },
             "MessageBody": {
-                "description": "Схема, представляющая тело сообщения",
+                "description": "Информация о сообщении",
                 "type": "object",
                 "properties": {
                     "mid": {
@@ -2208,17 +2250,17 @@
                         "type": "string"
                     },
                     "seq": {
-                        "description": "ID последовательности сообщения в чате",
+                        "description": "ID расположения сообщения в чате по порядку",
                         "type": "integer",
                         "format": "int64"
                     },
                     "text": {
-                        "description": "Новый текст сообщения",
+                        "description": "Текст сообщения",
                         "type": "string",
                         "nullable": true
                     },
                     "attachments": {
-                        "description": "Вложения сообщения. Могут быть одним из типов `Attachment`. Смотрите описание схемы",
+                        "description": "Вложения сообщения. Могут быть одним из типов `attachment`, описанных в схеме ниже<br/>Если получено пустое поле или равное `null`, результат будет без изменений. Если получен пустой массив, то все вложения будут удалены",
                         "type": "array",
                         "nullable": true,
                         "required": false,
@@ -2245,7 +2287,7 @@
                 ]
             },
             "MessageList": {
-                "description": "Пагинированный список сообщений",
+                "description": "Массив сообщений. Может быть как с пагинацией, так и без — если запрошены конкретные сообщения по их идентификаторам",
                 "properties": {
                     "messages": {
                         "description": "Массив сообщений",
@@ -2268,15 +2310,15 @@
                 ]
             },
             "NewMessageBody": {
+                "description": "Объект используется при отправке нового сообщения в чате или канале[`POST /messages`](/docs-api/methods/POST/messages), редактировании существующего сообщения или поста [`PUT /messages`](/docs-api/methods/PUT/messages), а также callback-отправке сообщения пользователю при нажатии им кнопки в чате или канале [`POST /answers`](/docs-api/methods/POST/answers) \n\nПараметры объекта содержат: текст и способ его форматирования, вложения, ссылку на связанное сообщение (ответ или пересылка), настройку PUSH-уведомлений для участников чата",
                 "properties": {
                     "text": {
-                        "description": "Новый текст сообщения",
                         "type": "string",
                         "maxLength": 4000,
                         "nullable": true
                     },
                     "attachments": {
-                        "description": "Вложения сообщения. Если поле равно `null`, изменений не произойдет. Если пусто, все вложения будут удалены",
+                        "description": "Вложения сообщения. Если поле равно `null`, изменений не произойдет. Если массив пуст, все вложения будут удалены",
                         "type": "array",
                         "nullable": true,
                         "items": {
@@ -2294,7 +2336,7 @@
                         ]
                     },
                     "notify": {
-                        "description": "Если false, участники чата не будут уведомлены (по умолчанию `true`)",
+                        "description": "Если `false`, участники чата не получат push-уведомления. Для каналов необходимо отправлять запрос с `notify = true` или без этого поля, т.к. каналы не подразумевают отправку постов без push-уведомлений",
                         "type": "boolean",
                         "default": true,
                         "readOnly": false
@@ -2319,7 +2361,7 @@
             "NewMessageLink": {
                 "properties": {
                     "type": {
-                        "description": "Тип ссылки сообщения",
+                        "description": "Тип связанного сообщения:\n - `\"forward\"` — пересланное сообщение\n - `\"reply\"` — ответ на сообщение",
                         "nullable": false,
                         "allOf": [
                             {
@@ -2349,7 +2391,7 @@
                         ]
                     },
                     "sender": {
-                        "description": "Пользователь, отправивший сообщение.",
+                        "description": "Пользователь или бот, отправивший сообщение",
                         "allOf": [
                             {
                                 "$ref": "#/components/schemas/User"
@@ -2358,7 +2400,7 @@
                         "readOnly": false
                     },
                     "chat_id": {
-                        "description": "Чат, в котором сообщение было изначально опубликовано. Только для пересланных сообщений. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
+                        "description": "Чат или канал, в котором сообщение было изначально опубликовано. Только для пересланных сообщений с `type = forward`. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                         "type": "integer",
                         "format": "int64",
                         "readOnly": false
@@ -2435,6 +2477,7 @@
                 ]
             },
             "PhotoAttachmentPayload": {
+                "description": "Данные, использованные для отправки изображения",
                 "properties": {
                     "photo_id": {
                         "description": "Уникальный ID этого изображения",
@@ -2442,11 +2485,11 @@
                         "format": "int64"
                     },
                     "token": {
-                        "description": "",
+                        "description": "Токен вложения — уникальный ID загруженного медиа: изображения, аудио, видео или файла. Возвращается в ответ на вызов [POST /uploads](/docs-api/methods/POST/uploads)",
                         "type": "string"
                     },
                     "url": {
-                        "description": "URL изображения",
+                        "description": "URL изображения. Время жизни ссылки ограниченно. Срок истечения указан в параметре `expires` — если он истёк, ссылку необходимо запросить повторно. Пока доступно только в веб-клиентe",
                         "type": "string"
                     }
                 },
@@ -2674,7 +2717,7 @@
             "AttachmentPayload": {
                 "properties": {
                     "url": {
-                        "description": "URL медиа-вложения. Этот URL будет получен в объекте [Update](/docs-api/objects/Update) после отправки сообщения в чат.\n\nПрямую ссылку на видео также можно получить с помощью метода [`GET /videos/{-videoToken-}`](/docs-api/methods/GET/videos/-videoToken-)",
+                        "description": "URL вложения, который возвращается в объекте [Update](/docs-api/objects/Update) после отправки сообщения в чат или канал\n\n В случае с вложенным видео прямую ссылку также можно получить с помощью метода [`GET /videos/{-videoToken-}`](/docs-api/methods/GET/videos/-videoToken-)",
                         "type": "string"
                     }
                 },
@@ -2683,6 +2726,7 @@
                 ]
             },
             "MediaAttachmentPayload": {
+                "description": "Результат загрузки аудио/видео",
                 "allOf": [
                     {
                         "$ref": "#/components/schemas/AttachmentPayload"
@@ -2690,7 +2734,7 @@
                     {
                         "properties": {
                             "token": {
-                                "description": "Используйте `token`, если вы пытаетесь повторно использовать одно и то же вложение в другом сообщении.",
+                                "description": "Используйте `token`, если вы пытаетесь повторно использовать одно и то же вложение в другом сообщении",
                                 "type": "string"
                             }
                         },
@@ -2701,6 +2745,7 @@
                 ]
             },
             "FileAttachmentPayload": {
+                "description": "Результат загрузки файла",
                 "allOf": [
                     {
                         "$ref": "#/components/schemas/AttachmentPayload"
@@ -2726,6 +2771,7 @@
                     {
                         "properties": {
                             "payload": {
+                                "description": "Результат загрузки данных контакта в сообщение",
                                 "type": "object",
                                 "allOf": [
                                     {
@@ -2767,6 +2813,7 @@
                 }
             },
             "StickerAttachmentPayload": {
+                "description": "Результат загрузки стикера",
                 "allOf": [
                     {
                         "$ref": "#/components/schemas/AttachmentPayload"
@@ -2792,6 +2839,7 @@
                     {
                         "properties": {
                             "payload": {
+                                "description": "Результат отправки стикера",
                                 "type": "object",
                                 "allOf": [
                                     {
@@ -2817,10 +2865,10 @@
                 ]
             },
             "ShareAttachmentPayload": {
-                "description": "Полезная нагрузка запроса ShareAttachmentRequest",
+                "description": "Данные прикреплённого к сообщению предпросмотра медиавложения",
                 "properties": {
                     "url": {
-                        "description": "URL, прикрепленный к сообщению в качестве предпросмотра медиа",
+                        "description": "URL, прикреплённый к сообщению для предпросмотра медиавложения",
                         "minLength": 1,
                         "type": "string",
                         "nullable": true,
@@ -2842,6 +2890,7 @@
                     {
                         "properties": {
                             "payload": {
+                                "description": "Данные, использованные для прикрепления к сообщению предпросмотра контента по внешнему URL",
                                 "type": "object",
                                 "allOf": [
                                     {
@@ -2884,12 +2933,12 @@
                             "latitude": {
                                 "type": "number",
                                 "format": "double",
-                                "description": "Широта"
+                                "description": "Широта, до 15 символов"
                             },
                             "longitude": {
                                 "type": "number",
                                 "format": "double",
-                                "description": "Долгота"
+                                "description": "Долгота, до 15 символов"
                             }
                         },
                         "required": [
@@ -2931,6 +2980,7 @@
                     {
                         "properties": {
                             "buttons": {
+                                "description": "Подробнее о типах кнопок и клавиатуре в ботах — [в разделе «Клавиатура для чат-бота»](/docs-api#Клавиатура%20для%20чат-бота)",
                                 "type": "array",
                                 "items": {
                                     "type": "array",
@@ -3066,7 +3116,7 @@
                     {
                         "properties": {
                             "quick": {
-                                "description": "Если *true*, отправляет местоположение без запроса подтверждения пользователя",
+                                "description": "Если `true`, отправляет местоположение без запроса подтверждения пользователя<br/>Если `false`, возвращает модальное окно с дополнительным уточнением об отправке местоположения",
                                 "readOnly": false,
                                 "type": "boolean",
                                 "default": false
@@ -3182,15 +3232,6 @@
                     }
                 ]
             },
-            "Intent": {
-                "description": "Намерение кнопки",
-                "type": "string",
-                "enum": [
-                    "positive",
-                    "negative",
-                    "default"
-                ]
-            },
             "ReplyButton": {
                 "description": "After pressing this type of button client will send a message on behalf of user with given payload",
                 "properties": {
@@ -3217,7 +3258,8 @@
                     }
                 },
                 "required": [
-                    "text"
+                    "text",
+                    "type"
                 ]
             },
             "SendMessageButton": {
@@ -3309,7 +3351,7 @@
                 ]
             },
             "PhotoAttachmentRequestPayload": {
-                "description": "Запрос на прикрепление изображения (все поля являются взаимоисключающими)",
+                "description": "Данные для прикрепления изображения (все поля являются взаимоисключающими). Вместе с изображениями можно прикрепить видеофайлы (`type: video`) и одно вложение с кнопками (`type: inline_keyboard`). Общее количество вложений не должно превышать общее ограничение — 12. Подробнее — [в примерах](/docs-api#Примеры%20с%20видео,%20изображением,%20файлом)",
                 "properties": {
                     "url": {
                         "description": "Любой внешний URL изображения, которое вы хотите прикрепить",
@@ -3361,7 +3403,7 @@
                 ]
             },
             "VideoAttachmentRequest": {
-                "description": "Запрос на прикрепление видео к сообщению",
+                "description": "Данные для прикрепления видео к сообщению. Вместе с видео можно прикрепить изображения (`type: image`) и одно вложение с кнопками (`type: inline_keyboard`). Общее количество вложений не должно превышать общее ограничение — 12. Подробнее — [в примерах](/docs-api#Примеры%20с%20видео,%20изображением,%20файлом)",
                 "allOf": [
                     {
                         "$ref": "#/components/schemas/AttachmentRequest"
@@ -3405,17 +3447,17 @@
                 ]
             },
             "UploadedInfo": {
-                "description": "Это информация, которую вы получите, как только аудио/видео будет загружено",
+                "description": "Данные, которые вы получили в ответ на запрос [POST /uploads](/docs-api/methods/POST/uploads). Можно передавать после того, как вы загрузили аудио, видео или файл и получили в ответ от сервера `retval`. Подробнее — в описании [POST /uploads](/docs-api/methods/POST/uploads)",
                 "properties": {
                     "token": {
-                        "description": "Токен — уникальный ID загруженного медиафайла",
+                        "description": "Токен вложения — уникальный ID загруженного медиа: изображения, аудио, видео или файла. Возвращается в ответ на вызов [POST /uploads](/docs-api/methods/POST/uploads)",
                         "type": "string",
                         "readOnly": false
                     }
                 }
             },
             "FileAttachmentRequest": {
-                "description": "Запрос на прикрепление файла к сообщению. Должен быть единственным вложением в сообщении",
+                "description": "Данные для прикрепления файла к сообщению, которые вы получили в ответ на запрос [POST /uploads](/docs-api/methods/POST/uploads). Файл можно отправить только в комбинации с вложением с кнопками — отправка совместно с изображением или видео не поддерживается. При этом к сообщению можно прикрепить только один файл и одно вложение с кнопками. Подробнее — в описании [POST /uploads](/docs-api/methods/POST/uploads)",
                 "allOf": [
                     {
                         "$ref": "#/components/schemas/AttachmentRequest"
@@ -3423,6 +3465,7 @@
                     {
                         "properties": {
                             "payload": {
+                                "description": "Данные для прикрепления файла к сообщению, которые вы получили в ответ на запрос [POST /uploads](/docs-api/methods/POST/uploads). К сообщению можно прикрепить только один файл вместе с одним вложением с кнопками. Отправка файла совместно с другими вложениями не поддерживается",
                                 "allOf": [
                                     {
                                         "$ref": "#/components/schemas/UploadedInfo"
@@ -3454,6 +3497,7 @@
                     {
                         "properties": {
                             "payload": {
+                                "description": "Данные для прикрепления карточки контакта к сообщению. К сообщению можно прикрепить только один контакт. Совместно с ним можно прикрепить дополнительно одно вложение с кнопками (`type: inline_keyboard`). Передача других типов вложений совместно с контактом не поддерживается",
                                 "allOf": [
                                     {
                                         "$ref": "#/components/schemas/ContactAttachmentRequestPayload"
@@ -3540,6 +3584,7 @@
                     {
                         "properties": {
                             "payload": {
+                                "description": "Данные для прикрепления кнопок к сообщению<br/>Ограничения:<br/>- Максимальное количество кнопок в ряду — 7<br/>- Максимальное количество строк с кнопками — 30<br/>- Если в ряду кнопки с типами: `link`, `open_app`, `request_geo_location`, `request_contact`, то максимальное количество кнопок в ряду — 3",
                                 "type": "object",
                                 "allOf": [
                                     {
@@ -3612,7 +3657,7 @@
                 ]
             },
             "LocationAttachmentRequest": {
-                "description": "Запрос на прикрепление клавиатуры к сообщению",
+                "description": "Запрос на прикрепление геолокации к сообщению",
                 "allOf": [
                     {
                         "$ref": "#/components/schemas/AttachmentRequest"
@@ -3622,12 +3667,12 @@
                             "latitude": {
                                 "type": "number",
                                 "format": "double",
-                                "description": "Широта"
+                                "description": "Широта, до 15 символов"
                             },
                             "longitude": {
                                 "type": "number",
                                 "format": "double",
-                                "description": "Долгота"
+                                "description": "Долгота, до 15 символов"
                             }
                         },
                         "required": [
@@ -3638,7 +3683,7 @@
                 ]
             },
             "ShareAttachmentRequest": {
-                "description": "Запрос на прикрепление предпросмотра медиафайла по внешнему URL",
+                "description": "Запрос на прикрепление предпросмотра контента по внешнему URL",
                 "allOf": [
                     {
                         "$ref": "#/components/schemas/AttachmentRequest"
@@ -3646,6 +3691,7 @@
                     {
                         "properties": {
                             "payload": {
+                                "description": "Данные для прикрепления предпросмотра контента по внешнему URL",
                                 "allOf": [
                                     {
                                         "$ref": "#/components/schemas/ShareAttachmentPayload"
@@ -3671,7 +3717,7 @@
                         "format": "int32"
                     },
                     "length": {
-                        "description": "Длина элемента разметки",
+                        "description": "Длина элемента разметки в символах",
                         "type": "integer",
                         "format": "int32"
                     }
@@ -3859,7 +3905,7 @@
                         "type": "boolean"
                     },
                     "message": {
-                        "description": "Объяснительное сообщение, если результат не был успешным",
+                        "description": "Сообщение об ошибке",
                         "type": "string",
                         "readOnly": false
                     }
@@ -3904,7 +3950,7 @@
                 "description": "Объект, отправленный боту, когда пользователь нажимает кнопку",
                 "properties": {
                     "timestamp": {
-                        "description": "Unix-время, когда пользователь нажал кнопку",
+                        "description": "Unix timestamp в миллисекундах, когда пользователь нажал кнопку",
                         "type": "integer",
                         "format": "int64"
                     },
@@ -4112,7 +4158,7 @@
                         "type": "string"
                     },
                     "timestamp": {
-                        "description": "Unix-время, когда произошло событие",
+                        "description": "Unix timestamp в миллисекундах, когда произошло событие",
                         "type": "integer",
                         "format": "int64"
                     }
@@ -4253,7 +4299,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, куда был добавлен бот. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
+                                "description": "ID чата или канала, куда был добавлен бот. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4334,7 +4380,7 @@
                                 ]
                             },
                             "muted_until": {
-                                "description": "Время в формате Unix, до наступления которого диалог был отключён",
+                                "description": "Время в формате Unix timestamp в миллисекундах, до наступления которого диалог был отключён",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4545,7 +4591,7 @@
                                 "format": "int64"
                             },
                             "user": {
-                                "description": "Пользователь, который нажал кнопку `Start`",
+                                "description": "Пользователь, который запустил бота через интерфейс, например, нажав кнопку `Start`",
                                 "allOf": [
                                     {
                                         "$ref": "#/components/schemas/User"
@@ -4553,14 +4599,14 @@
                                 ]
                             },
                             "payload": {
-                                "description": "Дополнительные данные из диплинков, переданные при запуске бота",
+                                "description": "Дополнительные данные из диплинков, переданные при запуске бота. Подробнее о диплинках — [в разделе FAQ](/help/deeplinks)",
                                 "type": "string",
                                 "maxLength": 512,
                                 "nullable": true,
                                 "readOnly": false
                             },
                             "user_locale": {
-                                "description": "Текущий язык пользователя в формате IETF BCP 47",
+                                "description": "Текущий язык пользователя в формате [IETF BCP 47](https://www.rfc-editor.org/info/bcp47/)",
                                 "type": "string",
                                 "readOnly": false
                             }

@@ -8,16 +8,17 @@ from maxo.types.share_attachment_payload import ShareAttachmentPayload
 
 class ShareAttachmentRequest(AttachmentRequest):
     """
-    Запрос на прикрепление предпросмотра медиафайла по внешнему URL
+    Запрос на прикрепление предпросмотра контента по внешнему URL
 
     Args:
-        payload:
+        payload: Данные для прикрепления предпросмотра контента по внешнему URL
         type:
     """
 
     type: AttachmentRequestType = AttachmentRequestType.SHARE
 
     payload: ShareAttachmentPayload
+    """Данные для прикрепления предпросмотра контента по внешнему URL"""
 
     @classmethod
     def factory(

@@ -22,5 +22,4 @@ class AttachmentType(StrEnum):
     PHOTO = IMAGE
 
 
-# Подражание aiogram
-ContentType: TypeAlias = AttachmentType
+ContentType: TypeAlias = AttachmentType  # Подражание aiogram

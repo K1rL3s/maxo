@@ -32,6 +32,9 @@ class BaseFilter(ABC, Filter[_UpdateT], Generic[_UpdateT]):
 
         return InvertFilter(self)
 
+    def update_handler_flags(self, flags: dict[str, Any]) -> None:
+        """Дополняет флаги хендлера при регистрации."""
+
     def _signature_to_string(self, *args: Any, **kwargs: Any) -> str:
         items = [repr(arg) for arg in args]
         items.extend([f"{k}={v!r}" for k, v in kwargs.items() if v is not None])

@@ -669,6 +669,7 @@ class TestTwoStepMediaEdit:
 
         assert bot.edit_message.await_count == 2
 
+
 class TestSaveMediaIds:
     """Кэширование payload-токена из отправленного сообщения для path и url."""
 

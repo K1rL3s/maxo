@@ -41,13 +41,21 @@ Long Polling (длинный опрос) - простой способ полу�
 
     await dispatcher.start_polling(bot)
 
-Под капотом оба метода зовут :class:`~maxo.transport.long_polling.LongPolling`. Этот класс остается публичным: он нужен, когда требуется свой ``backoff_config`` или несколько поллеров в одном процессе.
+Под капотом оба метода зовут :class:`~maxo.transport.long_polling.LongPolling`. Этот класс остается публичным для запуска нескольких поллеров в одном процессе.
 
 .. code-block:: python
 
-    from maxo.transport.long_polling import LongPolling
+    from maxo.backoff import BackoffConfig
 
-    LongPolling(dispatcher, backoff_config=my_backoff).run(bot)
+    dispatcher.run_polling(
+        bot,
+        backoff_config=BackoffConfig(
+            min_delay=1.0,
+            max_delay=5.0,
+            factor=1.3,
+            jitter=0.1,
+        ),
+    )
 
 Параметры запуска
 -----------------
@@ -60,6 +68,7 @@ Long Polling (длинный опрос) - простой способ полу�
 - ``types`` (Sequence[str], опционально) - список типов обновлений, которые вы хотите получать. Если не указано, **maxo** автоматически определит этот список на основе зарегистрированных обработчиков.
 - ``marker`` (int, опционально) - маркер, с которого продолжить чтение обновлений. Если не указан, сервер сам решит, откуда начать.
 - ``auto_close_bot`` (bool, по умолчанию True) - закрывать ли сессию бота после остановки поллинга.
+- ``backoff_config`` (BackoffConfig, опционально) - настройки задержек между повторными запросами после ошибок сети или API.
 
 Все, что не входит в этот список, попадает в ``workflow_data`` и доезжает до хендлеров как контекст.
 

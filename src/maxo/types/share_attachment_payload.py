@@ -5,17 +5,17 @@ from maxo.types.base import MaxoType
 
 class ShareAttachmentPayload(MaxoType):
     """
-    Полезная нагрузка запроса ShareAttachmentRequest
+    Данные прикреплённого к сообщению предпросмотра медиавложения
 
     Args:
         token: Токен вложения
-        url: URL, прикрепленный к сообщению в качестве предпросмотра медиа
+        url: URL, прикреплённый к сообщению для предпросмотра медиавложения
     """
 
     token: Omittable[str | None] = Omitted()
     """Токен вложения"""
     url: Omittable[str | None] = Omitted()
-    """URL, прикрепленный к сообщению в качестве предпросмотра медиа"""
+    """URL, прикреплённый к сообщению для предпросмотра медиавложения"""
 
     @property
     def unsafe_token(self) -> str:

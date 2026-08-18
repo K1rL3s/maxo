@@ -5,9 +5,9 @@ from maxo.types.message import Message
 
 class GetMessageById(MaxoMethod[Message]):
     """
-    Получить сообщение
+    Получение сообщений
 
-    Возвращает сообщение по его ID
+    Возвращает сообщение из канала или чата по его ID
 
     #### Пример запроса:
     ```bash
@@ -16,7 +16,7 @@ class GetMessageById(MaxoMethod[Message]):
     ```
 
     Args:
-        message_id: ID сообщения (`mid`), чтобы получить одно сообщение в чате
+        message_id: ID сообщения (`mid`), чтобы получить одно сообщение в чате или канале
 
     Источник: https://dev.max.ru/docs-api/methods/GET/messages/-messageId-
     """
@@ -25,4 +25,4 @@ class GetMessageById(MaxoMethod[Message]):
     __method__ = "get"
 
     message_id: Path[str]
-    """ID сообщения (`mid`), чтобы получить одно сообщение в чате"""
+    """ID сообщения (`mid`), чтобы получить одно сообщение в чате или канале"""

@@ -3,6 +3,7 @@ from .bots.edit_my_commands import EditMyCommands
 from .bots.get_my_info import GetMyInfo
 from .chats.add_members import AddMembers
 from .chats.delete_admin import DeleteAdmin
+from .chats.delete_admins import DeleteAdmins
 from .chats.delete_chat import DeleteChat
 from .chats.edit_chat import EditChat
 from .chats.get_admins import GetAdmins
@@ -37,6 +38,7 @@ __all__ = (
     "AddMembers",
     "AnswerOnCallback",
     "DeleteAdmin",
+    "DeleteAdmins",
     "DeleteChat",
     "DeleteMessage",
     "EditBotInfo",

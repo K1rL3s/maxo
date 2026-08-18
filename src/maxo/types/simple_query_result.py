@@ -8,7 +8,7 @@ class SimpleQueryResult(MaxoType):
     Простой ответ на запрос
 
     Args:
-        message: Объяснительное сообщение, если результат не был успешным
+        message: Сообщение об ошибке
         success: `true`, если запрос был успешным, `false` - в противном случае
     """
 
@@ -16,7 +16,7 @@ class SimpleQueryResult(MaxoType):
     """`true`, если запрос был успешным, `false` - в противном случае"""
 
     message: Omittable[str] = Omitted()
-    """Объяснительное сообщение, если результат не был успешным"""
+    """Сообщение об ошибке"""
 
     @property
     def unsafe_message(self) -> str:

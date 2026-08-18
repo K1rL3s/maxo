@@ -18,7 +18,7 @@ from maxo.bot.defaults import BotDefaults
 from maxo.bot.methods import (
     AddMembers,
     AnswerOnCallback,
-    DeleteAdmin,
+    DeleteAdmins,
     DeleteChat,
     DeleteMessage,
     EditBotInfo,
@@ -227,7 +227,8 @@ class Bot(BaseAsyncClient):
     # Chats
 
     add_members = bind_method(AddMembers)
-    delete_admin = bind_method(DeleteAdmin)
+    delete_admins = bind_method(DeleteAdmins)
+    delete_admin = delete_admins
     delete_chat = bind_method(DeleteChat)
     edit_chat = bind_method(EditChat)
     get_admins = bind_method(GetAdmins)

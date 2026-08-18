@@ -213,6 +213,9 @@ test.py
 # codegen
 .butcher
 
+# Graphify
+graphify-out/
+
 docs/superpowers/
 uv.lock
 

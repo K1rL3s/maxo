@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from maxo.routing.ctx import Ctx
@@ -22,10 +23,11 @@ class UpdateObserver(
         self,
         handler_fn: UpdateHandlerFn[_UpdateT, Any],
         *filters: Filter[_UpdateT],
+        flags: Mapping[str, Any] | None = None,
     ) -> UpdateHandlerFn[_UpdateT, Any]:
         self.state.ensure_add_handler()
 
-        self._handlers.append(UpdateHandler(handler_fn, *filters))
+        self._handlers.append(UpdateHandler(handler_fn, *filters, flags=flags))
 
         return handler_fn
 

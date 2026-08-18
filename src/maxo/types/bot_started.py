@@ -12,10 +12,10 @@ class BotStarted(MaxUpdate, ChatMethodsFacade):
 
     Args:
         chat_id: ID диалога, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)
-        payload: Дополнительные данные из диплинков, переданные при запуске бота
+        payload: Дополнительные данные из диплинков, переданные при запуске бота. Подробнее о диплинках - [в разделе FAQ](https://dev.max.ru/help/deeplinks)
         type:
-        user: Пользователь, который нажал кнопку `Start`
-        user_locale: Текущий язык пользователя в формате IETF BCP 47
+        user: Пользователь, который запустил бота через интерфейс, например, нажав кнопку `Start`
+        user_locale: Текущий язык пользователя в формате [IETF BCP 47](https://www.rfc-editor.org/info/bcp47/)
     """
 
     type = UpdateType.BOT_STARTED
@@ -23,12 +23,12 @@ class BotStarted(MaxUpdate, ChatMethodsFacade):
     chat_id: int
     """ID диалога, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)"""
     user: User
-    """Пользователь, который нажал кнопку `Start`"""
+    """Пользователь, который запустил бота через интерфейс, например, нажав кнопку `Start`"""
 
     payload: Omittable[str | None] = Omitted()
-    """Дополнительные данные из диплинков, переданные при запуске бота"""
+    """Дополнительные данные из диплинков, переданные при запуске бота. Подробнее о диплинках - [в разделе FAQ](https://dev.max.ru/help/deeplinks)"""
     user_locale: Omittable[str] = Omitted()
-    """Текущий язык пользователя в формате IETF BCP 47"""
+    """Текущий язык пользователя в формате [IETF BCP 47](https://www.rfc-editor.org/info/bcp47/)"""
 
     @property
     def unsafe_payload(self) -> str:

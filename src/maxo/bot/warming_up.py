@@ -6,7 +6,7 @@ from adaptix import Retort
 from maxo.bot.methods import (
     AddMembers,
     AnswerOnCallback,
-    DeleteAdmin,
+    DeleteAdmins,
     DeleteChat,
     DeleteMessage,
     EditBotInfo,
@@ -283,7 +283,7 @@ _types = (
 _methods = (
     AddMembers,
     AnswerOnCallback,
-    DeleteAdmin,
+    DeleteAdmins,
     DeleteChat,
     DeleteMessage,
     EditBotInfo,

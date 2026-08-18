@@ -10,7 +10,7 @@ class StickerAttachment(Attachment):
     """
     Args:
         height: Высота стикера
-        payload:
+        payload: Результат отправки стикера
         type:
         width: Ширина стикера
     """
@@ -20,6 +20,7 @@ class StickerAttachment(Attachment):
     height: int
     """Высота стикера"""
     payload: StickerAttachmentPayload
+    """Результат отправки стикера"""
     width: int
     """Ширина стикера"""
 

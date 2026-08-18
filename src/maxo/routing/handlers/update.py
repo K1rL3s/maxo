@@ -1,10 +1,12 @@
 import asyncio
 import inspect
+from collections.abc import Mapping
 from functools import partial
 from typing import Any, Generic, Protocol, TypeVar, runtime_checkable
 
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters.logic import combine_filters
+from maxo.routing.flags import resolve_handler_flags
 from maxo.routing.interfaces.filter import Filter
 from maxo.routing.interfaces.handler import Handler
 from maxo.types.base import BaseUpdate
@@ -31,6 +33,7 @@ class UpdateHandler(
     __slots__ = (
         "_awaitable",
         "_filter",
+        "_flags",
         "_handler_fn",
         "_params",
         "_varkw",
@@ -40,9 +43,11 @@ class UpdateHandler(
         self,
         handler_fn: UpdateHandlerFn[_UpdateT, _ReturnT_co],
         *filters: Filter[_UpdateT],
+        flags: Mapping[str, Any] | None = None,
     ) -> None:
         self._filter = combine_filters(*filters)
         self._handler_fn = handler_fn
+        self._flags = resolve_handler_flags(handler_fn, filters, flags)
         self._awaitable = inspect.isawaitable(
             handler_fn,
         ) or inspect.iscoroutinefunction(handler_fn)
@@ -55,6 +60,11 @@ class UpdateHandler(
             f"{self.__class__.__name__}"
             f"(handler_fn={self._handler_fn}, filter={self._filter})"
         )
+
+    @property
+    def flags(self) -> dict[str, Any]:
+        self._flags.update(resolve_handler_flags(self._handler_fn))
+        return self._flags
 
     def _prepare_kwargs(self, ctx: Ctx) -> dict[str, Any]:
         if self._varkw:

@@ -1,9 +1,18 @@
 from abc import ABC
-from collections.abc import Callable, Coroutine, MutableSequence, Sequence
+from collections.abc import (
+    Callable,
+    Coroutine,
+    Iterator,
+    Mapping,
+    MutableSequence,
+    Sequence,
+)
+from contextlib import contextmanager
 from typing import Any, TypeVar, cast
 
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters.logic import combine_filters
+from maxo.routing.flags import HANDLER_KEY
 from maxo.routing.interfaces import Filter, Handler, Observer
 from maxo.routing.interfaces.observer import ObserverState
 from maxo.routing.middlewares.manager import MiddlewareManager, MiddlewareManagerFacade
@@ -65,9 +74,10 @@ class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
     def __call__(
         self,
         *filters: Filter[_UpdateT],
+        flags: Mapping[str, Any] | None = None,
     ) -> Callable[[_HandlerFnT], _HandlerFnT]:
         def wrapper(handler_fn: _HandlerFnT) -> _HandlerFnT:
-            return self.handler(handler_fn, *filters)
+            return self.handler(handler_fn, *filters, flags=flags)
 
         return wrapper
 
@@ -81,11 +91,12 @@ class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
 
     async def handler_lookup(self, ctx: Ctx) -> Any:
         for handler in self._handlers:
-            if await handler.execute_filter(ctx):
-                try:
-                    return await self.execute_handler(ctx, handler)
-                except SkipHandler:
-                    continue
+            with bind_handler(ctx, handler):
+                if await handler.execute_filter(ctx):
+                    try:
+                        return await self.execute_handler(ctx, handler)
+                    except SkipHandler:
+                        continue
 
         return UNHANDLED
 
@@ -96,3 +107,18 @@ class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
     ) -> _ReturnT_co:
         chain_middlewares = self.middleware.inner.wrap_middlewares(handler)
         return cast(_ReturnT_co, await chain_middlewares(ctx))
+
+
+@contextmanager
+def bind_handler(ctx: Ctx, handler: Handler[Any, Any]) -> Iterator[None]:
+    had_handler = HANDLER_KEY in ctx
+    previous_handler = ctx.get(HANDLER_KEY)
+
+    ctx[HANDLER_KEY] = handler
+    try:
+        yield
+    finally:
+        if had_handler:
+            ctx[HANDLER_KEY] = previous_handler
+        else:
+            ctx.pop(HANDLER_KEY, None)

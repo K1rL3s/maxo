@@ -12,6 +12,7 @@ from unihttp.serializers.adaptix.serialize import DEFAULT_RETORT
 from maxo._internal.adaptix import concat_provider, has_tag_provider, is_subclass
 from maxo.bot.defaults import BotDefaults
 from maxo.bot.methods import EditMessage, SendMessage
+from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.warming_up import WarmingUpType, warming_up_retort
 from maxo.enums import (
     AttachmentRequestType,
@@ -20,7 +21,7 @@ from maxo.enums import (
     MarkupElementType,
     UpdateType,
 )
-from maxo.omit import is_omitted
+from maxo.omit import Omitted, is_omitted
 from maxo.routing.mixins import message
 from maxo.types import (
     Attachments,
@@ -179,8 +180,9 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
         recipe=[
             TAG_PROVIDERS,
             dumper(
-                for_marker(QueryMarker, P[None]),
-                lambda _: "null",
+                is_subclass(MaxoMethod),
+                _omit_none_query_values,
+                chain=Chain.FIRST,
             ),
             dumper(
                 for_marker(QueryMarker, P[bool]),
@@ -240,3 +242,20 @@ def create_retort_with_bot(
         retort = warming_up_retort(retort, warming_up=WarmingUpType.METHOD)
 
     return retort
+
+
+def _omit_none_query_values(method: MaxoMethod[object]) -> MaxoMethod[object]:
+    replacements = {
+        field.name: Omitted()
+        for field in dataclasses.fields(method)
+        if any(
+            isinstance(argument, QueryMarker)
+            for argument in typing.get_args(field.type)
+        )
+        and getattr(method, field.name) is None
+    }
+
+    if not replacements:
+        return method
+
+    return dataclasses.replace(method, **replacements)

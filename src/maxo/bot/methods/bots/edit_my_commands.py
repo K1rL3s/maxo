@@ -11,11 +11,11 @@ class EditMyCommands(MaxoMethod[BotCommandsInfo]):
 
     Метод добавляет, изменяет или удаляет команды бота
 
-    Для удаления команд передайте пустой массив `commands`
+     Для удаления команд передайте пустой массив `commands`
 
     #### Пример запроса:
     ```bash
-    curl -X PATCH "https://platform-api2.max.ru/me/commands" \
+    curl -X  "https://platform-api2.max.ru/me/commands" \
       -H "Authorization: {access_token}" \
       -H "Content-Type: application/json" \
       -d '{

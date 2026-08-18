@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from collections.abc import Callable, Coroutine, Sequence
+from collections.abc import Callable, Coroutine, Mapping, Sequence
 from typing import Any, Protocol, TypeVar
 
 from maxo.routing.ctx import Ctx
@@ -52,6 +52,7 @@ class Observer(Protocol[_UpdateT, _HandlerT, _HandlerFnT]):
     def __call__(
         self,
         *filters: Filter[_UpdateT],
+        flags: Mapping[str, Any] | None = None,
     ) -> Callable[[_HandlerFnT], _HandlerFnT]:
         raise NotImplementedError
 
@@ -60,6 +61,7 @@ class Observer(Protocol[_UpdateT, _HandlerT, _HandlerFnT]):
         self,
         handler_fn: _HandlerFnT,
         *filters: Filter[_UpdateT],
+        flags: Mapping[str, Any] | None = None,
     ) -> _HandlerFnT:
         raise NotImplementedError
 
@@ -68,8 +70,9 @@ class Observer(Protocol[_UpdateT, _HandlerT, _HandlerFnT]):
         self,
         handler_fn: _HandlerFnT,
         *filters: Filter[_UpdateT],
+        flags: Mapping[str, Any] | None = None,
     ) -> _HandlerFnT:
-        return self.handler(handler_fn, *filters)
+        return self.handler(handler_fn, *filters, flags=flags)
 
     @abstractmethod
     def filter(self, *filters: Filter[_UpdateT]) -> None:

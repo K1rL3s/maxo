@@ -29,7 +29,7 @@ import re
 from collections.abc import Iterable, Sequence
 from dataclasses import field, replace
 from re import Match, Pattern
-from typing import cast
+from typing import Any, cast
 
 from maxo import Bot, Ctx
 from maxo.omit import is_defined
@@ -116,6 +116,10 @@ class Command(BaseFilter[MessageCreated]):
             ignore_case=self.ignore_case,
             ignore_mention=self.ignore_mention,
         )
+
+    def update_handler_flags(self, flags: dict[str, Any]) -> None:
+        # Не меняем список в переданном словаре
+        flags["commands"] = [*flags.get("commands", ()), self]
 
     async def __call__(
         self,

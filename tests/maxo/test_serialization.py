@@ -2,7 +2,13 @@ import pytest
 from adaptix.load_error import LoadError
 
 from maxo.bot.defaults import BotDefaults
-from maxo.bot.methods import EditMessage, SendMessage
+from maxo.bot.methods import (
+    EditMessage,
+    GetMembers,
+    GetMessages,
+    GetUpdates,
+    SendMessage,
+)
 from maxo.enums import TextFormat
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_omitted
@@ -61,6 +67,23 @@ def test_bot_default_disable_link_preview(default: Omittable[bool]) -> None:
         assert "disable_link_preview" not in data["query"]
     else:
         assert data["query"]["disable_link_preview"] == default
+
+
+@pytest.mark.parametrize(
+    "method",
+    [
+        GetUpdates(marker=None),
+        GetUpdates(types=None),
+        GetMessages(message_ids=None),
+        GetMembers(chat_id=1, user_ids=None),
+    ],
+)
+def test_query_none_is_omitted(method: object) -> None:
+    retort = create_retort(warming_up=False)
+
+    data = retort.dump(method)
+
+    assert not data.get("query")
 
 
 def test_retort_from_bot_load_bot() -> None:

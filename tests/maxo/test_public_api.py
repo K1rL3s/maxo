@@ -40,3 +40,11 @@ def test_methods_module_mirrors_bot_methods() -> None:
 
     for name in methods.__all__:
         assert getattr(methods, name) is getattr(bot_package.methods, name)
+
+
+def test_delete_admins_keeps_singular_aliases() -> None:
+    delete_admins = getattr(methods, "DeleteAdmins", None)
+
+    assert delete_admins is not None
+    assert methods.DeleteAdmin is delete_admins
+    assert getattr(Bot, "delete_admins", None) is Bot.delete_admin

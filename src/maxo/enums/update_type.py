@@ -4,12 +4,12 @@ from enum import StrEnum
 class UpdateType(StrEnum):
     """
     Объект `Update` описывает возможные события в чате или канале. Может возвращаться в следующих случаях:
-        - Вы подписались на обновления через Webhook - при наступлении события МАКС пришлёт [POST-запрос `/subscriptions`](https://dev.max.ru/docs-api/methods/POST/subscriptions), который содержит объект `Update`
-        - Вы отправили [GET-запрос /updates](https://dev.max.ru/docs-api/methods/GET/updates) для получения обновлений через  Long Polling - в ответ вернётся объект `Update`
+         - Вы подписались на обновления через Webhook - при наступлении события МАКС пришлёт [POST-запрос `/subscriptions`](https://dev.max.ru/docs-api/methods/POST/subscriptions), который содержит объект `Update`
+         - Вы отправили [GET-запрос /updates](https://dev.max.ru/docs-api/methods/GET/updates) для получения обновлений через  Long Polling - в ответ вернётся объект `Update`
 
-    >! Получение обновлений с помощью [Long Polling](https://dev.max.ru/docs-api/methods/GET/updates) ограничено по скорости и сроку хранения событий - этот способ не подходит для production-окружения. Рекомендуем на всех этапах работы использовать [Webhook](https://dev.max.ru/docs-api/methods/POST/subscriptions)
+      >! Получение обновлений с помощью [Long Polling](https://dev.max.ru/docs-api/methods/GET/updates) ограничено по скорости и сроку хранения событий - этот способ не подходит для production-окружения. Рекомендуем на всех этапах работы использовать [Webhook](https://dev.max.ru/docs-api/methods/POST/subscriptions)
 
-    ## Типы событий
+     ## Типы событий
         - `bot_added` - бот добавлен в чат или канал
         - `bot_started` - пользователь впервые начал общение с ботом или возобновил после остановки - нажал соответствующую кнопку в настройках бота в МАКС
         - `bot_stopped` - пользователь остановил или удалил бота через настройки бота в МАКС. Во втором случае одновременно с `bot_stopped` возвращается событие `dialog_removed`
@@ -20,13 +20,14 @@ class UpdateType(StrEnum):
         - `dialog_unmuted` - пользователь включил уведомления в диалоге с ботом
         - `dialog_removed` - пользователь удалил диалог с ботом. Вместе с этим событием одновременно возвращается `bot_stopped` - при удалении диалога бот останавливается автоматически
         - `message_callback` - пользователь нажал на кнопку в чате или канале
-        - `message_created` - пользователь отправил новое сообщение или опубликовал пост
+         - `message_created` - пользователь отправил новое сообщение или опубликовал пост
         - `message_edited` - пользователь отредактировал сообщение в чате или канале
         - `message_removed` - пользователь удалил сообщение из чата или канала
         - `user_added` - в чат или канал добавлен или перешёл по ссылке новый пользователь
         - `user_removed` - пользователь удалён или покинул чат или канал
 
-     ## Свойства объекта Update"""
+     ## Свойства объекта Update
+    """
 
     BOT_ADDED = "bot_added"
     BOT_REMOVED = "bot_removed"

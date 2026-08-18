@@ -14,7 +14,7 @@ class ShareAttachment(Attachment):
     Args:
         description: Описание предпросмотра ссылки
         image_url: Изображение предпросмотра ссылки
-        payload:
+        payload: Данные, использованные для прикрепления к сообщению предпросмотра контента по внешнему URL
         title: Заголовок предпросмотра ссылки.
         type:
     """
@@ -22,6 +22,7 @@ class ShareAttachment(Attachment):
     type: AttachmentType = AttachmentType.SHARE
 
     payload: ShareAttachmentPayload = field(default_factory=ShareAttachmentPayload)
+    """Данные, использованные для прикрепления к сообщению предпросмотра контента по внешнему URL"""
 
     description: Omittable[str | None] = Omitted()
     """Описание предпросмотра ссылки"""

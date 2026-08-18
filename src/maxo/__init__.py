@@ -3,6 +3,7 @@ from maxo.__meta__ import __version__
 from maxo.bot.bot import Bot
 from maxo.routing.ctx import Ctx
 from maxo.routing.dispatcher import Dispatcher
+from maxo.routing.flags import flags
 from maxo.routing.interfaces.middleware import BaseMiddleware
 from maxo.routing.routers.simple import Router
 from maxo.utils.text_decorations import (
@@ -18,6 +19,7 @@ __all__ = (
     "Router",
     "__version__",
     "enums",
+    "flags",
     "html",
     "md",
     "methods",

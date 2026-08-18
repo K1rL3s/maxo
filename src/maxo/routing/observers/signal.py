@@ -1,9 +1,10 @@
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from maxo.routing.ctx import Ctx
 from maxo.routing.handlers.signal import SignalHandler, SignalHandlerFn
 from maxo.routing.interfaces.filter import Filter
-from maxo.routing.observers.base import BaseObserver
+from maxo.routing.observers.base import BaseObserver, bind_handler
 from maxo.routing.sentinels import UNHANDLED
 from maxo.routing.signals.base import BaseSignal
 
@@ -23,17 +24,19 @@ class SignalObserver(
         self,
         handler_fn: SignalHandlerFn[_SignalT, Any],
         *filters: Filter[_SignalT],
+        flags: Mapping[str, Any] | None = None,
     ) -> SignalHandlerFn[_SignalT, Any]:
         self.state.ensure_add_handler()
 
-        self._handlers.append(SignalHandler(handler_fn, *filters))
+        self._handlers.append(SignalHandler(handler_fn, *filters, flags=flags))
 
         return handler_fn
 
     async def handler_lookup(self, ctx: Ctx) -> Any:
         for handler in self._handlers:
-            if await handler.execute_filter(ctx):
-                await self.execute_handler(ctx, handler)
+            with bind_handler(ctx, handler):
+                if await handler.execute_filter(ctx):
+                    await self.execute_handler(ctx, handler)
 
         # Возврат UNHANDLED для того, чтобы сигнал прошёлся по дочерним роутерам
         return UNHANDLED

@@ -4,10 +4,14 @@ except ImportError as e:
     e.add_note(" * Please run `pip install maxo[magic_filter]`")
     raise
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters.base import BaseFilter
+from maxo.routing.flags import extract_flags
+
+if TYPE_CHECKING:
+    from maxo.routing.flags import FlagsSource
 
 
 class MagicData(BaseFilter[Any]):
@@ -52,3 +56,7 @@ class MagicFilter(BaseFilter[Any]):
             ctx[self._result_key] = result
 
         return True
+
+
+def check_flags(source: "FlagsSource", magic: OriginMagicFilter) -> Any:
+    return magic.resolve(AttrDict(extract_flags(source)))

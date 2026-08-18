@@ -18,10 +18,8 @@ class FailedUserDetails(MaxoType):
     Код ошибки
 
     Возможные значения:
-
-    - `add.participant.privacy` - ошибки конфиденциальности при добавлении пользователей
-
-    - `add.participant.not.found` - пользователи не найдены
+        - `add.participant.privacy` - ошибки конфиденциальности при добавлении пользователей
+        - `add.participant.not.found` - пользователи не найдены
     """
     user_ids: list[int]
     """ID пользователей с данной ошибкой"""

@@ -132,6 +132,7 @@ Contributors
    pages/event-handling/filters
    pages/event-handling/middlewares
    pages/event-handling/handlers
+   pages/event-handling/flags
    pages/event-handling/fsm
    pages/event-handling/facades
    pages/event-handling/errors
@@ -176,6 +177,7 @@ Contributors
 
    pages/utils/link
    pages/utils/callback_answer
+   pages/utils/chat_action
 
 .. toctree::
    :maxdepth: 1

@@ -3,12 +3,14 @@ from collections.abc import MutableMapping, Sequence
 from typing import Any
 
 from maxo import Bot, loggers
+from maxo.backoff import BackoffConfig
 from maxo.fsm.key_builder import BaseKeyBuilder, DefaultKeyBuilder
 from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
 from maxo.fsm.storages.memory import MemoryStorage, SimpleEventIsolation
 from maxo.omit import Omittable, Omitted
 from maxo.routing.ctx import CTX_KEY, Ctx
 from maxo.routing.facades.middleware import FacadeMiddleware
+from maxo.routing.flags import HANDLER_KEY
 from maxo.routing.middlewares.error import ErrorMiddleware
 from maxo.routing.middlewares.fsm_context import FSMContextMiddleware
 from maxo.routing.middlewares.update_context import UpdateContextMiddleware
@@ -72,6 +74,7 @@ class Dispatcher(Router):
     async def start_polling(
         self,
         bot: Bot,
+        backoff_config: BackoffConfig | None = None,
         timeout: Omittable[int] = 30,
         limit: Omittable[int] = 100,
         marker: Omittable[int | None] = Omitted(),
@@ -82,7 +85,12 @@ class Dispatcher(Router):
     ) -> None:
         from maxo.transport.long_polling import LongPolling  # noqa: PLC0415
 
-        await LongPolling(self).start(
+        polling = (
+            LongPolling(self, backoff_config=backoff_config)
+            if backoff_config is not None
+            else LongPolling(self)
+        )
+        await polling.start(
             bot=bot,
             timeout=timeout,
             limit=limit,
@@ -96,6 +104,7 @@ class Dispatcher(Router):
     def run_polling(
         self,
         bot: Bot,
+        backoff_config: BackoffConfig | None = None,
         timeout: Omittable[int] = 30,
         limit: Omittable[int] = 100,
         marker: Omittable[int | None] = Omitted(),
@@ -107,6 +116,7 @@ class Dispatcher(Router):
         asyncio.run(
             self.start_polling(
                 bot,
+                backoff_config=backoff_config,
                 timeout=timeout,
                 limit=limit,
                 marker=marker,
@@ -169,6 +179,7 @@ class Dispatcher(Router):
         ctx_copy = Ctx(dict(ctx))
         ctx_copy[CTX_KEY] = ctx_copy
         ctx_copy["update"] = update.update
+        ctx_copy.pop(HANDLER_KEY, None)
 
         if "bot" in ctx:
             # Костыль для тестов (в них апдейты создаются без `.as_`)

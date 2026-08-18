@@ -13,14 +13,14 @@ class Callback(MaxoType):
     Args:
         callback_id: Текущий ID клавиатуры
         payload: Токен кнопки
-        timestamp: Unix-время, когда пользователь нажал кнопку
+        timestamp: Unix timestamp в миллисекундах, когда пользователь нажал кнопку
         user: Пользователь, нажавший на кнопку
     """
 
     callback_id: str
     """Текущий ID клавиатуры"""
     timestamp: datetime
-    """Unix-время, когда пользователь нажал кнопку"""
+    """Unix timestamp в миллисекундах, когда пользователь нажал кнопку"""
     user: User
     """Пользователь, нажавший на кнопку"""
 

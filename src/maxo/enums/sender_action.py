@@ -16,5 +16,4 @@ class SenderAction(StrEnum):
     SENDING_PHOTO = "sending_photo"
     SENDING_VIDEO = "sending_video"
     TYPING_ON = "typing_on"
-
     MARK_SEEN = "mark_seen"  # Удалён из доки, работает

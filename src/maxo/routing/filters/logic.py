@@ -3,7 +3,7 @@
 from abc import abstractmethod
 from collections.abc import Awaitable, Callable, Sequence
 from copy import copy
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from maxo.routing.ctx import CTX_KEY, Ctx
 from maxo.routing.filters.always import AlwaysTrueFilter
@@ -46,6 +46,12 @@ class AndFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
 
         return True
 
+    def update_handler_flags(self, flags: dict[str, Any]) -> None:
+        for filter_ in self._filters:
+            update_handler_flags = getattr(filter_, "update_handler_flags", None)
+            if update_handler_flags is not None:
+                update_handler_flags(flags)
+
     def _inlining(self) -> None:
         inlined_filters: list[Filter[_UpdateT]] = []
 
@@ -75,6 +81,12 @@ class OrFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
 
         return False
 
+    def update_handler_flags(self, flags: dict[str, Any]) -> None:
+        for filter_ in self._filters:
+            update_handler_flags = getattr(filter_, "update_handler_flags", None)
+            if update_handler_flags is not None:
+                update_handler_flags(flags)
+
     def _inlining(self) -> None:
         inlined_filters: list[Filter[_UpdateT]] = []
 
@@ -103,14 +115,10 @@ class InvertFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
         return not await self._filter(update, _isolated_copy(ctx))
 
     def _inlining(self) -> None:
-        inner = self._filter
-        if isinstance(inner, InvertFilter):
-            # `~~f` эквивалентно `f`, поэтому цепочка инверсий схлопывается в
-            # один узел. Чётность считаем по вложенному фильтру: если он сам уже
-            # схлопнут в тождество (`_inlined is True`), то текущая инверсия
-            # снова становится настоящей.
-            self._inlined = not inner._inlined
-            self._filter = inner._filter
+        if isinstance(self._filter, InvertFilter):
+            # `_inlined` хранит чётность схлопнутых инверсий
+            self._inlined = not self._filter._inlined
+            self._filter = self._filter._filter
         else:
             self._inlined = False
 

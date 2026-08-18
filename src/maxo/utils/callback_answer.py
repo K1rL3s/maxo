@@ -25,10 +25,12 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR TH
 OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+from collections.abc import Mapping
 from typing import Any
 
 from maxo.errors import MaxoError
 from maxo.routing.ctx import Ctx
+from maxo.routing.flags import get_flag
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
 from maxo.types import MessageCallback
 
@@ -111,13 +113,7 @@ class CallbackAnswer:
 
 
 class CallbackAnswerMiddleware(BaseMiddleware[MessageCallback]):
-    """
-    Inner-middleware: автоматически отвечает на колбэк.
-
-    Дефолты задаются в конструкторе. Хендлер может переопределить поведение,
-    мутируя `CallbackAnswer` из ctx. Аналог aiogram CallbackAnswerMiddleware,
-    но без механизма flags - конфиг через мутабельный объект в ctx.
-    """
+    """Отвечает на колбэк с учётом флага `callback_answer`."""
 
     __slots__ = ("_before", "_disabled", "_notification")
 
@@ -137,11 +133,7 @@ class CallbackAnswerMiddleware(BaseMiddleware[MessageCallback]):
         ctx: Ctx,
         next: NextMiddleware[MessageCallback],
     ) -> Any:
-        answer = CallbackAnswer(
-            disabled=self._disabled,
-            before=self._before,
-            notification=self._notification,
-        )
+        answer = self.construct_callback_answer(get_flag(ctx, CALLBACK_ANSWER_KEY))
         ctx[CALLBACK_ANSWER_KEY] = answer
 
         if answer.before and not answer.disabled:
@@ -153,12 +145,36 @@ class CallbackAnswerMiddleware(BaseMiddleware[MessageCallback]):
             if not answer.disabled and not answer.answered:
                 await self._answer(update, answer)
 
+    def construct_callback_answer(self, properties: Any) -> CallbackAnswer:
+        disabled, before, notification = (
+            self._disabled,
+            self._before,
+            self._notification,
+        )
+
+        if properties is None:
+            return CallbackAnswer(
+                disabled=disabled,
+                before=before,
+                notification=notification,
+            )
+
+        if isinstance(properties, Mapping):
+            disabled = properties.get("disabled", disabled)
+            before = properties.get("before", before)
+            notification = properties.get("notification", notification)
+        elif isinstance(properties, bool):
+            disabled = not properties
+
+        return CallbackAnswer(
+            disabled=disabled,
+            before=before,
+            notification=notification,
+        )
+
     async def _answer(self, update: MessageCallback, answer: CallbackAnswer) -> None:
         if answer.notification is not None:
             await update.answer(notification=answer.notification)
         else:
             await update.answer()
-        # `answered` намеренно read-only для хендлеров (публичного сеттера нет),
-        # а middleware и CallbackAnswer - тесно связаны в одном модуле,
-        # поэтому внутренний флаг ставим напрямую
-        answer._answered = True  # noqa: SLF001
+        answer._answered = True  # noqa: SLF001 - объект принадлежит мидлвари

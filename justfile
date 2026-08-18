@@ -43,4 +43,10 @@ docs *args:
 test-all:
     uv run nox
 
+butcher *args:
+    uv run --group butcher python -m butcher {{ args }}
+
+butcher-test *args:
+    uv run --group butcher pytest butcher/tests {{ args }}
+
 all: lint mypy test-all

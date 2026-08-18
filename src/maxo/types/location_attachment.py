@@ -6,17 +6,17 @@ from maxo.types.location_attachment_request import LocationAttachmentRequest
 class LocationAttachment(Attachment):
     """
     Args:
-        latitude: Широта
-        longitude: Долгота
+        latitude: Широта, до 15 символов
+        longitude: Долгота, до 15 символов
         type:
     """
 
     type: AttachmentType = AttachmentType.LOCATION
 
     latitude: float
-    """Широта"""
+    """Широта, до 15 символов"""
     longitude: float
-    """Долгота"""
+    """Долгота, до 15 символов"""
 
     def to_request(self) -> LocationAttachmentRequest:
         return LocationAttachmentRequest(

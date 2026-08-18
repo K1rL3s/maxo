@@ -14,7 +14,7 @@ class DialogMuted(MaxUpdate, ChatMethodsFacade):
 
     Args:
         chat_id: ID чата, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)
-        muted_until: Время в формате Unix, до наступления которого диалог был отключён
+        muted_until: Время в формате Unix timestamp в миллисекундах, до наступления которого диалог был отключён
         type:
         user: Пользователь, который отключил уведомления
         user_locale: Текущий язык пользователя в формате IETF BCP 47
@@ -25,7 +25,7 @@ class DialogMuted(MaxUpdate, ChatMethodsFacade):
     chat_id: int
     """ID чата, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)"""
     muted_until: datetime
-    """Время в формате Unix, до наступления которого диалог был отключён"""
+    """Время в формате Unix timestamp в миллисекундах, до наступления которого диалог был отключён"""
     user: User
     """Пользователь, который отключил уведомления"""
 

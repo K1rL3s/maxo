@@ -9,6 +9,7 @@ from unittest.mock import ANY, AsyncMock, call, patch
 import pytest
 from adaptix.load_error import LoadError
 
+from maxo.backoff import BackoffConfig
 from maxo.bot.api_client import MaxApiClient
 from maxo.bot.bot import Bot
 from maxo.bot.methods import GetUpdates
@@ -266,8 +267,17 @@ async def test_start_feeds_updates_to_dispatcher(
 
 async def test_start_polling_delegates_to_long_polling(mock_bot: Bot) -> None:
     dispatcher = Dispatcher()
+    backoff_config = BackoffConfig(
+        min_delay=0.1,
+        max_delay=1.0,
+        factor=2.0,
+        jitter=0.1,
+    )
 
-    with patch.object(LongPolling, "start", new_callable=AsyncMock) as start:
+    with (
+        patch.object(LongPolling, "__init__", return_value=None) as init,
+        patch.object(LongPolling, "start", new_callable=AsyncMock) as start,
+    ):
         await dispatcher.start_polling(
             mock_bot,
             timeout=5,
@@ -275,9 +285,11 @@ async def test_start_polling_delegates_to_long_polling(mock_bot: Bot) -> None:
             types=["message_created"],
             auto_close_bot=False,
             drop_pending_updates=True,
+            backoff_config=backoff_config,
             extra="context",
         )
 
+    init.assert_called_once_with(dispatcher, backoff_config=backoff_config)
     start.assert_awaited_once_with(
         bot=mock_bot,
         timeout=5,
@@ -302,10 +314,25 @@ async def test_start_polling_omits_types_by_default(mock_bot: Bot) -> None:
 
 def test_run_polling_runs_start_polling(mock_bot: Bot) -> None:
     dispatcher = Dispatcher()
+    backoff_config = BackoffConfig(
+        min_delay=0.1,
+        max_delay=1.0,
+        factor=2.0,
+        jitter=0.1,
+    )
 
-    with patch.object(LongPolling, "start", new_callable=AsyncMock) as start:
-        dispatcher.run_polling(mock_bot, timeout=7, auto_close_bot=False)
+    with (
+        patch.object(LongPolling, "__init__", return_value=None) as init,
+        patch.object(LongPolling, "start", new_callable=AsyncMock) as start,
+    ):
+        dispatcher.run_polling(
+            mock_bot,
+            timeout=7,
+            auto_close_bot=False,
+            backoff_config=backoff_config,
+        )
 
+    init.assert_called_once_with(dispatcher, backoff_config=backoff_config)
     start.assert_awaited_once()
     assert start.await_args is not None
     assert start.await_args.kwargs["timeout"] == 7

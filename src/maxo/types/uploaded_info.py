@@ -5,14 +5,14 @@ from maxo.types.base import MaxoType
 
 class UploadedInfo(MaxoType):
     """
-    Это информация, которую вы получите, как только аудио/видео будет загружено
+    Данные, которые вы получили в ответ на запрос [POST /uploads](https://dev.max.ru/docs-api/methods/POST/uploads). Можно передавать после того, как вы загрузили аудио, видео или файл и получили в ответ от сервера `retval`. Подробнее - в описании [POST /uploads](https://dev.max.ru/docs-api/methods/POST/uploads)
 
     Args:
-        token: Токен - уникальный ID загруженного медиафайла
+        token: Токен вложения - уникальный ID загруженного медиа: изображения, аудио, видео или файла. Возвращается в ответ на вызов [POST /uploads](https://dev.max.ru/docs-api/methods/POST/uploads)
     """
 
     token: Omittable[str] = Omitted()
-    """Токен - уникальный ID загруженного медиафайла"""
+    """Токен вложения - уникальный ID загруженного медиа: изображения, аудио, видео или файла. Возвращается в ответ на вызов [POST /uploads](https://dev.max.ru/docs-api/methods/POST/uploads)"""
 
     @property
     def unsafe_token(self) -> str:
