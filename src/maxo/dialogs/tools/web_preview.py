@@ -4,7 +4,8 @@ import inspect
 import os.path
 import sys
 from concurrent.futures import ProcessPoolExecutor
-from tempfile import NamedTemporaryFile
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, cast
 
 from aiohttp import web
@@ -70,15 +71,16 @@ class Controller:
 
     async def transitions(self, _request: web.Request) -> web.Response:
         loop = asyncio.get_running_loop()
-        with NamedTemporaryFile(suffix=".png") as f:
+        with TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "transitions.png"
             with ProcessPoolExecutor(max_workers=1) as executor:
                 await loop.run_in_executor(
                     executor,
                     self.renderer.load_transitions,
-                    f.name,
+                    str(path),
                 )
             return web.Response(
-                body=f.read(),
+                body=path.read_bytes(),
                 headers={"Content-Type": "image/png"},
             )
 
