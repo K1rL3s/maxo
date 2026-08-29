@@ -15,22 +15,12 @@ class BlockingShutdownDispatcher(DummyDispatcher):
         super().__init__()
         self.shutdown_started = asyncio.Event()
         self.release_shutdown = asyncio.Event()
-        self.foreground_updates: list[dict[str, Any]] = []
-        self.background_updates: list[dict[str, Any]] = []
-        self.foreground_session_closed: list[bool | None] = []
-        self.background_session_closed: list[bool | None] = []
-        self.background_continue = asyncio.Event()
 
     async def _block_until_released(self) -> None:
         self.shutdown_started.set()
         await self.release_shutdown.wait()
 
-    async def emit_shutdown(self, **kwargs: Any) -> None:
-        # BaseMultiBotEngine signals shutdown via this hook.
-        await self._block_until_released()
-
     async def feed_signal(self, signal: Any, bot: Any = None) -> None:
-        # SingleBotEngine signals shutdown via feed_signal(BeforeShutdown()) instead.
         if type(signal).__name__ == "BeforeShutdown":
             await self._block_until_released()
 

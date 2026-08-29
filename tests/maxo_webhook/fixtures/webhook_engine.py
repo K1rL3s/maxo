@@ -25,9 +25,6 @@ class DummyRoute(Route):
 
 
 class CapturingAdapter(WebAdapter[Any, Any, Any]):
-    def __init__(self) -> None:
-        self.payload: Any = None
-
     def bind_request(self, request: Any) -> WebRequest[Any]:
         raise NotImplementedError
 
@@ -55,16 +52,6 @@ class CapturingAdapter(WebAdapter[Any, Any, Any]):
             "headers": headers,
         }
 
-    def payload_response(
-        self,
-        status_code: int,
-        payload: Any,
-        headers: Mapping[str, str] | None = None,
-    ) -> dict[str, Any]:
-        self.payload = payload
-        return {"kind": "payload", "status_code": status_code, "headers": headers}
-
-
 class DummyDispatcher(Dispatcher):
     def __init__(self, result: Any = None) -> None:
         self.workflow_data: MutableMapping[str, Any] = {}
@@ -76,15 +63,6 @@ class DummyDispatcher(Dispatcher):
         self.webhook_bot = bot
         self.webhook_update = update
         return self.result
-
-    async def silent_call_request(self, bot: Bot, result: Any) -> None:
-        return None
-
-    async def emit_startup(self, **kwargs: Any) -> None:
-        return None
-
-    async def emit_shutdown(self, **kwargs: Any) -> None:
-        return None
 
     async def feed_signal(self, signal: Any, bot: Bot | None = None) -> None:
         return None

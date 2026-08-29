@@ -79,7 +79,7 @@ async def test_single_bot_engine_rejects_new_requests_once_shutdown_has_started(
 
 
 @pytest.mark.asyncio
-async def test_background_engine_rejects_request_during_shutdown(
+async def test_single_bot_engine_rejects_request_during_shutdown(
     bot: Bot,
     adapter: CapturingAdapter,
     update_request: DummyWebRequest,
@@ -97,51 +97,16 @@ async def test_background_engine_rejects_request_during_shutdown(
 
     try:
         response = await engine.handle_request(update_request)
-        await asyncio.sleep(0)
     finally:
-        dispatcher.background_continue.set()
         dispatcher.release_shutdown.set()
         await asyncio.wait_for(shutdown_task, timeout=1)
-        if engine._task_tracker._tasks:
-            await asyncio.wait_for(
-                asyncio.gather(*engine._task_tracker._tasks),
-                timeout=1,
-            )
 
     assert response["status_code"] == 503
-    assert dispatcher.background_updates == []
     assert len(engine._task_tracker._tasks) == 0
 
 
 @pytest.mark.asyncio
-async def test_foreground_engine_rejects_request_during_shutdown(
-    bot: Bot,
-    adapter: CapturingAdapter,
-    update_request: DummyWebRequest,
-) -> None:
-    dispatcher = BlockingShutdownDispatcher()
-    engine = SingleBotEngine(
-        dispatcher,
-        bot,
-        web=adapter,
-        route=DummyRoute({"bot_token": bot.token}),
-    )
-
-    shutdown_task = asyncio.create_task(engine.on_shutdown(None))
-    await asyncio.wait_for(dispatcher.shutdown_started.wait(), timeout=1)
-
-    try:
-        response = await engine.handle_request(update_request)
-    finally:
-        dispatcher.release_shutdown.set()
-        await asyncio.wait_for(shutdown_task, timeout=1)
-
-    assert response["status_code"] == 503
-    assert dispatcher.foreground_updates == []
-
-
-@pytest.mark.asyncio
-async def test_background_engine_rejects_request_after_shutdown_with_closed_bot_session(
+async def test_single_bot_engine_rejects_request_after_shutdown(
     adapter: CapturingAdapter,
     update_request: DummyWebRequest,
 ) -> None:
@@ -159,45 +124,11 @@ async def test_background_engine_rejects_request_after_shutdown_with_closed_bot_
     await engine.on_shutdown(None)
 
     response = await engine.handle_request(update_request)
-    await asyncio.sleep(0)
-    dispatcher.background_continue.set()
-    if engine._task_tracker._tasks:
-        await asyncio.wait_for(asyncio.gather(*engine._task_tracker._tasks), timeout=1)
-
-    # Клиент создали снаружи - бот его не закрывает, даже при shutdown
-    assert client.closed is False
-    assert bot.closed is True
-    assert response["status_code"] == 503
-    assert dispatcher.background_updates == []
-    assert dispatcher.background_session_closed == []
-
-
-@pytest.mark.asyncio
-async def test_foreground_engine_rejects_request_after_shutdown_with_closed_bot_session(
-    adapter: CapturingAdapter,
-    update_request: DummyWebRequest,
-) -> None:
-    client = TrackableClient(bot_id=42)
-    bot = Bot("42:TEST", client=client)
-    dispatcher = BlockingShutdownDispatcher()
-    engine = SingleBotEngine(
-        dispatcher,
-        bot,
-        web=adapter,
-        route=DummyRoute({"bot_token": bot.token}),
-    )
-
-    dispatcher.release_shutdown.set()
-    await engine.on_shutdown(None)
-
-    response = await engine.handle_request(update_request)
 
     # Клиент создали снаружи - бот его не закрывает, даже при shutdown.
     assert client.closed is False
     assert bot.closed is True
     assert response["status_code"] == 503
-    assert dispatcher.foreground_updates == []
-    assert dispatcher.foreground_session_closed == []
 
 
 @pytest.mark.asyncio

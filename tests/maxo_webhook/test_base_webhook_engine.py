@@ -54,7 +54,7 @@ class EngineProbe(BaseWebhookEngine[Any, Any, dict[str, Any]]):
 
 
 @pytest.mark.asyncio
-async def test_foreground_engine_acknowledges_empty_dispatcher_result(
+async def test_engine_acknowledges_empty_dispatcher_result(
     bot: Bot,
     adapter: CapturingAdapter,
     dispatcher: DummyDispatcher,
@@ -65,7 +65,6 @@ async def test_foreground_engine_acknowledges_empty_dispatcher_result(
     response = await engine.handle_request(update_request)
 
     assert response == {"kind": "json", "status_code": 200, "data": {}, "headers": None}
-    assert adapter.payload is None
 
 
 @pytest.mark.asyncio
