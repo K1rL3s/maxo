@@ -67,7 +67,7 @@ from maxo.bot.state import (
 from maxo.bot.upload import UploadConfig
 from maxo.errors import MaxBotApiError
 from maxo.serialization import create_retort_with_bot
-from maxo.types import AttachmentPayload, MaxoType
+from maxo.types import AttachmentPayload, MaxoType, SimpleQueryResult
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import InputFile
 
@@ -273,7 +273,10 @@ class Bot(BaseAsyncClient):
 
     get_subscriptions = bind_method(GetSubscriptions)
 
-    async def clear_subscriptions(self, active_url: str | None = None) -> None:
+    async def clear_subscriptions(
+        self,
+        active_url: str | None = None,
+    ) -> list[SimpleQueryResult]:
         """
         Удаляет все WebHook-подписки, кроме активной.
 
@@ -281,9 +284,12 @@ class Bot(BaseAsyncClient):
             active_url: URL подписки, которую нужно сохранить. Если не передан,
                 удаляются все подписки.
 
+        Returns:
+            Результаты удаления подписок в их исходном порядке.
+
         """
         subscriptions = await self.get_subscriptions()
-        await asyncio.gather(
+        return await asyncio.gather(
             *(
                 self.unsubscribe(url=subscription.url)
                 for subscription in subscriptions.subscriptions

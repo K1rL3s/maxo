@@ -7,7 +7,12 @@ from maxo.bot.bot import Bot
 from maxo.bot.state import ClosedBotState, EmptyBotState, RunningBotState
 from maxo.bot.upload import UploadConfig, UploadMethod
 from maxo.errors import MaxBotApiError
-from maxo.types import BotInfo, GetSubscriptionsResult, Subscription
+from maxo.types import (
+    BotInfo,
+    GetSubscriptionsResult,
+    SimpleQueryResult,
+    Subscription,
+)
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import BufferedInputFile
 from tests.constants import NOW, TOKEN
@@ -203,6 +208,9 @@ async def test_clear_subscriptions(
             Subscription(time=NOW, url="https://two.example/webhook"),
         ],
     )
+    unsubscribe_results = [
+        SimpleQueryResult(success=True) for _ in removed_urls
+    ]
 
     with (
         patch.object(
@@ -210,12 +218,17 @@ async def test_clear_subscriptions(
             "get_subscriptions",
             new=AsyncMock(return_value=subscriptions),
         ) as get_subscriptions,
-        patch.object(Bot, "unsubscribe", new=AsyncMock()) as unsubscribe,
+        patch.object(
+            Bot,
+            "unsubscribe",
+            new=AsyncMock(side_effect=unsubscribe_results),
+        ) as unsubscribe,
     ):
-        await bot.clear_subscriptions(active_url=active_url)
+        result = await bot.clear_subscriptions(active_url=active_url)
 
     get_subscriptions.assert_awaited_once_with()
     assert [call.kwargs["url"] for call in unsubscribe.await_args_list] == removed_urls
+    assert result == unsubscribe_results
 
 
 async def test_clear_subscriptions_handles_an_empty_list(bot: Bot) -> None:
@@ -229,6 +242,7 @@ async def test_clear_subscriptions_handles_an_empty_list(bot: Bot) -> None:
         ),
         patch.object(Bot, "unsubscribe", new=AsyncMock()) as unsubscribe,
     ):
-        await bot.clear_subscriptions()
+        result = await bot.clear_subscriptions()
 
     unsubscribe.assert_not_awaited()
+    assert result == []
