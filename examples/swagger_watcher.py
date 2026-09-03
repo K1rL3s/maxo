@@ -16,8 +16,8 @@ from aiohttp import ClientSession, ClientTimeout
 
 try:
     from maxo import Bot as MaxBot
-    from maxo.types.facades import AttachmentsFacade
     from maxo.types import LinkButton
+    from maxo.types.facades import AttachmentsFacade
     from maxo.utils.upload_media import BufferedInputFile as MaxBufferedInputFile
 except ModuleNotFoundError:
     MAXO_INSTALLED = False
