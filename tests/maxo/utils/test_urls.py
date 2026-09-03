@@ -1,3 +1,5 @@
+import pytest
+
 from maxo.enums import MessageLinkType
 from maxo.types import LinkedMessage, MessageBody
 from maxo.utils.link import id_to_message_url, url_to_message_id
@@ -11,6 +13,28 @@ def test_id_to_message_url() -> None:
 def test_url_to_message_id() -> None:
     sequence_id = url_to_message_id("https://max.ru/c/-71196681472709/AZ1T1H0eHrQ")
     assert sequence_id == 116341337478799028
+
+
+def test_url_to_message_id_ignores_query_and_fragment() -> None:
+    sequence_id = url_to_message_id(
+        "https://max.ru/c/-71196681472709/AZ1T1H0eHrQ?x=1#frag",
+    )
+    assert sequence_id == 116341337478799028
+
+
+def test_url_to_message_id_ignores_trailing_slash() -> None:
+    sequence_id = url_to_message_id("https://max.ru/c/-71196681472709/AZ1T1H0eHrQ/")
+    assert sequence_id == 116341337478799028
+
+
+def test_url_to_message_id_rejects_garbage_characters() -> None:
+    with pytest.raises(ValueError, match="Invalid message URL"):
+        url_to_message_id("https://max.ru/c/1/!!!!!!!!")
+
+
+def test_url_to_message_id_rejects_wrong_decoded_length() -> None:
+    with pytest.raises(ValueError, match="Invalid message URL"):
+        url_to_message_id("https://max.ru/c/1/AAAA?x=1")
 
 
 def test_linked_message_generated_url() -> None:
