@@ -35,6 +35,7 @@ from maxo.routing.middlewares.update_context import (
     EVENT_FROM_USER_KEY,
     UPDATE_CONTEXT_KEY,
 )
+from maxo.routing.sentinels import UNHANDLED
 from maxo.types import (
     BotAddedToChat,
     BotRemovedFromChat,
@@ -364,7 +365,11 @@ class IntentMiddlewareFactory:
             ctx[PAYLOAD_KEY] = ctx[CALLBACK_DATA_KEY] = original_data
         else:
             await self._load_default_context(update, ctx, event_context)
-        return await next(ctx)
+        result = await next(ctx)
+        if result is UNHANDLED and ctx.get(FORBIDDEN_STACK_KEY):
+            # Гасим "часики" на кнопке: чужой/протухший стек хендлер не обработает.
+            await update.callback_answer()
+        return result
 
     async def process_bot_started(
         self,

@@ -44,6 +44,7 @@ from maxo.routing.middlewares.update_context import (
     EVENT_FROM_USER_KEY,
     UPDATE_CONTEXT_KEY,
 )
+from maxo.routing.sentinels import UNHANDLED
 from maxo.types import (
     BotAddedToChat,
     BotRemovedFromChat,
@@ -412,6 +413,22 @@ class TestIntentMiddlewareFactory:
 
         assert ctx[FORBIDDEN_STACK_KEY] is True
         assert STORAGE_KEY not in ctx
+
+    async def test_forbidden_stack_unhandled_callback_stops_spinner(self) -> None:
+        factory = make_factory()
+        factory.access_validator = MagicMock(is_allowed=AsyncMock(return_value=False))
+        bot = MagicMock(answer_on_callback=AsyncMock())
+        update = make_message_callback("plain").as_(bot)
+
+        result = await factory.process_callback(
+            update,
+            make_ctx(bot=bot),  # type: ignore[arg-type]
+            AsyncMock(return_value=UNHANDLED),
+        )
+
+        assert result is UNHANDLED
+        bot.answer_on_callback.assert_awaited_once()
+        assert bot.answer_on_callback.await_args.kwargs["callback_id"] == "c"
 
 
 class TestIntentErrorMiddleware:
