@@ -169,9 +169,6 @@ Butcher не создаёт и при генерации затрёт, если 
   Забыл - `LoadError` в рантайме.
 - `routing/routers/simple.py` - `UpdateObserver[X]()` и запись в `_observers`.
   Забыл - хендлер некуда зарегистрировать.
-- `routing/facades/<name>.py`, его `__init__.py` и `_FACADES_MAP` в
-  `routing/facades/middleware.py`. `_FACADES_MAP` - единственный путь к
-  `ctx["facade"]`.
 - `routing/middlewares/update_context.py` - ветка `isinstance`, заполняющая
   `chat_id`/`user`/`user_id`. Забыл - тихо ломаются ключи FSM, диалоги и фильтры.
 - `overrides.CLASS_MIXINS` - миксин-фасад по полям апдейта: есть `message` ->
@@ -183,15 +180,6 @@ Butcher не создаёт и при генерации затрёт, если 
   `examples/all_updates.py`.
 
 `collect_used_updates` правок не требует - он обходит `observers` динамически.
-
-Депрекейтед-слои ведут себя по-разному, и это не забывается заново:
-
-- **`maxo.routing.updates` пополняется.** Новый апдейт добавляется и в
-  `__init__.py` шима, и отдельным deep-модулем `routing/updates/<name>.py`, а
-  сам модуль дописывается в `parametrize` в
-  `tests/maxo/routing/updates/test_deprecation.py`.
-- **`maxo.utils.facades` сохраняет фасадные алиасы до 0.9.0.** В 0.9.0 этот
-  устаревший слой удаляется целиком.
 
 ### Новый полиморфный тип: `TAG_PROVIDERS`
 

@@ -71,8 +71,8 @@
   вместо обязательного поля.
 - `MessageCallback` - `# type: ignore[misc]` на классе, `message: Message | None`
   с `# type: ignore[assignment]`, импорты фасадов из
-  `maxo.routing.mixins.callback` и `maxo.routing.mixins.message` (генератор
-  печатает плоский `from maxo.routing.mixins import ...`).
+  `maxo.types.facades.callback` и `maxo.types.facades.message` (генератор
+  печатает плоский `from maxo.types.facades import ...`).
 
 `MessageButton.text` и `PhotoAttachmentRequestPayload.photos` руками уже **не**
 правятся - они генерируются через `MODEL_FIELD_OVERRIDES`.
@@ -109,18 +109,10 @@
 - `src/maxo/bot/warming_up.py` - кортежи `_types` и `_methods`.
 - `../../../../src/maxo/types/facades/attachments.py` - `MEDIA_ATTACHMENT_FACTORIES`,
   карта `UploadType` -> `factory` для заливаемых медиа.
-- `src/maxo/routing/facades/middleware.py` - `_FACADES_MAP`, единственный путь
-  от типа апдейта к `ctx["facade"]`.
 - `src/maxo/routing/middlewares/update_context.py` - ветки `isinstance`,
   которые заполняют `chat_id`/`user`/`user_id` в `UpdateContext`.
-- `src/maxo/routing/updates/` - депрекейтед-шим: `__init__.py` плюс
-  deep-модули на каждый апдейт. **Пополняется**: новый апдейт заводится и там.
-- `src/maxo/utils/facades/` - второй депрекейтед-шим (`updates/`, `methods/`,
-  `middleware.py`), переехавший в `maxo.routing`. Сохраняет фасадные алиасы до
-  удаления всего слоя в 0.9.0.
-- `tests/maxo/routing/updates/test_deprecation.py` - ручной `parametrize` по
-  модулям шима.
-- `tests/maxo/routing/test_facades.py` - ручной список `CASES`.
+- `tests/maxo/types/facades/test_<name>.py` - по файлу на фасад, каждый со
+  своими `parametrize`.
 - `tests/maxo/types/test_accessors.py` - ручные списки полей для `unsafe_*`.
 
 ## Известный дрейф: генератор впереди дерева

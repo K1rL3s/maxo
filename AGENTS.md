@@ -264,8 +264,7 @@ router.callback_query = router.message_callback  # алиас
 
 ### Исключения, алиасы и канонические импорты
 
-- Канонические update-типы находятся в `maxo.types`. Пакет
-  `maxo.routing.updates` сохраняется только как устаревший слой совместимости.
+- Канонические update-типы находятся в `maxo.types`.
 - Общие и API-исключения находятся в `maxo.errors`, dialog-исключения - в
   `maxo.dialogs.api.exceptions`, а управляющие исключения routing - в
   `maxo.routing.sentinels`.
@@ -502,8 +501,9 @@ TAG_PROVIDERS = concat_provider(
 - `maxo.exceptions` и `maxo.filters` - постоянные алиасы `maxo.errors` и
   `maxo.routing.filters` для портирования ботов с `aiogram`. Они не
   предупреждают при импорте и не планируются к удалению. Не путай их с
-  переездами внутри пакета (`maxo.routing.updates`, `maxo.utils.facades`,
-  `maxo.utils.long_polling`) - те остаются с `DeprecationWarning`.
+  переездами внутри пакета (`maxo.utils.long_polling` ->
+  `maxo.transport.long_polling`) - те кидают `DeprecationWarning` и будут
+  удалены.
 - Документация и примеры должны импортировать из публичных модулей, а не из
   `maxo._internal`.
 - При добавлении публичного символа обновляй ближайший `__init__.py` и
@@ -941,8 +941,8 @@ uv run sphinx-build -b html docs docs/_build/html
 - `src/maxo/types/` и `src/maxo/enums/` содержат много файлов, которые
   фактически являются generated API surface. Генерирует их `just butcher` -
   правила в `butcher/AGENTS.md`.
-- `src/maxo/bot/methods/` и `src/maxo/routing/updates/` тоже относятся к API
-  surface и требуют синхронизации с типами, enum и сериализацией.
+- `src/maxo/bot/methods/` тоже относится к API surface и требует синхронизации
+  с типами, enum и сериализацией.
 - Движок кодогенерации `unihttp-openapi-generator==0.3.1` устанавливается из
   PyPI через dependency group `butcher`.
 - `maxo.dialogs` и `maxo.transport.webhook` исторически портированы из
