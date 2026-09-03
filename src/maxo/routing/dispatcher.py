@@ -8,7 +8,7 @@ from maxo.fsm.key_builder import BaseKeyBuilder, DefaultKeyBuilder
 from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
 from maxo.fsm.storages.memory import MemoryStorage, SimpleEventIsolation
 from maxo.omit import Omittable, Omitted
-from maxo.routing.ctx import Ctx
+from maxo.routing.ctx import CTX_KEY, Ctx
 from maxo.routing.facades.middleware import FacadeMiddleware
 from maxo.routing.flags import HANDLER_KEY
 from maxo.routing.middlewares.error import ErrorMiddleware
@@ -164,7 +164,7 @@ class Dispatcher(Router):
 
     async def feed_update(self, update: BaseUpdate, bot: Bot | None = None) -> Any:
         ctx = Ctx({**self.workflow_data, "update": update})
-        ctx["ctx"] = ctx
+        ctx[CTX_KEY] = ctx
 
         if bot is not None:
             ctx["bot"] = bot
@@ -177,7 +177,7 @@ class Dispatcher(Router):
 
     async def _feed_update_handler(self, update: MaxoUpdate[Any], ctx: Ctx) -> Any:
         ctx_copy = Ctx(dict(ctx))
-        ctx_copy["ctx"] = ctx_copy
+        ctx_copy[CTX_KEY] = ctx_copy
         ctx_copy["update"] = update.update
         ctx_copy.pop(HANDLER_KEY, None)
 
