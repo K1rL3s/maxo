@@ -2,7 +2,6 @@ import asyncio
 from asyncio import CancelledError
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from typing import Any, cast
 from unittest.mock import ANY, AsyncMock, call, patch
 
@@ -10,17 +9,15 @@ import pytest
 from adaptix.load_error import LoadError
 
 from maxo.backoff import BackoffConfig
-from maxo.bot.api_client import MaxApiClient
 from maxo.bot.bot import Bot
 from maxo.bot.methods import GetUpdates
-from maxo.bot.state import RunningBotState
 from maxo.omit import Omitted
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.signals.update import MaxoUpdate
 from maxo.transport.long_polling import LongPolling
-from maxo.types import BotInfo, MaxoType, UpdateList
+from maxo.types import MaxoType, UpdateList
 from maxo.types.updates import Updates
-from tests.factories import make_bot
+from tests.factories import make_bot, make_bot_info
 
 
 @dataclass
@@ -29,23 +26,14 @@ class MockUpdate(MaxoType):
 
 
 @pytest.fixture
-def mock_api_client() -> AsyncMock:
-    return AsyncMock(spec=MaxApiClient)
+def mock_client() -> AsyncMock:
+    return AsyncMock()
 
 
 @pytest.fixture
-def mock_bot(mock_api_client: AsyncMock) -> Bot:
-    bot = make_bot()
-    bot._state = RunningBotState(
-        info=BotInfo(
-            user_id=123,
-            first_name="test_bot",
-            username="test_bot",
-            is_bot=True,
-            last_activity_time=datetime.fromtimestamp(1234567890, tz=UTC),
-        ),
-        api_client=mock_api_client,
-    )
+def mock_bot(mock_client: AsyncMock) -> Bot:
+    bot = make_bot(client=mock_client)
+    bot._info = make_bot_info()
     return bot
 
 
@@ -77,19 +65,13 @@ async def run_generator_once(generator: AsyncIterator[Any]) -> None:
     await asyncio.gather(task, return_exceptions=True)
 
 
-async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
-    nothing: tuple[Any, ...] = ()
-    for update in nothing:
-        yield update
-
-
 async def test_handles_load_error_and_skips_update(
     long_polling: LongPolling,
     mock_bot: Bot,
-    mock_api_client: AsyncMock,
+    mock_client: AsyncMock,
 ) -> None:
     initial_marker = 10
-    mock_api_client.call_method.side_effect = [
+    mock_client.call_method.side_effect = [
         LoadError("Test LoadError"),
         UpdateList(
             updates=cast(list[Updates], [MockUpdate(timestamp=100)]),
@@ -117,8 +99,8 @@ async def test_handles_load_error_and_skips_update(
             "Ошибка загрузки апдейта в модель. "
             "Сообщите об этой ошибке в https://github.com/K1rL3s/maxo/issues",
         )
-        assert mock_api_client.call_method.call_count == 2
-        mock_api_client.call_method.assert_has_calls(
+        assert mock_client.call_method.call_count == 2
+        mock_client.call_method.assert_has_calls(
             [
                 call(
                     GetUpdates(
@@ -127,6 +109,7 @@ async def test_handles_load_error_and_skips_update(
                         timeout=30,
                         types=Omitted(),
                     ),
+                    middleware=ANY,
                 ),
                 call(
                     GetUpdates(
@@ -135,6 +118,7 @@ async def test_handles_load_error_and_skips_update(
                         timeout=30,
                         types=Omitted(),
                     ),
+                    middleware=ANY,
                 ),
             ],
         )
@@ -154,9 +138,9 @@ async def test_handles_load_error_and_skips_update(
 async def test_handles_load_error_with_no_marker(
     long_polling: LongPolling,
     mock_bot: Bot,
-    mock_api_client: AsyncMock,
+    mock_client: AsyncMock,
 ) -> None:
-    mock_api_client.call_method.side_effect = [
+    mock_client.call_method.side_effect = [
         LoadError("Test LoadError"),
         CancelledError,
     ]
@@ -178,7 +162,7 @@ async def test_handles_load_error_with_no_marker(
             "Ошибка загрузки апдейта в модель. "
             "Сообщите об этой ошибке в https://github.com/K1rL3s/maxo/issues",
         )
-        assert mock_api_client.call_method.call_count == 2
+        assert mock_client.call_method.call_count == 2
         mock_backoff_next.assert_called_once()
         mock_backoff_sleep.assert_called_once()
 
@@ -186,10 +170,10 @@ async def test_handles_load_error_with_no_marker(
 async def test_handles_general_exception(
     long_polling: LongPolling,
     mock_bot: Bot,
-    mock_api_client: AsyncMock,
+    mock_client: AsyncMock,
     mock_feed_max_update: AsyncMock,
 ) -> None:
-    mock_api_client.call_method.side_effect = ValueError(
+    mock_client.call_method.side_effect = ValueError(
         "Test ValueError",
     )
 
@@ -203,8 +187,14 @@ async def test_handles_general_exception(
             "ValueError",
             ANY,
         )
-        mock_api_client.call_method.assert_called_once()
+        mock_client.call_method.assert_called_once()
         mock_feed_max_update.assert_not_called()
+
+
+async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
+    nothing: tuple[Any, ...] = ()
+    for update in nothing:
+        yield update
 
 
 @pytest.mark.parametrize(

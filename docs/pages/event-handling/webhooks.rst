@@ -22,12 +22,16 @@ Webhooks
 
 Система вебхуков в **maxo** построена на нескольких ключевых компонентах:
 
-- **WebhookEngine**: Ядро, отвечающее за обработку входящих запросов. Оно получает запрос, проверяет его безопасность, парсит обновление и передает его в :class:`~maxo.Dispatcher`.
-- **WebAdapter**: Адаптер для конкретного веб-фреймворка (например, ``aiohttp`` или ``FastAPI``). Он унифицирует работу с входящими запросами и позволяет **maxo** быть независимым от фреймворка.
-- **Routing**: Определяет, как строится URL для вебхука и как из входящего запроса извлечь токен бота (актуально для мульти-бот приложений).
+- **Engine**: Ядро, отвечающее за обработку входящих запросов. Оно получает запрос, проверяет его безопасность, парсит обновление и передает его в :class:`~maxo.Dispatcher`. Для одного бота есть готовый ``SingleBotEngine``, для нескольких - ``TokenEngine``; общая база - ``BaseWebhookEngine``.
+- **WebAdapter**: Адаптер для конкретного веб-фреймворка (``AiohttpAdapter`` или ``FastAPIAdapter``). Он унифицирует работу с входящими запросами и позволяет **maxo** быть независимым от фреймворка.
+- **Route**: Определяет, как строится URL для вебхука и как из входящего запроса извлечь параметры маршрута - например, токен бота (актуально для мульти-бот приложений).
 - **Security**: Отвечает за проверку подлинности запроса, например, через проверку секретного токена в заголовке ``X-Max-Bot-Api-Secret``.
 
 Все эти компоненты работают вместе, чтобы обеспечить надежный и гибкий прием обновлений.
+
+.. note::
+
+    Движки, ``Route`` и конфиги импортируются из корня пакета: ``from maxo.transport.webhook import SingleBotEngine, Route, WebhookConfig``. Адаптеры лежат каждый в своём модуле - ``maxo.transport.webhook.web.aiohttp`` и ``maxo.transport.webhook.web.fastapi`` (последний требует ``maxo[fastapi]``). ``Security`` и ``StaticSecret`` берутся из ``maxo.transport.webhook.security``.
 
 Примеры использования
 ---------------------
@@ -47,12 +51,15 @@ Webhooks
 
             from maxo import Bot, Dispatcher
             from maxo.enums import TextFormat
-            from maxo.types import MessageCreated
             from maxo.routing.utils import collect_used_updates
-            from maxo.transport.webhook.adapters.aiohttp.adapter import AiohttpWebAdapter
-            from maxo.transport.webhook.engines import SimpleEngine, WebhookEngine
-            from maxo.transport.webhook.routing import StaticRouting
-            from maxo.transport.webhook.security import Security, StaticSecretToken
+            from maxo.transport.webhook import (
+                Route,
+                SingleBotEngine,
+                WebhookConfig,
+            )
+            from maxo.transport.webhook.security import Security, StaticSecret
+            from maxo.transport.webhook.web.aiohttp import AiohttpAdapter
+            from maxo.types import MessageCreated
 
             dp = Dispatcher()
             bot = Bot(os.environ["TOKEN"])
@@ -66,23 +73,27 @@ Webhooks
                 )
 
 
-            @dp.after_startup()
-            async def on_startup(dispatcher: Dispatcher, webhook_engine: WebhookEngine) -> None:
-                await webhook_engine.set_webhook(update_types=collect_used_updates(dispatcher))
-
-
             def main() -> None:
-                engine = SimpleEngine(
+                engine = SingleBotEngine(
                     dp,
                     bot,
-                    web_adapter=AiohttpWebAdapter(),
+                    web=AiohttpAdapter(),
                     # Укажите путь, по которому к вам будут приходить апдейты из Макса
-                    routing=StaticRouting(url="https://example.com/webhook"),
+                    route=Route(base_url="https://example.com", path="/webhook"),
                     # security можно оставить None, если не используете секретный токен
-                    security=Security(secret_token=StaticSecretToken("pepapig")),
+                    security=Security(secret=StaticSecret("pepapig")),
                 )
+
                 app = web.Application()
                 engine.register(app)
+
+                # Подписка на вебхук: сообщаем Максу URL и нужные типы апдейтов
+                async def subscribe(_app: web.Application) -> None:
+                    await engine.subscribe(
+                        WebhookConfig(update_types=list(collect_used_updates(dp))),
+                    )
+
+                app.on_startup.append(subscribe)
                 web.run_app(app, host="127.0.0.1", port=8080)
 
 
@@ -103,12 +114,15 @@ Webhooks
 
             from maxo import Bot, Dispatcher
             from maxo.enums import TextFormat
-            from maxo.types import MessageCreated
             from maxo.routing.utils import collect_used_updates
-            from maxo.transport.webhook.adapters.fastapi.adapter import FastApiWebAdapter
-            from maxo.transport.webhook.engines import SimpleEngine, WebhookEngine
-            from maxo.transport.webhook.routing import StaticRouting
-            from maxo.transport.webhook.security import Security, StaticSecretToken
+            from maxo.transport.webhook import (
+                Route,
+                SingleBotEngine,
+                WebhookConfig,
+            )
+            from maxo.transport.webhook.security import Security, StaticSecret
+            from maxo.transport.webhook.web.fastapi import FastAPIAdapter
+            from maxo.types import MessageCreated
 
             dp = Dispatcher()
             bot = Bot(os.environ["TOKEN"])
@@ -122,33 +136,30 @@ Webhooks
                 )
 
 
-            @dp.after_startup()
-            async def on_startup(dispatcher: Dispatcher, webhook_engine: WebhookEngine) -> None:
-                await webhook_engine.set_webhook(update_types=collect_used_updates(dispatcher))
-
-
             def main() -> FastAPI:
-                engine = SimpleEngine(
+                engine = SingleBotEngine(
                     dp,
                     bot,
-                    web_adapter=FastApiWebAdapter(),
+                    web=FastAPIAdapter(),
                     # Укажите путь, по которому к вам будут приходить апдейты из Макса
-                    routing=StaticRouting(url="https://example.com/webhook"),
+                    route=Route(base_url="https://example.com", path="/webhook"),
                     # security можно оставить None, если не используете секретный токен
-                    security=Security(secret_token=StaticSecretToken("pepapig")),
+                    security=Security(secret=StaticSecret("pepapig")),
                 )
 
-                # В реализации FastApiWebAdapter в register игнорируются переданные
-                # on_startup и on_shutdown. Разработчик должен сам определить lifespan,
-                # в котором вызовет engine.on_startup и engine.on_shutdown для корректной работы
+                # Сигналы startup/shutdown движок повесит сам внутри register().
+                # Свой lifespan нужен только для подписки на вебхук.
                 @asynccontextmanager
-                async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-                    engine.register(app)
-                    await engine.on_startup(app)
+                async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+                    await engine.subscribe(
+                        WebhookConfig(update_types=list(collect_used_updates(dp))),
+                    )
                     yield
-                    await engine.on_shutdown(app)
 
-                return FastAPI(lifespan=lifespan)
+                app = FastAPI(lifespan=lifespan)
+                engine.register(app)
+
+                return app
 
 
             logging.basicConfig(level=logging.DEBUG)
@@ -158,9 +169,9 @@ Webhooks
 Обработка в фоне
 ----------------
 
-По умолчанию ``WebhookEngine`` обрабатывает каждое обновление в фоновой задаче (``asyncio.create_task``) и немедленно возвращает серверу Max.ru ответ ``200 OK``. Это позволяет избежать таймаутов, если обработка обновления занимает много времени.
+Движок обрабатывает каждое обновление в фоновой задаче и немедленно возвращает серверу Max.ru ответ ``200 OK``. Это позволяет избежать таймаутов, если обработка обновления занимает много времени. Поведение не отключается.
 
-Такое поведение можно отключить, передав ``handle_in_background=False`` в конструктор движка. В этом случае ответ серверу будет отправлен только после полного выполнения вашего хендлера.
+Фоновые задачи не теряются при остановке: их отслеживает ``TaskTracker``, и на shutdown движок ждёт их завершения не дольше ``shutdown_timeout`` (по умолчанию 10 секунд). Пока идёт остановка, новые запросы отклоняются.
 
 Безопасность
 ------------
@@ -168,26 +179,30 @@ Webhooks
 Для проверки того, что запросы на ваш вебхук приходят именно от серверов Max.ru, используется секретный токен.
 
 1.  Вы генерируете случайную строку (токен).
-2.  Указываете её при подписке на вебхук (метод ``webhook_engine.set_webhook()``).
+2.  Указываете её при подписке на вебхук - движок сам добавит секрет в параметры ``engine.subscribe()``, если передан ``security``.
 3.  При каждом запросе сервер Max.ru будет добавлять заголовок ``X-Max-Bot-Api-Secret`` с этим токеном.
 4.  **maxo** автоматически проверяет совпадение токена.
 
-В **maxo** за это отвечает компонент ``Security``. Реализация ``StaticSecretToken`` позволяет задать один и тот же токен для всех ботов.
+В **maxo** за это отвечает компонент ``Security``. Реализация ``StaticSecret`` позволяет задать один и тот же токен для всех ботов.
 
 .. code-block:: python
 
-    from maxo.transport.webhook.security import Security, StaticSecretToken
+    from maxo.transport.webhook.security import Security, StaticSecret
 
-    security = Security(secret_token=StaticSecretToken("your-super-secret-token"))
+    security = Security(secret=StaticSecret("your-super-secret-token"))
 
-Если не передать ``security`` в движок, проверка токена производиться не будет.
+Секрет обязан подходить под ``^[a-zA-Z0-9_-]{5,256}$`` - иначе ``StaticSecret`` бросит ``ValueError`` сразу при создании. Ограничение идёт от `самого API <https://dev.max.ru/docs-api/methods/POST/subscriptions>`_.
+
+Кроме секрета в ``Security`` можно передать произвольные проверки - позиционными аргументами. Проверка это любой объект с методом ``verify(request, route_params) -> bool`` (протокол ``SecurityCheck``); вернула ``False`` - запрос отклонён.
+
+Если не передать ``security`` в движок, проверка токена производиться не будет - движок предупредит об этом в логах при ``register()``.
 
 Запуск и остановка
 ------------------
 
-При использовании вебхуков жизненный цикл приложения (startup и shutdown) управляется веб-фреймворком. **maxo** предоставляет хуки ``on_startup`` и ``on_shutdown``, которые должны быть вызваны в соответствующие моменты.
+При использовании вебхуков жизненный цикл приложения (startup и shutdown) управляется веб-фреймворком. ``engine.register(app)`` подписывает хуки движка на события фреймворка сам - и для ``aiohttp``, и для ``FastAPI`` (адаптер вешает собственный ``lifespan`` на свой роутер).
 
-- ``on_startup``: Вызывает ``BeforeStartup`` и ``AfterStartup`` сигналы диспетчера, а также инициализирует сессию бота. Установку вебхука рекомендуется выполнять в обработчике ``after_startup`` через ``webhook_engine.set_webhook()``.
-- ``on_shutdown``: Вызывает ``BeforeShutdown`` и ``AfterShutdown``, а также корректно закрывает сессию бота.
+- **startup**: вызывает сигналы ``BeforeStartup`` и ``AfterStartup`` диспетчера, подтягивает информацию о боте и кладёт в ``workflow_data`` ключи ``dispatcher``, ``app``, ``bot`` и ``webhook_engine`` - их можно принимать в хендлерах.
+- **shutdown**: вызывает ``BeforeShutdown`` и ``AfterShutdown``, дожидается фоновых задач и корректно закрывает сессию бота.
 
-В примере с ``aiohttp`` адаптер делает это автоматически. В ``fastapi`` это нужно сделать вручную через ``lifespan`` менеджер.
+Подписка на вебхук (``engine.subscribe()``) - отдельный шаг, и её вы вызываете сами: в ``app.on_startup`` у ``aiohttp`` или в своём ``lifespan`` у ``FastAPI``. Так подписку легко отключить, если URL уже зарегистрирован в Максе.

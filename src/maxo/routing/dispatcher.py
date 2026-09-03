@@ -22,6 +22,7 @@ from maxo.routing.signals.update import MaxoUpdate
 from maxo.routing.utils._resolving_inner_middlewares import resolve_middlewares
 from maxo.routing.utils.validate_router_graph import validate_router_graph
 from maxo.types.base import BaseUpdate
+from maxo.types.binding import bind_bot
 
 
 class Dispatcher(Router):
@@ -169,9 +170,11 @@ class Dispatcher(Router):
         if bot is not None:
             ctx["bot"] = bot
             ctx["bots"] = [bot]
-            # Костыль для тестов (в них апдейты создаются без `.as_`)
-            # и неправильных вызовах `.feed_update`. Удачи отдебажить >:)
-            update.bot = bot
+            # Единственное место, где апдейт и бот встречаются на всех путях:
+            # лонг-поллинг, вебхук, диалоги, ручной вызов из тестов.
+            # `MaxoUpdate` - обёртка роутинга, бота держит апдейт внутри неё,
+            # а по хинту (тайпвар) `bind_bot` туда не спустится.
+            bind_bot(update.update if isinstance(update, MaxoUpdate) else update, bot)
 
         return await self.trigger(ctx)
 
@@ -180,11 +183,6 @@ class Dispatcher(Router):
         ctx_copy["ctx"] = ctx_copy
         ctx_copy["update"] = update.update
         ctx_copy.pop(HANDLER_KEY, None)
-
-        if "bot" in ctx:
-            # Костыль для тестов (в них апдейты создаются без `.as_`)
-            # и неправильных вызовах `.feed_update`. Удачи отдебажить >:)
-            update.update.bot = update.bot = ctx["bot"]
 
         result = await self.trigger(ctx_copy)
         if result is UNHANDLED:

@@ -1,145 +1,172 @@
-import asyncio
 from abc import ABC, abstractmethod
-from json import JSONDecodeError
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from adaptix.load_error import LoadError
+from unihttp.serializers.adaptix.serialize import DEFAULT_RETORT
 
 from maxo import Bot, Dispatcher
-from maxo.bot.methods.base import MaxoMethod
+from maxo.loggers import webhook
 from maxo.routing.signals import MaxoUpdate
-from maxo.transport.webhook.adapters.base_adapter import BoundRequest, WebAdapter
-from maxo.transport.webhook.routing.base import BaseRouting
-from maxo.transport.webhook.security.security import Security
+from maxo.serialization import get_retort
+from maxo.transport.webhook.configs.webhook import WebhookConfig
+from maxo.transport.webhook.engines.errors import (
+    BotNotFoundError,
+    InvalidJsonError,
+    RequestHandlingStoppedError,
+)
+from maxo.transport.webhook.errors import MaxoWebhookError
+from maxo.transport.webhook.route import Route
+from maxo.transport.webhook.route.params import RouteParams
+from maxo.transport.webhook.security import Security
+from maxo.transport.webhook.tasks import TaskTracker
+from maxo.transport.webhook.web.base import WebAdapter, WebRequest
 from maxo.types import Updates
 
+AppT = TypeVar("AppT")
+RawRequestT = TypeVar("RawRequestT")
+FrameworkResponseT = TypeVar("FrameworkResponseT")
 
-class WebhookEngine(ABC):
-    """
-    Base webhook engine for processing Telegram bot updates.
 
-    Handles incoming webhook requests, bot resolution, security checks,
-    routing, and dispatching updates to the maxo dispatcher. Supports
-    both synchronous and background processing.
-    """
-
+class BaseWebhookEngine(ABC, Generic[AppT, RawRequestT, FrameworkResponseT]):
     def __init__(
         self,
         dispatcher: Dispatcher,
-        /,
-        web_adapter: WebAdapter,
-        routing: BaseRouting,
+        web: WebAdapter[AppT, RawRequestT, FrameworkResponseT],
+        route: Route,
         security: Security | None = None,
-        handle_in_background: bool = True,
+        shutdown_timeout: float = 10.0,
     ) -> None:
         self.dispatcher = dispatcher
-        self.web_adapter = web_adapter
-        self.routing = routing
+        self.web = web
+        self.route = route
         self.security = security
-        self.handle_in_background = handle_in_background
-        self._background_feed_update_tasks: set[asyncio.Task[Any]] = set()
 
-    @abstractmethod
-    def _get_bot_from_request(self, bound_request: BoundRequest[Any]) -> Bot | None:
-        raise NotImplementedError
+        self.shutdown_timeout = shutdown_timeout
+        self._is_shutting_down = False
 
-    @abstractmethod
-    async def set_webhook(self, *args: Any, **kwargs: Any) -> Bot:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def on_startup(self, app: Any, *args: Any, **kwargs: Any) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def on_shutdown(self, app: Any, *args: Any, **kwargs: Any) -> None:
-        raise NotImplementedError
-
-    def _build_workflow_data(self, app: Any, **kwargs: Any) -> dict[str, Any]:
-        """Build workflow data for startup/shutdown events."""
-        return {
-            "app": app,
-            "webhook_engine": self,
-            **self.dispatcher.workflow_data,
-            **kwargs,
-        }
-
-    async def handle_request(self, bound_request: BoundRequest[Any]) -> Any:
-        bot = self._get_bot_from_request(bound_request)
-        if bot is None:
-            return self.web_adapter.create_json_response(
-                status=400,
-                payload={"detail": "Bot not found"},
+    def register(self, app: AppT) -> None:
+        webhook.info(
+            "Registering webhook path %s via %s",
+            self.route.path,
+            self.web.__class__.__name__,
+        )
+        if self.security is None:
+            webhook.warning(
+                "Webhook is registered without security: "
+                "anyone who knows path %s can feed updates to the bot. "
+                "Pass security=Security(secret=...) to the engine.",
+                self.route.path,
             )
-
-        if self.security is not None and not await self.security.verify(
-            bot=bot,
-            bound_request=bound_request,
-        ):
-            return self.web_adapter.create_json_response(
-                status=403,
-                payload={"detail": "Forbidden"},
-            )
-
-        try:
-            raw_update = await bound_request.json()
-        except JSONDecodeError:
-            return self.web_adapter.create_json_response(
-                status=400,
-                payload={"detail": "Bad request"},
-            )
-
-        try:
-            update = MaxoUpdate(update=bot.retort.load(raw_update, Updates))
-        except LoadError:
-            return self.web_adapter.create_json_response(
-                status=400,
-                payload={"detail": "Bad request"},
-            )
-
-        if self.handle_in_background:
-            return await self._handle_request_background(bot=bot, update=update)
-        return await self._handle_request(bot=bot, update=update)
-
-    def register(self, app: Any) -> None:
-        self.web_adapter.register(
+        self.web.register(
             app=app,
-            path=self.routing.path,
+            path=self.route.path,
             handler=self.handle_request,
             on_startup=self.on_startup,
             on_shutdown=self.on_shutdown,
         )
 
-    async def _handle_request(
+    async def handle_request(
+        self,
+        request: WebRequest[RawRequestT],
+    ) -> FrameworkResponseT:
+        try:
+            self._ensure_accepting_requests()
+
+            route_params = await self.route.match(request)
+
+            if self.security is not None:
+                await self.security.verify(
+                    request=request,
+                    route_params=route_params,
+                )
+
+            bot = await self._resolve_bot(route_params=route_params)
+            if bot is None:
+                raise BotNotFoundError(route_param_names=route_params.keys())
+
+            try:
+                raw_update = await request.json()
+            except ValueError as exc:
+                raise InvalidJsonError(original_error=exc) from exc
+
+            try:
+                update = MaxoUpdate(update=get_retort().load(raw_update, Updates))
+            except LoadError as exc:
+                raise InvalidJsonError(original_error=exc) from exc
+
+            webhook.debug("New update: %s", update.update)
+
+            self._ensure_accepting_requests(bot)
+
+            self._get_task_tracker(bot).spawn(  # type: ignore[unused-awaitable]
+                self.dispatcher.feed_update(bot=bot, update=update),
+            )
+            return self.web.json_response(status_code=200, data={})
+
+        except MaxoWebhookError as exc:
+            webhook.log(
+                exc.log_level,
+                "Webhook request failed: %s: %s",
+                exc.code,
+                exc,
+                extra={
+                    "error_type": exc.__class__.__name__,
+                    "status_code": exc.status_code,
+                },
+            )
+
+            return self.web.json_response(
+                status_code=exc.status_code,
+                data=exc.response_payload(),
+            )
+
+    async def on_startup(self, app: AppT, *args: Any, **kwargs: Any) -> None:
+        await self._on_startup(app, *args, **kwargs)
+        self._is_shutting_down = False
+
+    async def on_shutdown(self, app: AppT, *args: Any, **kwargs: Any) -> None:
+        self._is_shutting_down = True
+        await self._on_shutdown(app, *args, **kwargs)
+
+    @abstractmethod
+    async def _on_startup(self, app: AppT, *args: Any, **kwargs: Any) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def _on_shutdown(self, app: AppT, *args: Any, **kwargs: Any) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def _resolve_bot(self, route_params: RouteParams) -> Bot | None: ...
+
+    @abstractmethod
+    def _get_task_tracker(self, bot: Bot) -> TaskTracker:
+        raise NotImplementedError
+
+    def _build_lifecycle_data(self, *, app: AppT, **kwargs: Any) -> dict[str, Any]:
+        return {
+            "dispatcher": self.dispatcher,
+            **self.dispatcher.workflow_data,
+            "app": app,
+            "webhook_engine": self,
+            **kwargs,
+        }
+
+    async def _build_webhook_kwargs(
         self,
         bot: Bot,
-        update: MaxoUpdate[Any],
-    ) -> Any:
-        result = await self.dispatcher.feed_max_update(bot=bot, update=update)
+        base_config: WebhookConfig,
+        override_config: WebhookConfig | None = None,
+    ) -> dict[str, Any]:
+        kwargs: dict[str, Any] = DEFAULT_RETORT.dump(base_config)
+        if override_config is not None:
+            kwargs.update(DEFAULT_RETORT.dump(override_config))
+        if self.security is not None:
+            secret = await self.security.secret(bot)
+            if secret is not None:
+                kwargs["secret"] = secret
+        return kwargs
 
-        if not isinstance(result, MaxoMethod):
-            return self.web_adapter.create_json_response(status=200, payload={})
-
-        await bot.silent_call_method(method=result)
-        return self.web_adapter.create_json_response(status=200, payload={})
-
-    async def _background_feed_update(self, bot: Bot, update: MaxoUpdate[Any]) -> None:
-        result = await self.dispatcher.feed_max_update(
-            bot=bot,
-            update=update,
-        )  # **self.data
-        if isinstance(result, MaxoMethod):
-            await bot.silent_call_method(method=result)
-
-    async def _handle_request_background(
-        self,
-        bot: Bot,
-        update: MaxoUpdate[Any],
-    ) -> Any:
-        feed_update_task = asyncio.create_task(
-            self._background_feed_update(bot=bot, update=update),
-        )
-        self._background_feed_update_tasks.add(feed_update_task)
-        feed_update_task.add_done_callback(self._background_feed_update_tasks.discard)
-
-        return self.web_adapter.create_json_response(status=200, payload={})
+    def _ensure_accepting_requests(self, bot: Bot | None = None) -> None:
+        if self._is_shutting_down or (bot is not None and bot.closed):
+            raise RequestHandlingStoppedError

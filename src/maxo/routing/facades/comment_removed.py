@@ -1,6 +1,6 @@
 from maxo.routing.facades.base import BaseUpdateFacade
-from maxo.routing.mixins import ChatMethodsFacade
 from maxo.types.comment_removed import CommentRemoved
+from maxo.types.facades.chat import ChatMethodsFacade
 
 
 class CommentRemovedFacade(BaseUpdateFacade[CommentRemoved], ChatMethodsFacade):

@@ -3,11 +3,9 @@
 import warnings
 
 warnings.warn(
-    "Фасады были перенесены из `maxo.utils.facades` "
-    "в `maxo.routing.facades` и `maxo.routing.mixins`. "
-    "Пожалуйста, обновите импорты "
-    "на `from maxo.routing.facades import ...` "
-    "или `from maxo.routing.mixins import ...`",
+    "Вместо фасадов используйте сам апдейт: например `MessageCreated.answer(...)`. "
+    "Фасады переехали в `from maxo.routing.facades import` "
+    "и `from maxo.types.facades import`",
     DeprecationWarning,
     stacklevel=2,
 )
@@ -32,16 +30,16 @@ from maxo.routing.facades.message_edited import MessageEditedFacade
 from maxo.routing.facades.message_removed import MessageRemovedFacade
 from maxo.routing.facades.user_added_to_chat import UserAddedToChatFacade
 from maxo.routing.facades.user_removed_from_chat import UserRemovedFromChatFacade
-from maxo.routing.mixins import (
+from maxo.types.facades import (
     AttachmentsFacade,
     BaseMethodsFacade,
     BotMethodsFacade,
+    CallbackMethodsFacade,
     ChatMethodsFacade,
     CommentMethodsFacade,
     MessageMethodsFacade,
     SubscriptionMethodsFacade,
 )
-from maxo.routing.mixins.callback import CallbackMethodsFacade
 
 __all__ = (
     "AttachmentsFacade",

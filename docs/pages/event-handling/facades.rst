@@ -39,7 +39,7 @@
 
 .. code-block:: python
 
-    from maxo.routing.mixins.attachments import MediaInput
+    from maxo.types.facades import MediaInput
 
 Загрузка файла
 ~~~~~~~~~~~~~~

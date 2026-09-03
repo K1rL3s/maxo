@@ -335,7 +335,7 @@ CLASS_MIXINS: dict[str, tuple[str, ...]] = {
     "UserRemovedFromChat": ("ChatMethodsFacade",),
 }
 
-MIXINS_MODULE = "maxo.routing.mixins"
+MIXINS_MODULE = "maxo.types.facades"
 
 
 # --- ручные символы в __init__.py -------------------------------------------

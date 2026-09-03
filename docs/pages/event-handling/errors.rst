@@ -39,6 +39,7 @@ ExceptionTypeFilter
 
 .. code-block:: python
 
+    from maxo import Bot
     from maxo.routing.filters import ExceptionTypeFilter
     from maxo.types import ErrorEvent
     from maxo.types import UpdateContext
@@ -48,8 +49,9 @@ ExceptionTypeFilter
     async def value_error_handler(
         event: ErrorEvent,
         update_context: UpdateContext,
+        bot: Bot,
     ):
-        await event.bot.send_message(
+        await bot.send_message(
             chat_id=update_context.chat_id,
             text="Вы ввели некорректные данные!",
         )
@@ -87,6 +89,7 @@ ExceptionMessageFilter
 
     import logging
 
+    from maxo import Bot
     from maxo.routing.ctx import Ctx
     from maxo.routing.filters import ExceptionTypeFilter
     from maxo.types import ErrorEvent, MessageCreated
@@ -101,10 +104,14 @@ ExceptionMessageFilter
             raise MyCustomError("Ба-бах!")
 
     @router.error(ExceptionTypeFilter(MyCustomError))
-    async def error_handler(event: ErrorEvent, update_context: UpdateContext):
+    async def error_handler(
+        event: ErrorEvent,
+        update_context: UpdateContext,
+        bot: Bot,
+    ):
         # Пытаемся отправить сообщение в тот же чат, где произошла ошибка
         try:
-            await event.bot.send_message(
+            await bot.send_message(
                 chat_id=update_context.chat_id,
                 text=f"Ой, что-то сломалось: {event.exception}",
             )

@@ -1,10 +1,11 @@
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import is_defined
 from maxo.types.base import MaxoType
+from maxo.types.binding import BotMixin
 from maxo.types.updates import Updates
 
 
-class UpdateList(MaxoType):
+class UpdateList(MaxoType, BotMixin):
     """
     Список обновлений о событиях в чатах и каналах, в которые добавлен бот. Обратите внимание, чтобы получать события из групповых чатов и каналов, бот должен быть администратором
 

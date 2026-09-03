@@ -1,92 +1,76 @@
 import pytest
 
-from maxo import Bot
-from maxo.transport.webhook.security import SecurityCheck
-from maxo.transport.webhook.security.secret_token import (
-    SECRET_HEADER,
-    StaticSecretToken,
-)
+from maxo.transport.webhook.security.errors import SecretError, SecurityCheckError
+from maxo.transport.webhook.security.secret import SECRET_HEADER, StaticSecret
 from maxo.transport.webhook.security.security import Security
-
-from .fixtures import DummyBoundRequest, DummyRequest, FailingCheck, PassingCheck
-
-
-@pytest.mark.parametrize(
-    ("checks", "expected"),
-    [
-        # No checks - should pass
-        ([], True),
-        # Single check
-        ([PassingCheck()], True),
-        ([FailingCheck()], False),
-        # Two checks
-        ([PassingCheck(), PassingCheck()], True),
-        ([PassingCheck(), FailingCheck()], False),
-        ([FailingCheck(), PassingCheck()], False),
-        ([FailingCheck(), FailingCheck()], False),
-        # Three+ checks
-        ([PassingCheck(), PassingCheck(), PassingCheck()], True),
-        ([FailingCheck(), PassingCheck(), PassingCheck()], False),
-        ([PassingCheck(), PassingCheck(), FailingCheck()], False),
-    ],
-    ids=[
-        "no-checks",
-        "single-passing",
-        "single-failing",
-        "two-passing",
-        "passing-then-failing",
-        "failing-then-passing",
-        "two-failing",
-        "three-passing",
-        "failing-first-passing",
-        "failing-last-passing",
-    ],
-)
-async def test_security_checks(
-    checks: list[SecurityCheck],
-    expected: bool,
-    bot: Bot,
-) -> None:
-    sec = Security(*checks)
-    req = DummyBoundRequest()
-    assert await sec.verify(bot, req) is expected
+from tests.maxo_webhook.fixtures.security_checks import RecordingCheck
+from tests.maxo_webhook.fixtures.web_request import DummyRequest, DummyWebRequest
 
 
-@pytest.mark.parametrize(
-    ("checks", "secret_token", "request_token", "expected"),
-    [
-        # Both present and working
-        ([PassingCheck()], StaticSecretToken("secret"), "secret", True),
-        ([FailingCheck()], StaticSecretToken("secret"), "secret", False),
-        ([PassingCheck()], StaticSecretToken("secret"), "wrong", False),
-        # No checks
-        ([], StaticSecretToken("secret"), "secret", True),
-        ([], StaticSecretToken("secret"), "wrong", False),
-        # No secret token
-        ([PassingCheck()], None, None, True),
-        ([FailingCheck()], None, None, False),
-        # No checks and no secret token
-        ([], None, None, True),
-    ],
-    ids=[
-        "both-pass",
-        "check-fails",
-        "secret-fails",
-        "no-checks-secret-pass",
-        "no-checks-secret-fail",
-        "no-secret-check-pass",
-        "no-secret-check-fail",
-        "no-checks-no-secret",
-    ],
-)
-async def test_security_checks_and_secret_token(
-    checks: list[SecurityCheck],
-    secret_token: StaticSecretToken | None,
-    request_token: str | None,
-    expected: bool,
-    bot: Bot,
-) -> None:
-    sec = Security(*checks, secret_token=secret_token)
-    headers = {SECRET_HEADER: request_token} if request_token is not None else {}
-    req = DummyBoundRequest(DummyRequest(headers=headers))
-    assert await sec.verify(bot, req) is expected
+@pytest.mark.asyncio
+async def test_security_verify_noop_without_checks_or_secret() -> None:
+    security = Security()
+
+    await security.verify(request=DummyWebRequest(), route_params={})
+
+
+@pytest.mark.asyncio
+async def test_security_pipeline_stops_at_first_failed_check() -> None:
+    calls: list[str] = []
+    security = Security(
+        RecordingCheck("first", result=True, calls=calls),
+        RecordingCheck("second", result=False, calls=calls),
+        RecordingCheck("third", result=True, calls=calls),
+    )
+    request = DummyWebRequest(DummyRequest(ip="127.0.0.1"))
+
+    with pytest.raises(SecurityCheckError) as exc_info:
+        await security.verify(request=request, route_params={})
+
+    assert calls == ["first", "second"]
+    assert exc_info.value.security_check == "RecordingCheck"
+    assert exc_info.value.client_ip == "127.0.0.1"
+
+
+@pytest.mark.asyncio
+async def test_security_pipeline_allows_request_when_secret_and_checks_pass() -> None:
+    calls: list[str] = []
+    security = Security(
+        RecordingCheck("check", result=True, calls=calls),
+        secret=StaticSecret("secret"),
+    )
+    request = DummyWebRequest(DummyRequest(headers={SECRET_HEADER: "secret"}))
+
+    await security.verify(request=request, route_params={})
+
+    assert calls == ["check"]
+
+
+@pytest.mark.asyncio
+async def test_security_pipeline_runs_checks_after_valid_secret() -> None:
+    calls: list[str] = []
+    security = Security(
+        RecordingCheck("check", result=False, calls=calls),
+        secret=StaticSecret("secret"),
+    )
+    request = DummyWebRequest(DummyRequest(headers={SECRET_HEADER: "secret"}))
+
+    with pytest.raises(SecurityCheckError):
+        await security.verify(request=request, route_params={})
+
+    assert calls == ["check"]
+
+
+@pytest.mark.asyncio
+async def test_security_pipeline_rejects_bad_secret_before_checks() -> None:
+    calls: list[str] = []
+    security = Security(
+        RecordingCheck("check", result=True, calls=calls),
+        secret=StaticSecret("secret"),
+    )
+    request = DummyWebRequest(DummyRequest(headers={SECRET_HEADER: "wrong"}))
+
+    with pytest.raises(SecretError):
+        await security.verify(request=request, route_params={})
+
+    assert calls == []

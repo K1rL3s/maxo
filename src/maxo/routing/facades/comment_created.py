@@ -1,7 +1,7 @@
 from maxo.routing.facades.base import BaseUpdateFacade
-from maxo.routing.mixins import CommentMethodsFacade
 from maxo.types.comment_created import CommentCreated
 from maxo.types.comment_message import CommentMessage
+from maxo.types.facades.comment import CommentMethodsFacade
 
 
 class CommentCreatedFacade(BaseUpdateFacade[CommentCreated], CommentMethodsFacade):

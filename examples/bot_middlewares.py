@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 from collections.abc import Sequence
+from typing import Any
 
 from unihttp.http.request import HTTPRequest
 from unihttp.http.response import HTTPResponse
@@ -9,6 +10,7 @@ from unihttp.middlewares.base import AsyncHandler, AsyncMiddleware
 
 from maxo import Bot
 from maxo.backoff import Backoff, BackoffConfig
+from maxo.bot.client import default_client
 from maxo.errors import MaxBotNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -26,7 +28,7 @@ class LoggingMiddleware(AsyncMiddleware):
         self,
         request: HTTPRequest,
         next_handler: AsyncHandler,
-    ) -> HTTPResponse:
+    ) -> HTTPResponse[Any]:
         logger.info("Request: %s", request)
         response = await next_handler(request)
         logger.info("Response: %s", response)
@@ -50,7 +52,7 @@ class RetryMiddleware(AsyncMiddleware):
         self,
         request: HTTPRequest,
         next_handler: AsyncHandler,
-    ) -> HTTPResponse:
+    ) -> HTTPResponse[Any]:
         attempt = 0
         backoff = Backoff(self._backoff_config)
         while True:
@@ -86,15 +88,26 @@ class RetryMiddleware(AsyncMiddleware):
 
 
 async def main() -> None:
+    # Middleware на клиенте - общие для всех ботов, которым его отдали,
+    # и они самые внешние в цепочке.
+    client = default_client(middleware=[LoggingMiddleware()])
+
+    # Middleware бота - только его: они получают свой токен и свои ретраи.
+    # Пользовательские идут снаружи встроенных, поэтому логгер здесь ещё
+    # не увидит заголовок `Authorization`.
     bot = Bot(
         token=os.environ["TOKEN"],
-        middleware=[
-            LoggingMiddleware(),
-            RetryMiddleware(exceptions=[MaxBotNotFoundError]),
-        ],
+        client=client,
+        middlewares=[RetryMiddleware(exceptions=[MaxBotNotFoundError])],
     )
-    async with bot.context():
-        await bot.send_message(chat_id=-1)
+
+    try:
+        async with bot.context():
+            await bot.send_message(chat_id=-1)
+    finally:
+        # Клиент создали здесь - здесь и закрываем: `bot.close()`
+        # трогает только то, что бот создал сам.
+        await client.close()
 
 
 if __name__ == "__main__":

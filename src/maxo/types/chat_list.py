@@ -1,10 +1,11 @@
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import is_defined
 from maxo.types.base import MaxoType
+from maxo.types.binding import BotMixin
 from maxo.types.chat import Chat
 
 
-class ChatList(MaxoType):
+class ChatList(MaxoType, BotMixin):
     """
     Args:
         chats: Список запрашиваемых чатов

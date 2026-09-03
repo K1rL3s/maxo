@@ -856,21 +856,24 @@ def test_message_generated_url_requires_chat_id() -> None:
     assert message.generated_url is None
 
 
-def test_maxo_type_bot_accessors() -> None:
+def test_bot_mixin_accessors_only_on_facade_types() -> None:
     user = make_user()
+    assert not hasattr(user, "bot")
+
+    message = make_message()
 
     with pytest.raises(AttributeIsEmptyError):
-        _ = user.bot
+        _ = message.bot
 
-    user.bot = None
-    assert user._bot is None
+    message.bot = None
+    assert message._bot is None
 
     class DummyBot: ...
 
     # cast нужен для проверки BotMixin без создания реального Bot с сетевым клиентом.
     bot = cast(Bot, DummyBot())
-    assert user.as_(bot) is user
-    assert user.bot is bot
+    assert message.as_(bot) is message
+    assert message.bot is bot
 
 
 def test_user_and_chat_related_accessors() -> None:

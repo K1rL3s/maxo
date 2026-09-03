@@ -7,11 +7,10 @@ from fastapi import FastAPI
 
 from maxo import Bot, Dispatcher
 from maxo.enums import TextFormat
-from maxo.routing.utils import collect_used_updates
-from maxo.transport.webhook.adapters.fastapi import FastApiWebAdapter
-from maxo.transport.webhook.engines import SimpleEngine, WebhookEngine
-from maxo.transport.webhook.routing import StaticRouting
-from maxo.transport.webhook.security import Security, StaticSecretToken
+from maxo.transport.webhook.engines.single import SingleBotEngine
+from maxo.transport.webhook.route import Route
+from maxo.transport.webhook.security import Security, StaticSecret
+from maxo.transport.webhook.web.fastapi import FastAPIAdapter
 from maxo.types import MessageCreated
 
 dp = Dispatcher()
@@ -26,33 +25,26 @@ async def echo_handler(message: MessageCreated) -> None:
     )
 
 
-@dp.after_startup()
-async def on_startup(dispatcher: Dispatcher, webhook_engine: WebhookEngine) -> None:
-    await webhook_engine.set_webhook(update_types=collect_used_updates(dispatcher))
-
-
 def main() -> FastAPI:
-    engine = SimpleEngine(
+    engine = SingleBotEngine(
         dp,
         bot,
-        web_adapter=FastApiWebAdapter(),
+        web=FastAPIAdapter(),
         # Укажите путь, по которому к вам будут приходить апдейты из Макса
-        routing=StaticRouting(url="https://example.com/webhook"),
+        route=Route(base_url="https://example.com", path="/webhook"),
         # security можно оставить None, если не используете секретный токен
-        security=Security(secret_token=StaticSecretToken("pepapig")),
+        security=Security(secret=StaticSecret("webhook-secret")),
     )
 
-    # В реализации FastApiWebAdapter в register игнорируются переданные
-    # on_startup и on_shutdown. Разработчик должен сам определить lifespan,
-    # в котором вызовет engine.on_startup и engine.on_shutdown для корректной работы
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-        engine.register(app)
-        await engine.on_startup(app)
+    async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+        await engine.subscribe()
         yield
-        await engine.on_shutdown(app)
 
-    return FastAPI(lifespan=lifespan)
+    app = FastAPI(lifespan=lifespan)
+    engine.register(app)
+
+    return app
 
 
 logging.basicConfig(level=logging.DEBUG)

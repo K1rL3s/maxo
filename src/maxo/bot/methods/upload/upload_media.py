@@ -1,3 +1,5 @@
+from typing import Any
+
 from unihttp.http import HTTPResponse, UploadFile
 
 from maxo.bot.methods.base import MaxoMethod
@@ -23,6 +25,6 @@ class UploadMedia(MaxoMethod[UploadMediaResult]):
     upload_url: Path[str]
     file: File[UploadFile]
 
-    def validate_response(self, response: HTTPResponse) -> None:
+    def validate_response(self, response: HTTPResponse[Any]) -> None:
         if response.data == b"<retval>1</retval>":
             raise RetvalReturnedServerException

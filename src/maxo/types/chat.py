@@ -6,12 +6,13 @@ from maxo.enums.chat_type import ChatType
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
 from maxo.types.base import MaxoType
+from maxo.types.binding import BotMixin
 from maxo.types.image import Image
 from maxo.types.message import Message
 from maxo.types.user_with_photo import UserWithPhoto
 
 
-class Chat(MaxoType):
+class Chat(MaxoType, BotMixin):
     """
     Объект содержит общую информацию о групповом чате или канале: его тип, настройки отображения (название, аватар, описание, ссылка), публичную доступность, а также информацию об участниках (владельце, боте и других пользователях), времени их последней активности и событиях
 

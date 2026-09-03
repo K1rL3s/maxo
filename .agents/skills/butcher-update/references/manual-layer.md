@@ -13,7 +13,12 @@
 при чистке:
 
 - `src/maxo/types/base.py` - `MaxoType`, `BaseMaxoType`, `MaxUpdate`,
-  `BaseUpdate`, `BotMixin`.
+  `BaseUpdate`.
+- `src/maxo/types/binding.py` - `BotMixin` и `bind_bot`. **Осторожно:**
+  `TYPES_EXTRA_EXPORTS` в `butcher/overrides.py` объявляет `BotMixin` в
+  модуле `base`, а `bind_bot` не объявляет вовсе. В дереве первая строка
+  `types/__init__.py` - `from maxo.types.binding import BotMixin, bind_bot`,
+  и генерация её затрёт. Восстанавливай руками.
 - `src/maxo/types/error_event.py`, `update_context.py`, `upload_media_result.py`.
 - `src/maxo/bot/methods/base.py`, `markers.py`.
 - Методы вне свагера: `bots/edit_bot_info.py`, `chats/delete_chat.py`,
@@ -32,7 +37,7 @@
 `InlineKeyboardAttachmentRequest`, `PhotoAttachmentRequest`,
 `ShareAttachmentRequest`, `StickerAttachmentRequest`, `VideoAttachmentRequest`.
 
-На них завязаны `maxo/routing/mixins/attachments.py`,
+На них завязаны `maxo/types/facades/attachments.py`,
 `maxo/utils/builders/attachment_request.py`, `maxo/utils/hide_link.py` - без
 `factory` падает уже `import maxo`.
 
@@ -70,9 +75,10 @@
 - `ShareAttachment.payload` - `field(default_factory=ShareAttachmentPayload)`
   вместо обязательного поля.
 - `MessageCallback` - `# type: ignore[misc]` на классе, `message: Message | None`
-  с `# type: ignore[assignment]`, импорты фасадов из
-  `maxo.routing.mixins.callback` и `maxo.routing.mixins.message` (генератор
-  печатает плоский `from maxo.routing.mixins import ...`).
+  с `# type: ignore[assignment]`.
+- Импорты фасадов: `MIXINS_MODULE` в `butcher/overrides.py` направляет
+  генератор в `maxo.types.facades`. Не возвращай импорты через депрекейтед-шим
+  `maxo.routing.mixins`.
 
 `MessageButton.text` и `PhotoAttachmentRequestPayload.photos` руками уже **не**
 правятся - они генерируются через `MODEL_FIELD_OVERRIDES`.
@@ -104,10 +110,12 @@
 Генерация их не трогает, но по ним расходится ручная регистрация новых
 апдейтов и фасадов. Полный порядок действий - в карте касаний `SKILL.md`.
 
-- `src/maxo/serialization.py` - `TAG_PROVIDERS`, регистрация полиморфных типов
-  в retort. Union-алиасы генерируются, а эта таблица - нет.
-- `src/maxo/bot/warming_up.py` - кортежи `_types` и `_methods`.
-- `src/maxo/routing/mixins/attachments.py` - `MEDIA_ATTACHMENT_FACTORIES`,
+- `src/maxo/serialization.py` - словари тегов (`_UPDATE_TAGS`, `_ATTACHMENT_TAGS`,
+  ...), регистрация полиморфных типов в retort. Union-алиасы генерируются, а эти
+  словари - нет. `TAG_PROVIDERS` собирается из них через `_TAG_GROUPS`.
+- `src/maxo/bot/warming_up.py` - кортеж `_METHOD_ROOTS`. `_LOADED_ROOTS`
+  выводится из него через `__returning__`, руками не ведётся.
+- `src/maxo/types/facades/attachments.py` - `MEDIA_ATTACHMENT_FACTORIES`,
   карта `UploadType` -> `factory` для заливаемых медиа.
 - `src/maxo/routing/facades/middleware.py` - `_FACADES_MAP`, единственный путь
   от типа апдейта к `ctx["facade"]`.
@@ -115,6 +123,8 @@
   которые заполняют `chat_id`/`user`/`user_id` в `UpdateContext`.
 - `src/maxo/routing/updates/` - депрекейтед-шим: `__init__.py` плюс
   deep-модули на каждый апдейт. **Пополняется**: новый апдейт заводится и там.
+- `src/maxo/routing/mixins/` - депрекейтед-шим над `maxo.types.facades`.
+  **Заморожен**: новый фасад живёт только в `maxo.types.facades`.
 - `src/maxo/utils/facades/` - второй депрекейтед-шим (`updates/`, `methods/`,
   `middleware.py`), переехавший в `maxo.routing`. Сохраняет фасадные алиасы до
   удаления всего слоя в 0.9.0.

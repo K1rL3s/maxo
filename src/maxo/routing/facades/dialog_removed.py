@@ -1,7 +1,7 @@
 from maxo.omit import Omittable
 from maxo.routing.facades.base import BaseUpdateFacade
-from maxo.routing.mixins import ChatMethodsFacade
 from maxo.types.dialog_removed import DialogRemoved
+from maxo.types.facades import ChatMethodsFacade
 from maxo.types.user import User
 
 

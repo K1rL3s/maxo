@@ -74,7 +74,7 @@ classifiers = [
 ]
 requires-python = ">=3.12,<3.15"
 dependencies = [
-    "unihttp[aiohttp]>=0.2.6,<0.3.0",
+    "unihttp[aiohttp]>=0.3.0,<0.4.0",
     "anyio>=4.0.0,<5.0.0",
     "cachetools>=4.0.0,<7.0.0",
     "jinja2>=3.0.0,<4.0.0",
@@ -86,7 +86,12 @@ dependencies = [
 magic_filter = ["magic_filter>=1.0.0,<2.0.0"]
 dishka = ["dishka>=1.0.0,<2.0.0"]
 redis = ["redis[hiredis]>=5.0.1,<8.0.0"]
+webhook = [
+    "multidict>=6.7.1,<7.0.0",
+    "yarl>=1.17.0,<2.0.0",
+]
 fastapi = [
+    "maxo[webhook]",
     "fastapi>=0.128.0,<1.0.0; python_version <= '3.12'",
     "fastapi>=0.138.0,<1.0.0; python_version > '3.12'"
 ]

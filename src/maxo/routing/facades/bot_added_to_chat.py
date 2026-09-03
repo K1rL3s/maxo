@@ -1,6 +1,6 @@
 from maxo.routing.facades.base import BaseUpdateFacade
-from maxo.routing.mixins import ChatMethodsFacade
 from maxo.types.bot_added_to_chat import BotAddedToChat
+from maxo.types.facades import ChatMethodsFacade
 from maxo.types.user import User
 
 

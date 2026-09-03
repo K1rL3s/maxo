@@ -1,5 +1,7 @@
+from typing import Any
+
 from unihttp.http import HTTPRequest, HTTPResponse
-from unihttp.middlewares import AsyncHandler
+from unihttp.middlewares import AsyncHandler, AsyncMiddleware
 
 from maxo.backoff import Backoff, BackoffConfig
 from maxo.errors.api import MaxBotBadRequestError
@@ -14,7 +16,7 @@ def is_attachment_not_ready(error: MaxBotBadRequestError) -> bool:
     return NOT_READY_MESSAGE_MARK in (error.message or "")
 
 
-class AttachmentNotReadyRetryMiddleware:
+class AttachmentNotReadyRetryMiddleware(AsyncMiddleware):
     """Ретраит `attachment.not.ready` с backoff."""
 
     __slots__ = ("_backoff_config", "_max_retries")
@@ -27,7 +29,7 @@ class AttachmentNotReadyRetryMiddleware:
         self,
         request: HTTPRequest,
         next_handler: AsyncHandler,
-    ) -> HTTPResponse:
+    ) -> HTTPResponse[Any]:
         backoff = Backoff(self._backoff_config)
 
         while True:

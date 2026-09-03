@@ -1,7 +1,9 @@
 import dataclasses
 import typing
+from collections.abc import Mapping
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from functools import cache
+from typing import Any
 
 from adaptix import Chain, P, Retort, dumper, loader
 from adaptix.type_tools import exec_type_checking
@@ -9,11 +11,8 @@ from unihttp.serializers.adaptix.marker_tools import for_marker
 from unihttp.serializers.adaptix.serialize import DEFAULT_RETORT
 
 from maxo._internal.adaptix import concat_provider, has_tag_provider, is_subclass
-from maxo.bot.defaults import BotDefaults
-from maxo.bot.methods import EditComment, EditMessage, SendComment, SendMessage
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.methods.markers import QueryMarker
-from maxo.bot.warming_up import WarmingUpType, warming_up_retort
 from maxo.enums import (
     AttachmentRequestType,
     AttachmentType,
@@ -21,8 +20,7 @@ from maxo.enums import (
     MarkupElementType,
     UpdateType,
 )
-from maxo.omit import Omitted, is_omitted
-from maxo.routing.mixins import comment, message
+from maxo.omit import Omitted
 from maxo.types import (
     Attachments,
     AttachmentsRequests,
@@ -49,20 +47,20 @@ from maxo.types import (
     FileAttachmentRequest,
     HeadingMarkup,
     HighlightedMarkup,
+    InlineButtons,
     InlineKeyboardAttachment,
     InlineKeyboardAttachmentRequest,
     LinkButton,
     LinkMarkup,
     LocationAttachment,
     LocationAttachmentRequest,
+    MarkupElements,
     MessageButton,
     MessageCallback,
     MessageCreated,
     MessageEdited,
     MessageRemoved,
     MonospacedMarkup,
-    NewCommentBody,
-    NewMessageBody,
     OpenAppButton,
     PhotoAttachment,
     PhotoAttachmentRequest,
@@ -76,6 +74,7 @@ from maxo.types import (
     StrikethroughMarkup,
     StrongMarkup,
     UnderlineMarkup,
+    Updates,
     UserAddedToChat,
     UserMentionMarkup,
     UserRemovedFromChat,
@@ -83,102 +82,95 @@ from maxo.types import (
     VideoAttachmentRequest,
     base,
 )
+from maxo.types.facades import comment, message
 
-if TYPE_CHECKING:
-    from maxo import Bot
+_UPDATE_TAGS: Mapping[type, UpdateType] = {
+    BotAddedToChat: UpdateType.BOT_ADDED,
+    BotRemovedFromChat: UpdateType.BOT_REMOVED,
+    BotStarted: UpdateType.BOT_STARTED,
+    BotStopped: UpdateType.BOT_STOPPED,
+    ChatTitleChanged: UpdateType.CHAT_TITLE_CHANGED,
+    CommentCreated: UpdateType.COMMENT_CREATED,
+    CommentEdited: UpdateType.COMMENT_EDITED,
+    CommentRemoved: UpdateType.COMMENT_REMOVED,
+    DialogCleared: UpdateType.DIALOG_CLEARED,
+    DialogMuted: UpdateType.DIALOG_MUTED,
+    DialogRemoved: UpdateType.DIALOG_REMOVED,
+    DialogUnmuted: UpdateType.DIALOG_UNMUTED,
+    MessageCallback: UpdateType.MESSAGE_CALLBACK,
+    MessageCreated: UpdateType.MESSAGE_CREATED,
+    MessageEdited: UpdateType.MESSAGE_EDITED,
+    MessageRemoved: UpdateType.MESSAGE_REMOVED,
+    UserAddedToChat: UpdateType.USER_ADDED,
+    UserRemovedFromChat: UpdateType.USER_REMOVED,
+}
 
+_ATTACHMENT_TAGS: Mapping[type, AttachmentType] = {
+    AudioAttachment: AttachmentType.AUDIO,
+    ContactAttachment: AttachmentType.CONTACT,
+    FileAttachment: AttachmentType.FILE,
+    PhotoAttachment: AttachmentType.IMAGE,
+    InlineKeyboardAttachment: AttachmentType.INLINE_KEYBOARD,
+    LocationAttachment: AttachmentType.LOCATION,
+    ShareAttachment: AttachmentType.SHARE,
+    StickerAttachment: AttachmentType.STICKER,
+    VideoAttachment: AttachmentType.VIDEO,
+}
+
+_MARKUP_TAGS: Mapping[type, MarkupElementType] = {
+    EmphasizedMarkup: MarkupElementType.EMPHASIZED,
+    LinkMarkup: MarkupElementType.LINK,
+    MonospacedMarkup: MarkupElementType.MONOSPACED,
+    StrikethroughMarkup: MarkupElementType.STRIKETHROUGH,
+    StrongMarkup: MarkupElementType.STRONG,
+    UnderlineMarkup: MarkupElementType.UNDERLINE,
+    UserMentionMarkup: MarkupElementType.USER_MENTION,
+    HeadingMarkup: MarkupElementType.HEADING,
+    HighlightedMarkup: MarkupElementType.HIGHLIGHTED,
+    QuoteMarkup: MarkupElementType.QUOTE,
+}
+
+_ATTACHMENT_REQUEST_TAGS: Mapping[type, AttachmentRequestType] = {
+    PhotoAttachmentRequest: AttachmentRequestType.IMAGE,
+    VideoAttachmentRequest: AttachmentRequestType.VIDEO,
+    AudioAttachmentRequest: AttachmentRequestType.AUDIO,
+    FileAttachmentRequest: AttachmentRequestType.FILE,
+    StickerAttachmentRequest: AttachmentRequestType.STICKER,
+    ContactAttachmentRequest: AttachmentRequestType.CONTACT,
+    InlineKeyboardAttachmentRequest: AttachmentRequestType.INLINE_KEYBOARD,
+    LocationAttachmentRequest: AttachmentRequestType.LOCATION,
+    ShareAttachmentRequest: AttachmentRequestType.SHARE,
+}
+
+_BUTTON_TAGS: Mapping[type, ButtonType] = {
+    CallbackButton: ButtonType.CALLBACK,
+    LinkButton: ButtonType.LINK,
+    RequestContactButton: ButtonType.REQUEST_CONTACT,
+    RequestGeoLocationButton: ButtonType.REQUEST_GEO_LOCATION,
+    OpenAppButton: ButtonType.OPEN_APP,
+    MessageButton: ButtonType.MESSAGE,
+    ClipboardButton: ButtonType.CLIPBOARD,
+}
+
+# (тип объединения, поле с тегом, {член: значение тега})
+_TAG_GROUPS: tuple[tuple[Any, str, Mapping[type, Any]], ...] = (
+    (Updates, "update_type", _UPDATE_TAGS),
+    (Attachments, "type", _ATTACHMENT_TAGS),
+    (MarkupElements, "type", _MARKUP_TAGS),
+    (AttachmentsRequests, "type", _ATTACHMENT_REQUEST_TAGS),
+    (InlineButtons, "type", _BUTTON_TAGS),
+)
 
 TAG_PROVIDERS = concat_provider(
-    # ---> UpdateType <---
-    has_tag_provider(BotAddedToChat, "update_type", UpdateType.BOT_ADDED),
-    has_tag_provider(BotRemovedFromChat, "update_type", UpdateType.BOT_REMOVED),
-    has_tag_provider(BotStarted, "update_type", UpdateType.BOT_STARTED),
-    has_tag_provider(BotStopped, "update_type", UpdateType.BOT_STOPPED),
-    has_tag_provider(ChatTitleChanged, "update_type", UpdateType.CHAT_TITLE_CHANGED),
-    has_tag_provider(CommentCreated, "update_type", UpdateType.COMMENT_CREATED),
-    has_tag_provider(CommentEdited, "update_type", UpdateType.COMMENT_EDITED),
-    has_tag_provider(CommentRemoved, "update_type", UpdateType.COMMENT_REMOVED),
-    has_tag_provider(DialogCleared, "update_type", UpdateType.DIALOG_CLEARED),
-    has_tag_provider(DialogMuted, "update_type", UpdateType.DIALOG_MUTED),
-    has_tag_provider(DialogRemoved, "update_type", UpdateType.DIALOG_REMOVED),
-    has_tag_provider(DialogUnmuted, "update_type", UpdateType.DIALOG_UNMUTED),
-    has_tag_provider(MessageCallback, "update_type", UpdateType.MESSAGE_CALLBACK),
-    has_tag_provider(MessageCreated, "update_type", UpdateType.MESSAGE_CREATED),
-    has_tag_provider(MessageEdited, "update_type", UpdateType.MESSAGE_EDITED),
-    has_tag_provider(MessageRemoved, "update_type", UpdateType.MESSAGE_REMOVED),
-    has_tag_provider(UserAddedToChat, "update_type", UpdateType.USER_ADDED),
-    has_tag_provider(UserRemovedFromChat, "update_type", UpdateType.USER_REMOVED),
-    # ---> AttachmentType <---
-    has_tag_provider(AudioAttachment, "type", AttachmentType.AUDIO),
-    has_tag_provider(ContactAttachment, "type", AttachmentType.CONTACT),
-    has_tag_provider(FileAttachment, "type", AttachmentType.FILE),
-    has_tag_provider(PhotoAttachment, "type", AttachmentType.IMAGE),
-    has_tag_provider(InlineKeyboardAttachment, "type", AttachmentType.INLINE_KEYBOARD),
-    has_tag_provider(LocationAttachment, "type", AttachmentType.LOCATION),
-    has_tag_provider(ShareAttachment, "type", AttachmentType.SHARE),
-    has_tag_provider(StickerAttachment, "type", AttachmentType.STICKER),
-    has_tag_provider(VideoAttachment, "type", AttachmentType.VIDEO),
-    # ---> MarkupElementType <---
-    has_tag_provider(EmphasizedMarkup, "type", MarkupElementType.EMPHASIZED),
-    has_tag_provider(LinkMarkup, "type", MarkupElementType.LINK),
-    has_tag_provider(MonospacedMarkup, "type", MarkupElementType.MONOSPACED),
-    has_tag_provider(StrikethroughMarkup, "type", MarkupElementType.STRIKETHROUGH),
-    has_tag_provider(StrongMarkup, "type", MarkupElementType.STRONG),
-    has_tag_provider(UnderlineMarkup, "type", MarkupElementType.UNDERLINE),
-    has_tag_provider(UserMentionMarkup, "type", MarkupElementType.USER_MENTION),
-    has_tag_provider(HeadingMarkup, "type", MarkupElementType.HEADING),
-    has_tag_provider(HighlightedMarkup, "type", MarkupElementType.HIGHLIGHTED),
-    has_tag_provider(QuoteMarkup, "type", MarkupElementType.QUOTE),
-    # ---> AttachmentRequestType <---
-    has_tag_provider(PhotoAttachmentRequest, "type", AttachmentRequestType.IMAGE),
-    has_tag_provider(VideoAttachmentRequest, "type", AttachmentRequestType.VIDEO),
-    has_tag_provider(AudioAttachmentRequest, "type", AttachmentRequestType.AUDIO),
-    has_tag_provider(FileAttachmentRequest, "type", AttachmentRequestType.FILE),
-    has_tag_provider(StickerAttachmentRequest, "type", AttachmentRequestType.STICKER),
-    has_tag_provider(ContactAttachmentRequest, "type", AttachmentRequestType.CONTACT),
-    has_tag_provider(
-        InlineKeyboardAttachmentRequest,
-        "type",
-        AttachmentRequestType.INLINE_KEYBOARD,
+    *(
+        has_tag_provider(member, tag_field, value)
+        for _union, tag_field, members in _TAG_GROUPS
+        for member, value in members.items()
     ),
-    has_tag_provider(LocationAttachmentRequest, "type", AttachmentRequestType.LOCATION),
-    has_tag_provider(ShareAttachmentRequest, "type", AttachmentRequestType.SHARE),
-    # ---> KeyboardButtonType <---
-    has_tag_provider(CallbackButton, "type", ButtonType.CALLBACK),
-    has_tag_provider(LinkButton, "type", ButtonType.LINK),
-    has_tag_provider(RequestContactButton, "type", ButtonType.REQUEST_CONTACT),
-    has_tag_provider(RequestGeoLocationButton, "type", ButtonType.REQUEST_GEO_LOCATION),
-    has_tag_provider(OpenAppButton, "type", ButtonType.OPEN_APP),
-    has_tag_provider(MessageButton, "type", ButtonType.MESSAGE),
-    has_tag_provider(ClipboardButton, "type", ButtonType.CLIPBOARD),
 )
 
 
-def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
-    if defaults is None:
-        defaults = BotDefaults()
-
-    types_with_defaults = (
-        SendMessage
-        | EditMessage
-        | SendComment
-        | EditComment
-        | NewMessageBody
-        | NewCommentBody
-    )
-
-    def _set_method_defaults(method: types_with_defaults) -> types_with_defaults:
-        if hasattr(method, "format") and is_omitted(method.format):
-            method = dataclasses.replace(method, format=defaults.text_format)
-        if hasattr(method, "disable_link_preview") and is_omitted(
-            method.disable_link_preview,
-        ):
-            method = dataclasses.replace(
-                method,
-                disable_link_preview=defaults.disable_link_preview,  # type: ignore[arg-type]
-            )
-        return method
-
+def create_retort() -> Retort:
     def _load_datetime(time: int) -> datetime:
         try:
             return datetime.fromtimestamp(time / 1000, tz=UTC)
@@ -212,11 +204,6 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
                 lambda time: int(time.timestamp() * 1000),
             ),
             dumper(
-                P[*typing.get_args(types_with_defaults)],
-                _set_method_defaults,
-                chain=Chain.FIRST,
-            ),
-            dumper(
                 P[AttachmentsRequests | Attachments],
                 lambda x: x.to_request() if isinstance(x, Attachments) else x,
                 chain=Chain.FIRST,
@@ -228,40 +215,9 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
     return typing.cast(Retort, extended)
 
 
-def create_retort(
-    *,
-    defaults: BotDefaults | None = None,
-    warming_up: bool = True,
-) -> Retort:
-    retort = _create_retort(defaults=defaults)
-
-    if warming_up:
-        retort = warming_up_retort(retort, warming_up=WarmingUpType.TYPES)
-        retort = warming_up_retort(retort, warming_up=WarmingUpType.METHOD)
-
-    return retort
-
-
-def create_retort_with_bot(
-    bot: "Bot",
-    *,
-    defaults: BotDefaults | None = None,
-    warming_up: bool = True,
-) -> Retort:
-    def _load_bot[T: base.MaxoType](x: T) -> T:
-        return x.as_(bot)
-
-    retort = _create_retort(defaults=defaults)
-
-    retort = retort.extend(
-        recipe=[loader(is_subclass(base.MaxoType), _load_bot, Chain.LAST)],
-    )
-
-    if warming_up:
-        retort = warming_up_retort(retort, warming_up=WarmingUpType.TYPES)
-        retort = warming_up_retort(retort, warming_up=WarmingUpType.METHOD)
-
-    return retort
+@cache
+def get_retort() -> Retort:
+    return create_retort()
 
 
 def _omit_none_query_values(method: MaxoMethod[object]) -> MaxoMethod[object]:

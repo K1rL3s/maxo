@@ -87,7 +87,7 @@ just butcher-test  # тесты самого генератора
 
 | Путь                     | Назначение                                                                                                                        |
 |--------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| `src/maxo/bot/`          | `Bot`, `MaxApiClient`, состояния бота, declarative Bot API methods на `unihttp`.                                                  |
+| `src/maxo/bot/`          | `Bot`, `default_client`, middlewares клиента, дефолты, warming up, declarative Bot API methods на `unihttp`.                      |
 | `src/maxo/types/`        | Типы MAX Bot API. Многие файлы сгенерированы по документации API.                                                                 |
 | `src/maxo/enums/`        | Enum MAX Bot API. Многие файлы сгенерированы по документации API.                                                                 |
 | `src/maxo/routing/`      | `Dispatcher`, `Router`, observers, handlers, filters, middlewares, facades и signals; `updates/` - устаревший слой совместимости. |
@@ -166,15 +166,20 @@ class Message:
 
 **Автопривязка бота через BotMixin**
 
-Все `MaxoType` получают метод `as_(bot)` для привязки бота. В
-`serialization.py` есть специальный loader, который автоматически привязывает
-бот ко всем загруженным типам через `retort.extend(loader(...))`.
+`BotMixin` живёт в `src/maxo/types/binding.py` (не в `base.py`) и даёт
+`as_(bot)`, проперти `bot` и сеттер. Его получают не все `MaxoType`, а те, у
+кого он есть в базах: фасады и апдейты с записью в `CLASS_MIXINS`. Благодаря
+этому работает `await message.answer(...)` вместо `bot.send_message(...)`.
 
-Это позволяет:
-```python
-message = update.message
-await message.send_message(text="Reply")  # вместо bot.send_message(...)
-```
+Неочевидное про `bind_bot`:
+
+- Loader'а в retort **нет**. `bind_bot` зовётся снаружи: в `Bot.call_method`
+  над результатом, в `as_()` и в сеттере `bot`.
+- Спускается не во все поля, а только в ведущие к `BotMixin`. Их считает
+  `_bot_fields` (`@cache`) по хинтам на любой глубине.
+- Обход без `seen`: граф типов ацикличен, это держит тест
+  `test_type_graph_is_acyclic` (`tests/maxo/test_binding.py`). Заведёшь цикл в
+  типах - обход зациклится, тест упадёт первым.
 
 **Паттерн `unsafe_*` для Omittable полей**
 
@@ -198,28 +203,29 @@ class Message(MaxoType):
 
 **TAG_PROVIDERS для union-типов**
 
-`src/maxo/serialization.py` содержит `TAG_PROVIDERS` - список провайдеров для
-полиморфной (де)сериализации:
-
-```python
-TAG_PROVIDERS = concat_provider(
-    has_tag_provider(MessageCreated, "update_type", UpdateType.MESSAGE_CREATED),
-    has_tag_provider(PhotoAttachment, "type", AttachmentType.IMAGE),
-    # ...
-)
-```
+`src/maxo/serialization.py` держит теги полиморфных типов в словарях по
+семействам (`_UPDATE_TAGS`, `_ATTACHMENT_TAGS`, `_MARKUP_TAGS`,
+`_ATTACHMENT_REQUEST_TAGS`, `_BUTTON_TAGS`). `_TAG_GROUPS` связывает каждый
+словарь с union-алиасом и полем тега, а `TAG_PROVIDERS` собирается из
+`_TAG_GROUPS` автоматически - плоского списка `has_tag_provider(...)` больше
+нет, дописывать туда нечего.
 
 При добавлении нового варианта в union-тип (новый update, attachment, button):
 
 1. Создай класс, наследующий базовый тип
-2. Добавь `has_tag_provider` в `TAG_PROVIDERS` с уникальным тегом
+2. Добавь запись в словарь тегов своего семейства
 3. Обнови union-тип (например, `Updates = MessageCreated | BotStarted | ...`)
 
 **Warming up retort**
 
-`src/maxo/bot/warming_up.py` предзагружает все типы в retort при создании
-бота, чтобы первый запрос не тратил время на генерацию сериализаторов. Adaptix
-генерирует код на лету - warming_up делает это заранее.
+`src/maxo/bot/warming_up.py` предзагружает корневые типы в общую retort, чтобы
+первый запрос не тратил время на генерацию сериализаторов. Adaptix генерирует
+код на лету - warming_up делает это заранее.
+
+Retort одна на процесс (`get_retort()`, `@cache`) и от конфига не зависит:
+дефолты накладывает `apply_defaults()` в `Bot.call_method`, бота проставляет
+`bind_bot()` над результатом. Не заводи retort с ключом по `BotDefaults` или
+по боту - это ломает и прогрев, и кеш адаптикса.
 
 **Различие `Omitted()` vs `None`**
 
@@ -272,14 +278,13 @@ router.callback_query = router.message_callback  # алиас
 
 **Конфликт метаклассов: BaseMethodsFacade = BotMixin**
 
-`src/maxo/routing/mixins/base.py` содержит комментарий-исповедь:
+`src/maxo/types/facades/base.py` содержит комментарий-исповедь:
 
 ```python
-"""
-Класс должен наследоваться от ABC для работы @abstractmethod,
-но MaxoType сделан через метакласс, который конфликтует с ABC.
-Из-за этого фасады не наследуются от ABC.
-"""
+# Фасад должен был наследоваться от ABC ради @abstractmethod, но MaxoType
+# сделан через метакласс и конфликтует с ABC в моделях апдейтов. Плюс
+# BotMixin требует __slots__, а двойное наследование ломается - поэтому
+# BaseMethodsFacade, который определял только проперти `bot`, стал алиасом.
 BaseMethodsFacade = BotMixin
 ```
 
@@ -315,18 +320,48 @@ send_message = bind_method(SendMessage)  # в Bot классе
 
 **Патчинг success=false**
 
-`src/maxo/bot/api_client.py` содержит специальную логику:
+`MaxoMethod.validate_response` в `src/maxo/bot/methods/base.py`:
 
 ```python
-if response.ok and response.data.get("success", None) is False:
-    if isinstance(method, AddMembers):
-        return  # Особый случай
-    response.status_code = 400
+def validate_response(self, response: HTTPResponse[Any]) -> None:
+    # MAX иногда отвечает 200 с `success: false`/`error_code` в теле.
+    if response.ok and isinstance(response.data, dict) and (
+        response.data.get("error_code")
+        or response.data.get("success", None) is False
+    ):
+        response.status_code = 400
 ```
 
 MAX API иногда возвращает HTTP 200 с `"success": false`. Для большинства
-методов это патчится на 400, но для `AddMembers` остается как есть, т.к. там
-детальная информация в результате.
+методов это патчится на 400 (дальше `on_error` -> `raise_api_error`), но
+`AddMembers` перекрывает `validate_response` пустым телом: там при
+`success=false` приходит частичный результат.
+
+**Стек клиентских middleware `Bot`**
+
+`Bot.__init__` собирает `self.middleware` в фиксированном порядке, и порядок
+здесь - контракт, а не деталь:
+
+```python
+self.middleware = [
+    *middlewares,                        # пользовательские, снаружи всех
+    AuthMiddleware(token),               # Authorization + User-Agent
+    AttachmentNotReadyRetryMiddleware(...),  # ретрай `attachment.not.ready`
+    NetworkErrorMiddleware(),            # unihttp-ошибки -> ошибки maxo
+]
+```
+
+`NetworkErrorMiddleware` стоит последним, то есть ближе всего к транспорту:
+всё, что снаружи, уже видит `MaxBotNetworkError`/`MaxBotTimeoutError`, а не
+сырые исключения `unihttp`. `ChunkUploadRetryMiddleware` в этот список не
+входит - он передаётся точечно через `Bot.call_method(middleware=...)` при
+resumable-загрузке и ретраит 5xx и сетевые сбои на отдельном чанке.
+
+Параметры ретраев и порогов живут в `UploadConfig` (`src/maxo/bot/upload.py`):
+`method`, `resumable_threshold`, `chunk_size`, `chunk_retries`,
+`not_ready_max_retries`, две `BackoffConfig` и `processing_*` (ожидание
+обработки медиа на стороне MAX). Все инварианты проверяются в `__post_init__`.
+Не зашивай задержки в middleware - добавляй поле в `UploadConfig`.
 
 ### FSM и изоляция
 
@@ -424,7 +459,7 @@ MAX API требует явную подписку на типы update'ов д�
 
 ```python
 used_types = collect_used_updates(dp)
-# Результат: [UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK, ...]
+# Результат: (UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK, ...)
 ```
 
 Это оптимизация - webhook не получает лишние update'ы, на которые нет
@@ -444,7 +479,7 @@ class MyType(MaxoType, ABC):
 
 ```python
 async def startup():
-    router.message_created(handler)  # TypeError - observer в финальном состоянии
+    router.message_created(handler)  # StateError: Can't add handler after startup
 ```
 
 **❌ Нельзя**: Использовать dialogs без `with_destiny=True`
@@ -482,22 +517,26 @@ await message.send_message(text="Reply")  # работает через BotMixin
 user = message.unsafe_sender  # User, не Omittable[User]
 ```
 
-**✅ Можно**: Расширять TAG_PROVIDERS для новых полиморфных типов
+**✅ Можно**: Регистрировать новые полиморфные типы
 
 ```python
-# В serialization.py добавь:
-TAG_PROVIDERS = concat_provider(
-    existing_providers,
-    has_tag_provider(MyNewType, "type", MyEnum.VALUE),
-)
+# В serialization.py допиши в словарь тегов своего семейства:
+_ATTACHMENT_TAGS: Mapping[type, AttachmentType] = {
+    # ...
+    MyNewAttachment: AttachmentType.MY_NEW,
+}
 ```
+
+Сам `TAG_PROVIDERS` руками не трогай - он собирается из `_TAG_GROUPS`.
 
 ## Публичный API
 
-- Top-level `maxo` экспортирует только самые частые объекты:
-  `Bot`, `Dispatcher`, `Router`, `Ctx`, `BaseMiddleware`, `__version__`,
-  хелперы разметки `html` и `md`, а также модули `enums`, `methods`, `types`.
-  Набор повторяет корень `aiogram`, чтобы упростить портирование ботов.
+- Top-level `maxo` экспортирует только самые частые объекты: `Bot`,
+  `Dispatcher`, `Router`, `Ctx`, `BaseMiddleware`, `flags`, `__version__`,
+  хелперы разметки `html` и `md`, модули `enums`, `methods`, `types`, а также
+  точки входа в клиент и реторту - `default_client`, `build_ssl_context`,
+  `BASE_URL`, `get_retort`, `warm_up`. Ядро набора повторяет корень `aiogram`,
+  чтобы упростить портирование ботов.
 - Не расширяй top-level `maxo` без причины. Менее частые объекты должны
   импортироваться из своих публичных модулей.
 - `maxo.methods` - тонкий реэкспорт `maxo.bot.methods` с явным списком имен.
@@ -580,17 +619,31 @@ TAG_PROVIDERS = concat_provider(
 - Для unsafe-доступа к omitted/null полям следуй паттернам `unsafe_sender`,
   `unsafe_url` и `AttributeIsEmptyError`.
 - Полиморфные типы update, attachments, markup и buttons регистрируются в
-  `src/maxo/serialization.py` через `TAG_PROVIDERS`. При добавлении нового
-  варианта обнови retort.
-- `serialization.py` также отвечает за query dumping, defaults из
-  `BotDefaults`, attachments `to_request()`, timestamps в `datetime` с `UTC` и
-  привязку `Bot` через `create_retort_with_bot`.
-- `MaxApiClient` добавляет российский trusted CA, `Authorization`, `User-Agent`,
-  обработку ошибок API и patch для `success=false`. Не ломай эти гарантии.
+  `src/maxo/serialization.py` в словарях тегов (`_UPDATE_TAGS`,
+  `_ATTACHMENT_TAGS`, ...), из которых собирается `TAG_PROVIDERS`. При
+  добавлении нового варианта обнови нужный словарь.
+- `serialization.py` также отвечает за query dumping (включая омит `None` -
+  MAX не переваривает `null` в query), attachments `to_request()` и timestamps
+  в `datetime` с `UTC`. Дефолты и привязка `Bot` живут снаружи retort:
+  `apply_defaults()` и `bind_bot()`.
+- `default_client()` в `src/maxo/bot/client.py` подкладывает российский trusted
+  CA (`russiantrustedca.pem`) и retort как dumper/loader; `Authorization` и
+  `User-Agent` ставит `AuthMiddleware`, а patch `success=false`/`error_code` на
+  400 и подъём ошибок API живут в `MaxoMethod` (`bot/methods/base.py`).
+  Не ломай эти гарантии.
 - Особый случай `AddMembers` в обработке `success=false` не меняй без
   отдельного теста и обновления документации.
-- `Bot.download` принимает URL или `AttachmentPayload`; сохраняет в файл или
-  возвращает `BinaryIO`.
+- Скачивание - три метода, все принимают URL или `AttachmentPayload`:
+  `Bot.download()` отдаёт `bytes`, `Bot.download_to()` пишет в файл (открываем
+  и закрываем его мы), `Bot.download_stream()` - асинхронный контекстный
+  менеджер с чанками. Зеркалят `InputFile.read()`/`FSInputFile`/
+  `InputFile.stream()` на стороне загрузки - не разводи их сигнатуры.
+  Два правила, из которых это выросло:
+  - Не возвращай `destination` одним union-аргументом: из него росли `seek`
+    и флаш чужого буфера. Буфер вызывающего флашит и закрывает вызывающий.
+  - `download_stream()` - контекстный менеджер, а не голый генератор:
+    соединение наше, освобождать его при `break` должны мы, а не вызывающий
+    через `aclosing`. Форма та же, что у `aiohttp` и `httpx`.
 - Если меняется контракт MAX Bot API, синхронизируй метод, типы, enum,
   update-модель, facade/mixin при пользовательском удобстве, сериализацию,
   тесты и документацию.
@@ -612,7 +665,8 @@ TAG_PROVIDERS = concat_provider(
 - Runtime-зависимости задаются в `pyproject.toml`; не добавляй новые
   зависимости без необходимости и проверки минимальных версий.
 - Optional extras: `maxo[magic_filter]`, `maxo[dishka]`, `maxo[redis]`,
-  `maxo[fastapi]`, `maxo[preview]`.
+  `maxo[webhook]`, `maxo[fastapi]`, `maxo[preview]`. `fastapi` включает в себя
+  `webhook`.
 - Dev-группа подтягивает lint, tests, docs и основные extras. Для разработки
   используй `uv sync --all-groups`, чтобы тесты optional-интеграций не падали
   из-за отсутствующих зависимостей.
@@ -665,67 +719,16 @@ tests/
 
 ### Хелперы для тестирования dialogs
 
-**Фикстура mock_manager** (`tests/maxo_dialog/widgets/conftest.py`):
+- `tests/maxo_dialog/widgets/conftest.py` - фикстура `mock_manager`:
+  `MagicMock` с настоящим `Context` внутри `current_context()` и
+  `is_preview() -> False`.
+- `tests/maxo_dialog/widgets/input/conftest.py` - `create_text_message`,
+  `create_photo_message`, `create_message_no_body`, `setup_mock_manager`,
+  `dialog_protocol`.
+- Время в тестах бери из `tests/constants.NOW`, а не из своего
+  `datetime(...)` - иначе тесты расходятся по таймзонам и по значениям.
 
-```python
-@pytest.fixture
-def mock_manager() -> DialogManager:
-    manager = MagicMock()
-    context = Context(
-        dialog_data={},
-        start_data={},
-        widget_data={},
-        state=State(),
-        _stack_id="_stack_id",
-        _intent_id="_intent_id",
-    )
-    manager.current_context = Mock(side_effect=lambda: context)
-    manager.is_preview = MagicMock(return_value=False)
-    return manager
-```
-
-**Хелперы для создания сообщений** (`tests/maxo_dialog/widgets/input/conftest.py`):
-
-```python
-def create_text_message(text: str) -> MessageCreated:
-    """Создает текстовое сообщение для тестов."""
-    return MessageCreated(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
-        message=Message(
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
-            recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
-            body=MessageBody(mid="test_mid", seq=1, text=text),
-        ),
-    )
-
-def create_photo_message() -> MessageCreated:
-    """Создает сообщение с фото-вложением."""
-    photo = PhotoAttachment(
-        type=AttachmentType.IMAGE,
-        payload=PhotoAttachmentPayload(
-            photo_id=123,
-            token="test_token",  # noqa: S106
-            url="https://example.com/photo.jpg",
-        ),
-    )
-    return MessageCreated(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
-        message=Message(
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
-            recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
-            body=MessageBody(mid="test_mid", seq=1, text=None, attachments=[photo]),
-        ),
-    )
-
-def setup_mock_manager(
-    mock_manager: DialogManager,
-    event: MessageCreated | None = None,
-) -> None:
-    """Настраивает mock_manager для работы с фильтрами."""
-    mock_manager.middleware_data = {"ctx": {}}
-    if event:
-        mock_manager.event = event
-```
+Копии этих хелперов в документации не держим: смотри сами файлы.
 
 ### Паттерны тестирования widgets
 
@@ -834,11 +837,10 @@ uv run pytest tests/ --cov=src --cov-report=html  # для детального 
 При добавлении тестов для увеличения покрытия:
 
 1. Найди файлы с низким покрытием в coverage report
-2. Изучи непокрытые строки (coverage.xml или htmlcov/)
-3. Посмотри на существующие тесты в aiogram_dialog submodule для паттернов
-4. Создай тесты, покрывающие happy path и edge cases
-5. Используй shared helpers из conftest.py
-6. Проверь, что новые тесты увеличили покрытие
+2. Изучи непокрытые строки (`coverage.xml` или `htmlcov/`)
+3. Создай тесты на happy path и edge cases, переиспользуя хелперы из
+   ближайшего `conftest.py`
+4. Проверь, что новые тесты увеличили покрытие
 
 ### Специфичные проверки для подсистем
 
@@ -878,13 +880,8 @@ uv run pytest tests/ --cov=src --cov-report=html  # для детального 
 
 ### Рефакторинг тестов
 
-При обнаружении дублирования:
-
-1. Создай `conftest.py` в директории с тестами
-2. Вынеси общие хелперы (create_*, setup_*)
-3. Обнови импорты в тестах: `from .conftest import helper_name`
-4. Убедись, что все тесты проходят после рефакторинга
-5. Запусти `uv run ruff check --fix tests/` для проверки стиля
+Дублирующиеся хелперы (`create_*`, `setup_*`) выноси в ближайший
+`conftest.py` и импортируй относительно: `from .conftest import helper_name`.
 
 ## Документация и примеры
 
@@ -893,7 +890,7 @@ uv run pytest tests/ --cov=src --cov-report=html  # для детального 
 - Новые пользовательские возможности требуют обновления docs и, если уместно,
   `examples/`.
 - Примеры должны импортировать только публичный API и быть совместимыми с
-  текущей версией `0.8.0`.
+  текущей версией `0.8.1`.
 - При изменении структуры docs обновляй `docs/index.rst` и соответствующие
   `toctree`.
 - В README держи короткие актуальные примеры. Детальные объяснения отправляй в
@@ -906,9 +903,24 @@ uv run pytest tests/ --cov=src --cov-report=html  # для детального 
 - Клавиатуры показывай через `maxo.utils.builders.KeyboardBuilder`.
 - `magic_filter` показывай через
   `maxo.integrations.magic_filter.MagicFilter`.
-- Для webhook показывай `SimpleEngine`, `AiohttpWebAdapter` или
-  `FastApiWebAdapter`, `StaticRouting`, `Security`, `StaticSecretToken`,
-  `collect_used_updates`.
+- Для webhook показывай `SingleBotEngine`, `AiohttpAdapter` или
+  `FastAPIAdapter`, `Route`, `Security`, `StaticSecret`, `collect_used_updates`
+  (в `WebhookConfig(update_types=...)` для `engine.subscribe(...)`).
+- Из корня пакета `maxo.transport.webhook` реэкспортируются только
+  `SingleBotEngine`, `TokenEngine`, `Route`, `WebhookConfig` и `BotConfig`.
+  Адаптеры в корень не вынесены - каждый берётся из своего модуля:
+  `maxo.transport.webhook.web.aiohttp` и `maxo.transport.webhook.web.fastapi`.
+  Всё, что тянет опциональную зависимость, реэкспорту не подлежит: модуль
+  импортирует её сверху и вешает
+  `e.add_note("* Please run \`pip install maxo[...]\`")` (как
+  `fsm/storages/redis.py` и `integrations/magic_filter.py`).
+- `Security` и `StaticSecret` живут в `maxo.transport.webhook.security` и в
+  корень не вынесены. Промежуточные `engines/__init__.py`, `configs/__init__.py`
+  и `web/__init__.py` публичной поверхностью не являются: `web/__init__` отдаёт
+  только безфреймворковые `WebAdapter`, `WebHandler`, `WebRequest`, остальные
+  два пустые. Не пиши в доках импорт через них.
+- Эталон примеров - `examples/webhook_aiohttp.py` и
+  `examples/webhook_fastapi.py`: они под `mypy`, поэтому не отстают от кода.
 - Локальная сборка документации:
 
 ```bash

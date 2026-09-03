@@ -8,7 +8,6 @@ from maxo.bot.bot import Bot
 from maxo.bot.upload import UploadConfig, UploadMethod
 from maxo.enums import UploadType
 from maxo.errors.api import RetvalReturnedServerException
-from maxo.routing.mixins import AttachmentsFacade, MediaInput, MessageMethodsFacade
 from maxo.types import (
     AudioAttachmentRequest,
     CallbackButton,
@@ -20,6 +19,7 @@ from maxo.types import (
     UploadMediaResult,
     VideoAttachmentRequest,
 )
+from maxo.types.facades import AttachmentsFacade, MediaInput, MessageMethodsFacade
 from maxo.utils.upload_media import BufferedInputFile
 
 

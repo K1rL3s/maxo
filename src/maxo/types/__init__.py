@@ -1,3 +1,5 @@
+from maxo.types.binding import BotMixin, bind_bot
+
 from .attachment import Attachment
 from .attachment_payload import AttachmentPayload
 from .attachment_request import AttachmentRequest
@@ -9,7 +11,7 @@ from .attachments import (
 )
 from .audio_attachment import AudioAttachment
 from .audio_attachment_request import AudioAttachmentRequest
-from .base import BaseMaxoType, BaseUpdate, BotMixin, MaxUpdate, MaxoType
+from .base import BaseMaxoType, BaseUpdate, MaxUpdate, MaxoType
 from .bot_added_to_chat import BotAddedToChat
 from .bot_command import BotCommand
 from .bot_commands_info import BotCommandsInfo
@@ -251,4 +253,5 @@ __all__ = (
     "VideoAttachmentRequest",
     "VideoThumbnail",
     "VideoUrls",
+    "bind_bot",
 )

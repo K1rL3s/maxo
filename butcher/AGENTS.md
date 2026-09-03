@@ -120,15 +120,17 @@ false` - это `Omittable[...] = Omitted()`, а не `= <default>`.
 
 Butcher не создаёт и при генерации затрёт, если файл лежит на его пути:
 
-- `src/maxo/types/base.py` (`MaxoType`, `MaxUpdate`, `BotMixin`).
+- `src/maxo/types/base.py` (`MaxoType`, `MaxUpdate`) и
+  `src/maxo/types/binding.py` (`BotMixin`, `bind_bot`).
 - `factory()` и `to_request()` у attachment-типов, `generated_url` у
   `Message`, `keyboard`/`content_type` у `MessageBody` и подобные хелперы.
 - Методы вне свагера: `GetChatByLink`, `DeleteChat`, `UploadMedia`,
-  `EditBotInfo`, `GetChats`, `SetAdmins`.
+  `EditBotInfo`, `GetChats`, `SetAdmins`, `Download`.
 - Кастомные хвосты методов: `GetUpdates.make_response`,
   `UploadMedia.validate_response`.
-- `serialization.py` (`TAG_PROVIDERS`) и `warming_up.py` - butcher их не
-  трогает, но при новом полиморфном типе их нужно обновить руками.
+- `serialization.py` (словари тегов, из которых собирается `TAG_PROVIDERS`) и
+  `warming_up.py` (`_METHOD_ROOTS`) - butcher их не трогает, но при новом
+  полиморфном типе или новом методе их нужно обновить руками.
 - Поля, которых нет в свагере: `Chat.chat_message_id` вместе с
   `unsafe_chat_message_id`. Butcher их не знает и вычистит.
 - Алиасы-свойства и сужения типов с `# type: ignore[assignment]`:
@@ -165,7 +167,7 @@ Butcher не создаёт и при генерации затрёт, если 
 Генерация даёт только `maxo/types/<name>.py` и запись в union `Updates`. Всё
 остальное - руками, и большая часть пропусков падает молча:
 
-- `serialization.py` - `has_tag_provider(X, "update_type", UpdateType.X)`.
+- `serialization.py` - запись `X: UpdateType.X` в `_UPDATE_TAGS`.
   Забыл - `LoadError` в рантайме.
 - `routing/routers/simple.py` - `UpdateObserver[X]()` и запись в `_observers`.
   Забыл - хендлер некуда зарегистрировать.
@@ -177,7 +179,7 @@ Butcher не создаёт и при генерации затрёт, если 
 - `overrides.CLASS_MIXINS` - миксин-фасад по полям апдейта: есть `message` ->
   `MessageMethodsFacade`, есть `callback` -> `CallbackMethodsFacade`, иначе
   есть `chat_id` -> `ChatMethodsFacade`.
-- `bot/warming_up.py` - тип в списке типов.
+- `bot/warming_up.py` - ничего: апдейт греется внутри `Updates`.
 - `docs/pages/botapi/updates.rst` (ручной список `autoclass`),
   `docs/pages/event-handling/routers.rst` (таблица событий),
   `examples/all_updates.py`.
@@ -200,19 +202,22 @@ Union-алиас (`Attachments`, `InlineButtons`, `MarkupElements`, `Updates`)
 retort - ручная. Без неё подтип есть в аннотациях, но adaptix не умеет его ни
 загрузить, ни выгрузить: `LoadError` в рантайме, тесты этого не ловят.
 
-Новый подтип дописывается в `TAG_PROVIDERS` в `src/maxo/serialization.py`, в
-свою секцию (они помечены комментариями `# ---> ... <---`):
+Новый подтип дописывается в `src/maxo/serialization.py`, в словарь тегов своего
+семейства (`TAG_PROVIDERS` собирается из них через `_TAG_GROUPS` автоматически):
 
-| Семейство            | База                | Свойство на проводе | Enum                    |
-|----------------------|---------------------|---------------------|-------------------------|
-| Апдейты              | `Update`            | `"update_type"`     | `UpdateType`            |
-| Вложения             | `Attachment`        | `"type"`            | `AttachmentType`        |
-| Вложения в запросе   | `AttachmentRequest` | `"type"`            | `AttachmentRequestType` |
-| Элементы разметки    | `MarkupElement`     | `"type"`            | `MarkupElementType`     |
-| Кнопки               | `Button`            | `"type"`            | `ButtonType`            |
+| Семейство            | Словарь                    | Свойство на проводе | Enum                    |
+|----------------------|----------------------------|---------------------|-------------------------|
+| Апдейты              | `_UPDATE_TAGS`             | `"update_type"`     | `UpdateType`            |
+| Вложения             | `_ATTACHMENT_TAGS`         | `"type"`            | `AttachmentType`        |
+| Вложения в запросе   | `_ATTACHMENT_REQUEST_TAGS` | `"type"`            | `AttachmentRequestType` |
+| Элементы разметки    | `_MARKUP_TAGS`             | `"type"`            | `MarkupElementType`     |
+| Кнопки               | `_BUTTON_TAGS`             | `"type"`            | `ButtonType`            |
 
 ```python
-has_tag_provider(NewAttachment, "type", AttachmentType.NEW)
+_ATTACHMENT_TAGS = {
+    # ...
+    NewAttachment: AttachmentType.NEW,
+}
 ```
 
 Свойство берётся из `discriminator.propertyName` базы в `max-swagger.json`, а
@@ -222,11 +227,12 @@ has_tag_provider(NewAttachment, "type", AttachmentType.NEW)
 
 Дальше по тому же подтипу:
 
-- `bot/warming_up.py` - тип в кортеж `_types`.
+- `bot/warming_up.py` - ничего: подтип греется внутри своего union-алиаса,
+  а тот уже достижим от корней.
 - Для нового вложения ещё ручной хвост: `factory()` и `to_request()` у самого
   типа и его пары `*Request`, свойство-хелпер и ветка `attachment_type` в
   `MessageBody`, а если файл заливается через `UploadType` - запись в
-  `MEDIA_ATTACHMENT_FACTORIES` в `routing/mixins/attachments.py`.
+  `MEDIA_ATTACHMENT_FACTORIES` в `types/facades/attachments.py`.
 
 ## Правила разработки
 

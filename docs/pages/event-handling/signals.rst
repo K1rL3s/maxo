@@ -66,7 +66,7 @@
 
     @dispatcher.after_startup()
     async def on_startup(bot: Bot) -> None:
-        info = bot.state.info
+        info = bot.info
         print(f"Бот @{info.username} запущен!")
 
     @dispatcher.before_shutdown()
@@ -85,7 +85,7 @@
     from maxo import Bot, Dispatcher
 
     async def on_startup(bot: Bot) -> None:
-        print(f"Бот @{bot.state.info.username} запущен!")
+        print(f"Бот @{bot.info.username} запущен!")
 
     dispatcher = Dispatcher()
     dispatcher.after_startup.handler(on_startup)

@@ -56,7 +56,7 @@ def create_start_link(
     encoder: Callable[[bytes], bytes] | None = None,
 ) -> str:
     return create_deep_link(
-        username=cast(str, bot.state.info.username),
+        username=cast(str, bot.info.username),
         link_type="start",
         payload=payload,
         encode=encode,
@@ -72,7 +72,7 @@ def create_startapp_link(
     encoder: Callable[[bytes], bytes] | None = None,
 ) -> str:
     return create_deep_link(
-        username=cast(str, bot.state.info.username),
+        username=cast(str, bot.info.username),
         link_type="startapp",
         payload=payload,
         app_name=app_name,

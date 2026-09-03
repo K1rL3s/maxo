@@ -3,21 +3,20 @@
 import warnings
 
 warnings.warn(
-    "Миксины были перенесены из `maxo.routing.updates.mixins` в `maxo.routing.mixins`. "
+    "Миксины были перенесены из `maxo.routing.updates.mixins` в `maxo.types.facades`. "
     "Пожалуйста, обновите импорты "
-    "на `from maxo.routing.mixins import ...` ",
+    "на `from maxo.types.facades import ...` ",
     DeprecationWarning,
     stacklevel=2,
 )
 
-from maxo.routing.mixins.attachments import AttachmentsFacade, MediaInput
-from maxo.routing.mixins.base import BaseMethodsFacade
-from maxo.routing.mixins.bot import BotMethodsFacade
-from maxo.routing.mixins.callback import CallbackMethodsFacade
-from maxo.routing.mixins.chat import ChatMethodsFacade
-from maxo.routing.mixins.comment import CommentMethodsFacade
-from maxo.routing.mixins.message import MessageMethodsFacade
-from maxo.routing.mixins.subscription import SubscriptionMethodsFacade
+from maxo.types.facades.attachments import AttachmentsFacade, MediaInput
+from maxo.types.facades.base import BaseMethodsFacade
+from maxo.types.facades.bot import BotMethodsFacade
+from maxo.types.facades.callback import CallbackMethodsFacade
+from maxo.types.facades.chat import ChatMethodsFacade
+from maxo.types.facades.message import MessageMethodsFacade
+from maxo.types.facades.subscription import SubscriptionMethodsFacade
 
 __all__ = (
     "AttachmentsFacade",
@@ -25,7 +24,6 @@ __all__ = (
     "BotMethodsFacade",
     "CallbackMethodsFacade",
     "ChatMethodsFacade",
-    "CommentMethodsFacade",
     "MediaInput",
     "MessageMethodsFacade",
     "SubscriptionMethodsFacade",

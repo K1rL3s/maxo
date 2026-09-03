@@ -1,4 +1,4 @@
-# ruff: noqa: S106, S105
+# ruff: noqa: S106
 
 from decimal import Decimal
 
@@ -32,7 +32,7 @@ def test_attachment_request_builder_add_image_token() -> None:
     attachments = builder.build()
     assert len(attachments) == 1
     assert isinstance(attachments[0], PhotoAttachmentRequest)
-    assert attachments[0].payload.token == "photo_token_123"
+    assert attachments[0].payload.token == "photo_token_123"  # noqa: S105
 
 
 def test_attachment_request_builder_add_image_token_with_photos() -> None:
@@ -41,10 +41,10 @@ def test_attachment_request_builder_add_image_token_with_photos() -> None:
     attachments = builder.build()
     assert len(attachments) == 1
     assert isinstance(attachments[0], PhotoAttachmentRequest)
-    assert attachments[0].payload.token == "photo_token_456"
+    assert attachments[0].payload.token == "photo_token_456"  # noqa: S105
     photos = attachments[0].payload.photos
     assert isinstance(photos, list)
-    assert photos[0].token == "id1"
+    assert photos[0].token == "id1"  # noqa: S105
 
 
 def test_attachment_request_builder_add_video() -> None:
@@ -53,7 +53,7 @@ def test_attachment_request_builder_add_video() -> None:
     attachments = builder.build()
     assert len(attachments) == 1
     assert isinstance(attachments[0], VideoAttachmentRequest)
-    assert attachments[0].payload.token == "video_token_123"
+    assert attachments[0].payload.token == "video_token_123"  # noqa: S105
 
 
 def test_attachment_request_builder_add_audio() -> None:
@@ -62,7 +62,7 @@ def test_attachment_request_builder_add_audio() -> None:
     attachments = builder.build()
     assert len(attachments) == 1
     assert isinstance(attachments[0], AudioAttachmentRequest)
-    assert attachments[0].payload.token == "audio_token_123"
+    assert attachments[0].payload.token == "audio_token_123"  # noqa: S105
 
 
 def test_attachment_request_builder_add_file() -> None:
@@ -71,7 +71,7 @@ def test_attachment_request_builder_add_file() -> None:
     attachments = builder.build()
     assert len(attachments) == 1
     assert isinstance(attachments[0], FileAttachmentRequest)
-    assert attachments[0].payload.token == "file_token_123"
+    assert attachments[0].payload.token == "file_token_123"  # noqa: S105
 
 
 def test_attachment_request_builder_add_sticker() -> None:
@@ -135,7 +135,7 @@ def test_attachment_request_builder_add_share_token() -> None:
     attachments = builder.build()
     assert len(attachments) == 1
     assert isinstance(attachments[0], ShareAttachmentRequest)
-    assert attachments[0].payload.token == "share_token_123"
+    assert attachments[0].payload.token == "share_token_123"  # noqa: S105
 
 
 def test_attachment_request_builder_multiple_items() -> None:
@@ -147,4 +147,4 @@ def test_attachment_request_builder_multiple_items() -> None:
     assert isinstance(attachments[0], PhotoAttachmentRequest)
     assert attachments[0].payload.url == "http://example.com/image.jpg"
     assert isinstance(attachments[1], VideoAttachmentRequest)
-    assert attachments[1].payload.token == "video_token_123"
+    assert attachments[1].payload.token == "video_token_123"  # noqa: S105

@@ -3,13 +3,16 @@ import importlib
 
 import pytest
 
-from maxo.routing.mixins.attachments import AttachmentsFacade, MediaInput
-from maxo.routing.mixins.base import BaseMethodsFacade
-from maxo.routing.mixins.bot import BotMethodsFacade
-from maxo.routing.mixins.callback import CallbackMethodsFacade
-from maxo.routing.mixins.chat import ChatMethodsFacade
-from maxo.routing.mixins.message import MessageMethodsFacade
-from maxo.routing.mixins.subscription import SubscriptionMethodsFacade
+from maxo.types.facades import (
+    AttachmentsFacade,
+    BaseMethodsFacade,
+    BotMethodsFacade,
+    CallbackMethodsFacade,
+    ChatMethodsFacade,
+    MediaInput,
+    MessageMethodsFacade,
+    SubscriptionMethodsFacade,
+)
 
 
 def test_deprecation_warning() -> None:

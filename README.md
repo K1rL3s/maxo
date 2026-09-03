@@ -215,10 +215,13 @@ from aiohttp import web
 from maxo import Bot, Dispatcher, Router
 from maxo.enums import TextFormat
 from maxo.routing.utils import collect_used_updates
-from maxo.transport.webhook.adapters.aiohttp import AiohttpWebAdapter
-from maxo.transport.webhook.engines import SimpleEngine, WebhookEngine
-from maxo.transport.webhook.routing import StaticRouting
-from maxo.transport.webhook.security import Security, StaticSecretToken
+from maxo.transport.webhook import (
+    Route,
+    SingleBotEngine,
+    WebhookConfig,
+)
+from maxo.transport.webhook.security import Security, StaticSecret
+from maxo.transport.webhook.web.aiohttp import AiohttpAdapter
 from maxo.types import BotStarted, MessageCreated
 
 bot = Bot("TOKEN")
@@ -237,24 +240,26 @@ async def echo_handler(message: MessageCreated) -> None:
         format=TextFormat.HTML,
     )
 
-@router.after_startup()
-async def on_startup(dispatcher: Dispatcher, webhook_engine: WebhookEngine) -> None:
-    await webhook_engine.set_webhook(update_types=collect_used_updates(dispatcher))
-
 def main() -> None:
     dispatcher = Dispatcher()
     dispatcher.include(router)
 
-    engine = SimpleEngine(
+    engine = SingleBotEngine(
         dispatcher,
         bot,
-        web_adapter=AiohttpWebAdapter(),
-        routing=StaticRouting(url="https://example.com/webhook"),
-        security=Security(secret_token=StaticSecretToken("pepa_pig")),
+        web=AiohttpAdapter(),
+        route=Route(base_url="https://example.com", path="/webhook"),
+        security=Security(secret=StaticSecret("pepa_pig")),
     )
     app = web.Application()
     engine.register(app)
 
+    async def subscribe(_app: web.Application) -> None:
+        await engine.subscribe(
+            WebhookConfig(update_types=list(collect_used_updates(dispatcher))),
+        )
+
+    app.on_startup.append(subscribe)
     web.run_app(app, host="127.0.0.1", port=8080)
 
 if __name__ == "__main__":
@@ -302,7 +307,7 @@ FSM встроена в `maxo` - есть `MemoryStorage` из коробки и
 
 ### Можно ли обслуживать несколько ботов в одном приложении?
 
-Пока частично. Готовый `SimpleEngine` обслуживает одного бота. Для мульти-бот сценария есть заготовки: `PathRouting` и `QueryRouting` извлекают токен бота из URL или query-параметра, а выбор бота по токену реализуется наследником `WebhookEngine` (метод `_get_bot_from_request`).
+Да. `SingleBotEngine` обслуживает одного бота, а для нескольких есть `TokenEngine`: он достаёт токен из параметра маршрута и сам заводит бота под него. Маршрут описывается как `Route(path="/webhook/{bot_token}", params={"bot_token": BotTokenParam()})`, боты добавляются и убираются на лету через `add_bot(token)` / `remove_bot(bot_id)`; есть и `BotIdParam`, если в URL приходит id. Своя стратегия выбора бота - наследник `BaseMultiBotEngine` с методом `_resolve_bot(route_params)`.
 
 ### Как масштабировать бота под нагрузку?
 

@@ -38,6 +38,8 @@
 - ``'maxo[dishka]'`` - для поддержки DI через ``dishka``
 - ``'maxo[redis]'`` - для использования ``RedisStorage`` в качестве FSM-хранилища
 - ``'maxo[magic_filter]'`` - для использования ``MagicFilter`` для условий срабатывания обработчиков
+- ``'maxo[webhook]'`` - для приёма обновлений по вебхуку на ``aiohttp``
+- ``'maxo[fastapi]'`` - то же, но с адаптером под ``fastapi``
 
 .. note::
 
