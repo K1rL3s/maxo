@@ -18,7 +18,6 @@ from maxo.dialogs.api.protocols import (
 from maxo.enums import AttachmentType, UploadType
 from maxo.errors import MaxBotApiError, MaxBotBadRequestError
 from maxo.omit import Omitted
-from maxo.routing.mixins import AttachmentsFacade, MediaInput
 from maxo.types import (
     Attachments,
     AttachmentsRequests,
@@ -31,6 +30,7 @@ from maxo.types import (
     PhotoAttachmentRequest,
     VideoAttachmentRequest,
 )
+from maxo.types.facades import AttachmentsFacade, MediaInput
 from maxo.utils.upload_media import FSInputFile
 
 SEND_METHODS = {

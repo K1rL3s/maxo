@@ -9,7 +9,7 @@ from .attachments import (
 )
 from .audio_attachment import AudioAttachment
 from .audio_attachment_request import AudioAttachmentRequest
-from .base import BaseMaxoType, BaseUpdate, BotMixin, MaxUpdate, MaxoType
+from .base import BaseMaxoType, BaseMethodsFacade, BaseUpdate, MaxUpdate, MaxoType
 from .bot_added_to_chat import BotAddedToChat
 from .bot_command import BotCommand
 from .bot_commands_info import BotCommandsInfo
@@ -133,12 +133,12 @@ __all__ = (
     "AudioAttachment",
     "AudioAttachmentRequest",
     "BaseMaxoType",
+    "BaseMethodsFacade",
     "BaseUpdate",
     "BotAddedToChat",
     "BotCommand",
     "BotCommandsInfo",
     "BotInfo",
-    "BotMixin",
     "BotRemovedFromChat",
     "BotStarted",
     "BotStopped",

@@ -38,7 +38,20 @@ class BaseMaxoType(metaclass=_MaxoTypeMetaClass):
     pass
 
 
-class BotMixin:
+class BaseMethodsFacade:
+    """
+    Базовый фасад: хранит ссылку на бота и отдаёт её наследникам.
+
+    От него растёт вся цепочка фасадов (`BotMethodsFacade` ->
+    `ChatMethodsFacade` -> ...). Он же подмешан в `MaxoType`, поэтому любой тип
+    несёт `bot`/`as_` (это наследование со временем уберём - бот на типе нужен
+    не всем).
+
+    Не наследуется от `ABC`/`Protocol`: `MaxoType` сделан через метакласс, а он
+    конфликтует с `ABCMeta` в апдейтах. См. историю в
+    https://github.com/K1rL3s/maxo/pull/103 и .../pull/107.
+    """
+
     __slots__ = ("_bot",)
 
     def __init__(self, bot: Optional["Bot"] = None) -> None:
@@ -63,9 +76,19 @@ class BotMixin:
         return self
 
 
-class MaxoType(BaseMaxoType, BotMixin):
+# TODO: `MaxoType` наследует `BaseMethodsFacade` только ради слота `_bot` -
+# `bot`/`as_` не нужны большинству DTO (`User`, `Chat`, ...). Убрать это
+# наследование можно, сузив `_load_bot` в `serialization` до фасад-типов.
+#
+# Отдельная, большая проблема: `*MethodsFacade` подмешаны прямо в типы апдейтов
+# (`class BotStarted(MaxUpdate, ChatMethodsFacade)`), а те под метаклассом,
+# который конфликтует с `ABCMeta`. Поэтому фасады не могут быть ABC - отсюда
+# декоративные `@abstractmethod`, раздвоённые `if TYPE_CHECKING`-объявления полей
+# и `type: ignore[misc]` на апдейтах. Это лечится только выносом фасада из базы
+# типа (отдельный объект `update.facade` или `Protocol`), не строкой ниже.
+class MaxoType(BaseMaxoType, BaseMethodsFacade):
     def __post_init__(self) -> None:
-        BotMixin.__init__(self)
+        BaseMethodsFacade.__init__(self)
 
 
 class BaseUpdate(MaxoType):

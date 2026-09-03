@@ -13,7 +13,7 @@
 при чистке:
 
 - `src/maxo/types/base.py` - `MaxoType`, `BaseMaxoType`, `MaxUpdate`,
-  `BaseUpdate`, `BotMixin`.
+  `BaseUpdate`, `BaseMethodsFacade`.
 - `src/maxo/types/error_event.py`, `update_context.py`, `upload_media_result.py`.
 - `src/maxo/bot/methods/base.py`, `markers.py`.
 - Методы вне свагера: `bots/edit_bot_info.py`, `chats/delete_chat.py`,
@@ -107,7 +107,7 @@
 - `src/maxo/serialization.py` - `TAG_PROVIDERS`, регистрация полиморфных типов
   в retort. Union-алиасы генерируются, а эта таблица - нет.
 - `src/maxo/bot/warming_up.py` - кортежи `_types` и `_methods`.
-- `src/maxo/routing/mixins/attachments.py` - `MEDIA_ATTACHMENT_FACTORIES`,
+- `../../../../src/maxo/types/facades/attachments.py` - `MEDIA_ATTACHMENT_FACTORIES`,
   карта `UploadType` -> `factory` для заливаемых медиа.
 - `src/maxo/routing/facades/middleware.py` - `_FACADES_MAP`, единственный путь
   от типа апдейта к `ctx["facade"]`.

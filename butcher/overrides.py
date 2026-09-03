@@ -363,7 +363,13 @@ TYPE_ALIASES: dict[str, tuple[tuple[str, str], ...]] = {
 TYPES_EXTRA_EXPORTS: tuple[ExtraExport, ...] = (
     ExtraExport(
         module="base",
-        names=("BaseMaxoType", "BaseUpdate", "BotMixin", "MaxUpdate", "MaxoType"),
+        names=(
+            "BaseMaxoType",
+            "BaseMethodsFacade",
+            "BaseUpdate",
+            "MaxUpdate",
+            "MaxoType",
+        ),
     ),
     ExtraExport(module="error_event", names=("ErrorEvent",)),
     ExtraExport(module="update_context", names=("UpdateContext",)),

@@ -1,6 +1,6 @@
 from maxo.enums.update_type import UpdateType
-from maxo.routing.mixins import ChatMethodsFacade
 from maxo.types.base import MaxUpdate
+from maxo.types.facades import ChatMethodsFacade
 from maxo.types.user import User
 
 

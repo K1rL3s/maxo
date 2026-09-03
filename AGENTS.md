@@ -164,7 +164,7 @@ class Message:
 
 **Важно**: Если явно указать `__slots__`, метакласс не применит `@dataclass`.
 
-**Автопривязка бота через BotMixin**
+**Автопривязка бота через BaseMethodsFacade**
 
 Все `MaxoType` получают метод `as_(bot)` для привязки бота. В
 `serialization.py` есть специальный loader, который автоматически привязывает
@@ -270,21 +270,17 @@ router.callback_query = router.message_callback  # алиас
   `maxo.dialogs.api.exceptions`, а управляющие исключения routing - в
   `maxo.routing.sentinels`.
 
-**Конфликт метаклассов: BaseMethodsFacade = BotMixin**
+**Конфликт метаклассов: фасады не могут быть ABC**
 
-`src/maxo/routing/mixins/base.py` содержит комментарий-исповедь:
+`BaseMethodsFacade` (`src/maxo/types/base.py`) - корень цепочки фасадов и
+одновременно подмешан в `MaxoType`. Наследоваться от `ABC`/`Protocol` он не
+может: `_MaxoTypeMetaClass` конфликтует с `ABCMeta`. Поэтому `@abstractmethod`
+на фасадах декоративный, а поля вроде `message` объявлены раздвоённо через
+`if TYPE_CHECKING`.
 
-```python
-"""
-Класс должен наследоваться от ABC для работы @abstractmethod,
-но MaxoType сделан через метакласс, который конфликтует с ABC.
-Из-за этого фасады не наследуются от ABC.
-"""
-BaseMethodsFacade = BotMixin
-```
-
-Это технический долг. Не пытайся использовать ABC с MaxoType - будут ошибки
-инициализации.
+Это технический долг. `MaxoType` наследует `BaseMethodsFacade` временно -
+когда наследование уберут, фасады станут настоящими ABC. Не пытайся
+использовать ABC с MaxoType сейчас - будут ошибки инициализации.
 
 ### Bot API и unihttp
 
@@ -472,7 +468,7 @@ SendMessage(text=None)  # отправляется {"text": null}
 
 ```python
 message = update.message.as_(bot)
-await message.send_message(text="Reply")  # работает через BotMixin
+await message.send_message(text="Reply")  # работает через BaseMethodsFacade
 ```
 
 **✅ Можно**: Использовать `unsafe_*` для гарантированно присутствующих полей

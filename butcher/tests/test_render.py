@@ -143,7 +143,7 @@ def test_emit_uses_project_import_sorting(
 
     source = (tmp_path / "types" / "__init__.py").read_text(encoding="utf-8")
     assert (
-        "from .base import BaseMaxoType, BaseUpdate, BotMixin, MaxUpdate, MaxoType"
+        "from .base import BaseMaxoType, BaseMethodsFacade, BaseUpdate, MaxUpdate, MaxoType"
         in source
     )
 

@@ -28,7 +28,6 @@ from maxo.enums import (
     UpdateType,
 )
 from maxo.omit import Omitted, is_defined, is_omitted
-from maxo.routing.mixins import comment, message
 from maxo.types import (
     Attachments,
     AttachmentsRequests,
@@ -89,6 +88,7 @@ from maxo.types import (
     VideoAttachmentRequest,
     base,
 )
+from maxo.types.facades import comment, message
 
 if TYPE_CHECKING:
     from maxo import Bot

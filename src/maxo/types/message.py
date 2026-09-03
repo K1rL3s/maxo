@@ -3,8 +3,8 @@ from typing import Self
 
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
-from maxo.routing.mixins import MessageMethodsFacade
 from maxo.types.base import MaxoType
+from maxo.types.facades.message import MessageMethodsFacade
 from maxo.types.linked_message import LinkedMessage
 from maxo.types.message_body import MessageBody
 from maxo.types.message_stat import MessageStat
