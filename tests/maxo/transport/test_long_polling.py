@@ -1,10 +1,10 @@
 import asyncio
 from asyncio import CancelledError
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, cast
-from unittest.mock import ANY, AsyncMock, call, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, call, patch
 
 import pytest
 from adaptix.load_error import LoadError
@@ -14,11 +14,19 @@ from maxo.bot.api_client import MaxApiClient
 from maxo.bot.bot import Bot
 from maxo.bot.methods import GetUpdates
 from maxo.bot.state import RunningBotState
+from maxo.errors import UnsubscribeError
 from maxo.omit import Omitted
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.signals.update import MaxoUpdate
 from maxo.transport.long_polling import LongPolling
-from maxo.types import BotInfo, MaxoType, UpdateList
+from maxo.types import (
+    BotInfo,
+    ClearSubscriptionsResult,
+    GetSubscriptionsResult,
+    MaxoType,
+    Subscription,
+    UpdateList,
+)
 from maxo.types.updates import Updates
 from tests.factories import make_bot
 
@@ -64,6 +72,18 @@ def mock_dispatcher(mock_feed_max_update: AsyncMock) -> Dispatcher:
 @pytest.fixture
 def long_polling(mock_dispatcher: Dispatcher) -> LongPolling:
     return LongPolling(dispatcher=mock_dispatcher)
+
+
+@pytest.fixture
+def mock_get_subscriptions() -> Iterator[AsyncMock]:
+    with patch.object(
+        Bot,
+        "get_subscriptions",
+        new=AsyncMock(
+            return_value=GetSubscriptionsResult(subscriptions=[]),
+        ),
+    ) as get_subscriptions:
+        yield get_subscriptions
 
 
 async def anext_coro(generator: AsyncIterator[Any]) -> Any:
@@ -214,6 +234,7 @@ async def test_handles_general_exception(
 )
 async def test_start_collects_used_updates_when_types_not_given(
     mock_bot: Bot,
+    mock_get_subscriptions: AsyncMock,
     types: Any,
 ) -> None:
     # Пустой список, как и Omitted(), означает "посчитать по роутерам",
@@ -228,10 +249,14 @@ async def test_start_collects_used_updates_when_types_not_given(
     with patch.object(long_polling, "_get_updates", side_effect=empty_updates) as spy:
         await long_polling.start(mock_bot, types=types, auto_close_bot=False)
 
+    mock_get_subscriptions.assert_awaited_once_with()
     assert spy.call_args.kwargs["types"] == ["message_created"]
 
 
-async def test_start_respects_explicit_types(mock_bot: Bot) -> None:
+async def test_start_respects_explicit_types(
+    mock_bot: Bot,
+    mock_get_subscriptions: AsyncMock,
+) -> None:
     dispatcher = Dispatcher()
 
     @dispatcher.message_created()
@@ -246,6 +271,7 @@ async def test_start_respects_explicit_types(mock_bot: Bot) -> None:
             auto_close_bot=False,
         )
 
+    mock_get_subscriptions.assert_awaited_once_with()
     assert spy.call_args.kwargs["types"] == ["bot_started"]
 
 
@@ -253,6 +279,7 @@ async def test_start_feeds_updates_to_dispatcher(
     long_polling: LongPolling,
     mock_bot: Bot,
     mock_feed_max_update: AsyncMock,
+    mock_get_subscriptions: AsyncMock,
 ) -> None:
     update = MaxoUpdate(update=cast(Updates, MockUpdate(timestamp=1)), marker=1)
 
@@ -262,7 +289,213 @@ async def test_start_feeds_updates_to_dispatcher(
     with patch.object(long_polling, "_get_updates", side_effect=single_update):
         await long_polling.start(mock_bot, auto_close_bot=False)
 
+    mock_get_subscriptions.assert_awaited_once_with()
     mock_feed_max_update.assert_awaited_once_with(update, mock_bot)
+
+
+async def test_start_clears_subscriptions_when_requested(
+    long_polling: LongPolling,
+    mock_bot: Bot,
+) -> None:
+    cleared = ClearSubscriptionsResult(
+        removed=[
+            Subscription(
+                time=datetime.now(tz=UTC),
+                url="https://example.com/webhook",
+            ),
+        ],
+        kept=[],
+    )
+
+    with (
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates),
+        patch.object(
+            Bot,
+            "clear_subscriptions",
+            new=AsyncMock(return_value=cleared),
+        ) as clear,
+        patch.object(Bot, "get_subscriptions", new=AsyncMock()) as get,
+        patch("maxo.transport.long_polling.loggers.long_polling") as logger,
+    ):
+        await long_polling.start(
+            mock_bot,
+            auto_close_bot=False,
+            clear_subscriptions=True,
+        )
+
+    clear.assert_awaited_once_with()
+    get.assert_not_awaited()
+    logger.warning.assert_not_called()
+    logger.info.assert_called_once_with(
+        "Удалено WebHook-подписок перед запуском Long Polling (%d): %s",
+        1,
+        ["https://example.com/webhook"],
+    )
+
+
+async def test_start_fails_when_clear_subscriptions_fails(
+    long_polling: LongPolling,
+    mock_bot: Bot,
+) -> None:
+    failure = ExceptionGroup(
+        "Не удалось удалить WebHook-подписки",
+        [UnsubscribeError(url="https://example.com/webhook", error=ValueError("boom"))],
+    )
+    get_updates = MagicMock(side_effect=empty_updates)
+
+    with (
+        patch.object(long_polling, "_get_updates", new=get_updates),
+        patch.object(Bot, "clear_subscriptions", new=AsyncMock(side_effect=failure)),
+        pytest.raises(ExceptionGroup),
+    ):
+        await long_polling.start(
+            mock_bot,
+            auto_close_bot=False,
+            clear_subscriptions=True,
+        )
+
+    get_updates.assert_not_called()
+
+
+async def test_start_clears_subscriptions_before_after_startup(
+    mock_dispatcher: Dispatcher,
+    long_polling: LongPolling,
+    mock_bot: Bot,
+) -> None:
+    # Падение очистки не должно оставлять приложение со сработавшими
+    # startup-хуками и несработавшими shutdown.
+    fired: list[str] = []
+
+    @mock_dispatcher.before_startup()
+    async def _before_startup() -> None:
+        fired.append("before_startup")
+
+    @mock_dispatcher.after_startup()
+    async def _after_startup() -> None:
+        fired.append("after_startup")
+
+    failure = ExceptionGroup(
+        "Не удалось удалить WebHook-подписки",
+        [UnsubscribeError(url="https://example.com/webhook", error=ValueError("boom"))],
+    )
+
+    with (
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates),
+        patch.object(Bot, "clear_subscriptions", new=AsyncMock(side_effect=failure)),
+        pytest.raises(ExceptionGroup),
+    ):
+        await long_polling.start(
+            mock_bot,
+            auto_close_bot=False,
+            clear_subscriptions=True,
+        )
+
+    assert fired == ["before_startup"]
+
+
+async def test_start_warns_about_subscriptions_when_not_cleared(
+    long_polling: LongPolling,
+    mock_bot: Bot,
+) -> None:
+    subscriptions = GetSubscriptionsResult(
+        subscriptions=[
+            Subscription(
+                time=datetime.now(tz=UTC),
+                url="https://example.com/webhook",
+            ),
+        ],
+    )
+
+    with (
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates),
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(return_value=subscriptions),
+        ) as get,
+        patch.object(Bot, "clear_subscriptions", new=AsyncMock()) as clear,
+        patch("maxo.transport.long_polling.loggers.long_polling") as logger,
+    ):
+        await long_polling.start(mock_bot, auto_close_bot=False)
+
+    get.assert_awaited_once_with()
+    clear.assert_not_awaited()
+    logger.warning.assert_called_once_with(
+        "У бота @%s есть активные WebHook-подписки (%d). "
+        "Они не были очищены перед запуском Long Polling. "
+        "Передайте clear_subscriptions=True, чтобы удалить их.",
+        "test_bot",
+        1,
+    )
+
+
+async def test_start_does_not_warn_when_there_are_no_subscriptions(
+    long_polling: LongPolling,
+    mock_bot: Bot,
+) -> None:
+    subscriptions = GetSubscriptionsResult(subscriptions=[])
+
+    with (
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates),
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(return_value=subscriptions),
+        ) as get,
+        patch("maxo.transport.long_polling.loggers.long_polling") as logger,
+    ):
+        await long_polling.start(mock_bot, auto_close_bot=False)
+
+    get.assert_awaited_once_with()
+    logger.warning.assert_not_called()
+
+
+async def test_start_continues_when_subscription_check_fails(
+    long_polling: LongPolling,
+    mock_bot: Bot,
+) -> None:
+    error = RuntimeError("API unavailable")
+
+    with (
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates) as get,
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(side_effect=error),
+        ) as get_subscriptions,
+        patch("maxo.transport.long_polling.loggers.long_polling") as logger,
+    ):
+        await long_polling.start(mock_bot, auto_close_bot=False)
+
+    get_subscriptions.assert_awaited_once_with()
+    get.assert_called_once()
+    logger.warning.assert_called_once_with(
+        "Не удалось проверить WebHook-подписки перед запуском Long Polling - %s: %s",
+        "RuntimeError",
+        error,
+    )
+
+
+def test_run_passes_clear_subscriptions_to_start(mock_bot: Bot) -> None:
+    long_polling = LongPolling(dispatcher=Dispatcher())
+
+    with patch.object(long_polling, "start", new=AsyncMock()) as start:
+        long_polling.run(
+            mock_bot,
+            auto_close_bot=False,
+            clear_subscriptions=True,
+        )
+
+    start.assert_awaited_once_with(
+        bot=mock_bot,
+        timeout=30,
+        limit=100,
+        marker=Omitted(),
+        types=Omitted(),
+        auto_close_bot=False,
+        drop_pending_updates=False,
+        clear_subscriptions=True,
+    )
 
 
 async def test_start_polling_delegates_to_long_polling(mock_bot: Bot) -> None:
@@ -285,6 +518,7 @@ async def test_start_polling_delegates_to_long_polling(mock_bot: Bot) -> None:
             types=["message_created"],
             auto_close_bot=False,
             drop_pending_updates=True,
+            clear_subscriptions=True,
             backoff_config=backoff_config,
             extra="context",
         )
@@ -298,6 +532,7 @@ async def test_start_polling_delegates_to_long_polling(mock_bot: Bot) -> None:
         types=["message_created"],
         auto_close_bot=False,
         drop_pending_updates=True,
+        clear_subscriptions=True,
         extra="context",
     )
 
@@ -310,6 +545,7 @@ async def test_start_polling_omits_types_by_default(mock_bot: Bot) -> None:
 
     assert start.await_args is not None
     assert start.await_args.kwargs["types"] == Omitted()
+    assert start.await_args.kwargs["clear_subscriptions"] is False
 
 
 def test_run_polling_runs_start_polling(mock_bot: Bot) -> None:
@@ -329,6 +565,7 @@ def test_run_polling_runs_start_polling(mock_bot: Bot) -> None:
             mock_bot,
             timeout=7,
             auto_close_bot=False,
+            clear_subscriptions=True,
             backoff_config=backoff_config,
         )
 
@@ -337,3 +574,4 @@ def test_run_polling_runs_start_polling(mock_bot: Bot) -> None:
     assert start.await_args is not None
     assert start.await_args.kwargs["timeout"] == 7
     assert start.await_args.kwargs["auto_close_bot"] is False
+    assert start.await_args.kwargs["clear_subscriptions"] is True

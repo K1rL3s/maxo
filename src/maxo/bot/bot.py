@@ -1,6 +1,7 @@
+import asyncio
 import json
 import pathlib
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Iterable
 from contextlib import asynccontextmanager
 from types import TracebackType
 from typing import Any, BinaryIO, Self, TypeVar
@@ -64,9 +65,9 @@ from maxo.bot.state import (
     RunningBotState,
 )
 from maxo.bot.upload import UploadConfig
-from maxo.errors import MaxBotApiError
+from maxo.errors import MaxBotApiError, UnsubscribeError
 from maxo.serialization import create_retort_with_bot
-from maxo.types import AttachmentPayload, MaxoType
+from maxo.types import AttachmentPayload, ClearSubscriptionsResult, MaxoType
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import InputFile
 
@@ -274,6 +275,71 @@ class Bot(BaseAsyncClient):
     get_updates = bind_method(GetUpdates)
     subscribe = bind_method(Subscribe)
     unsubscribe = bind_method(Unsubscribe)
+
+    async def clear_subscriptions(
+        self,
+        active_urls: str | Iterable[str] | None = None,
+    ) -> ClearSubscriptionsResult:
+        """
+        Удаляет все WebHook-подписки, кроме активных.
+
+        Args:
+            active_urls: URL подписок, которые нужно сохранить: одна строка или
+                итерируемый набор строк. Одновременно может работать несколько
+                подписок (бот, статистика и т.п.). Сравнение точное, поэтому
+                URL должны совпадать с тем, что вернул `get_subscriptions`.
+                Если не передан, удаляются все подписки.
+
+        Returns:
+            Удалённые и сохранённые подписки.
+
+        Raises:
+            BaseExceptionGroup: Если хотя бы одну подписку удалить не удалось.
+                Все запросы при этом доводятся до конца, а в группу попадают
+                ошибки по каждой неудачной попытке: обычные - обёрнутыми в
+                `UnsubscribeError` с URL, `BaseException` - как есть. Если
+                `BaseException` не было, группа сужается до `ExceptionGroup`.
+
+        """
+        if active_urls is None:
+            urls_to_keep: frozenset[str] = frozenset()
+        elif isinstance(active_urls, str):
+            urls_to_keep = frozenset((active_urls,))
+        else:
+            urls_to_keep = frozenset(active_urls)
+
+        subscriptions = (await self.get_subscriptions()).subscriptions
+        to_remove = [
+            subscription
+            for subscription in subscriptions
+            if subscription.url not in urls_to_keep
+        ]
+        kept = [
+            subscription
+            for subscription in subscriptions
+            if subscription.url in urls_to_keep
+        ]
+
+        results = await asyncio.gather(
+            *(self.unsubscribe(url=subscription.url) for subscription in to_remove),
+            return_exceptions=True,
+        )
+
+        errors: list[BaseException] = []
+        for subscription, result in zip(to_remove, results, strict=True):
+            if not isinstance(result, BaseException):
+                continue
+            if not isinstance(result, Exception):
+                errors.append(result)
+                continue
+            error = UnsubscribeError(url=subscription.url, error=result)
+            error.__cause__ = result
+            errors.append(error)
+
+        if errors:
+            raise BaseExceptionGroup("Не удалось удалить WebHook-подписки", errors)
+
+        return ClearSubscriptionsResult(removed=to_remove, kept=kept)
 
     # Uploads
 

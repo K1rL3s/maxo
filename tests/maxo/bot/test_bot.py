@@ -1,4 +1,5 @@
 import io
+from asyncio import CancelledError
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -6,8 +7,13 @@ import pytest
 from maxo.bot.bot import Bot
 from maxo.bot.state import ClosedBotState, EmptyBotState, RunningBotState
 from maxo.bot.upload import UploadConfig, UploadMethod
-from maxo.errors import MaxBotApiError
-from maxo.types import BotInfo
+from maxo.errors import MaxBotApiError, UnsubscribeError
+from maxo.types import (
+    BotInfo,
+    GetSubscriptionsResult,
+    SimpleQueryResult,
+    Subscription,
+)
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import BufferedInputFile
 from tests.constants import NOW, TOKEN
@@ -176,3 +182,227 @@ async def test_bot_upload_media_resumable(bot: Bot) -> None:
         file,
         None,
     )
+
+
+@pytest.mark.parametrize(
+    ("active_urls", "removed_urls"),
+    [
+        (None, ["https://one.example/webhook", "https://two.example/webhook"]),
+        ("https://one.example/webhook", ["https://two.example/webhook"]),
+        (
+            "https://missing.example/webhook",
+            [
+                "https://one.example/webhook",
+                "https://two.example/webhook",
+            ],
+        ),
+        (["https://one.example/webhook"], ["https://two.example/webhook"]),
+        (
+            [
+                "https://one.example/webhook",
+                "https://two.example/webhook",
+            ],
+            [],
+        ),
+    ],
+)
+async def test_clear_subscriptions(
+    bot: Bot,
+    active_urls: str | list[str] | None,
+    removed_urls: list[str],
+) -> None:
+    subscriptions = GetSubscriptionsResult(
+        subscriptions=[
+            Subscription(time=NOW, url="https://one.example/webhook"),
+            Subscription(time=NOW, url="https://two.example/webhook"),
+        ],
+    )
+
+    with (
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(return_value=subscriptions),
+        ) as get_subscriptions,
+        patch.object(Bot, "unsubscribe", new=AsyncMock()) as unsubscribe,
+    ):
+        result = await bot.clear_subscriptions(active_urls=active_urls)
+
+    get_subscriptions.assert_awaited_once_with()
+    assert [call.kwargs["url"] for call in unsubscribe.await_args_list] == removed_urls
+    assert [subscription.url for subscription in result.removed] == removed_urls
+    assert [subscription.url for subscription in result.kept] == [
+        subscription.url
+        for subscription in subscriptions.subscriptions
+        if subscription.url not in removed_urls
+    ]
+
+
+async def test_clear_subscriptions_handles_an_empty_list(bot: Bot) -> None:
+    subscriptions = GetSubscriptionsResult(subscriptions=[])
+
+    with (
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(return_value=subscriptions),
+        ),
+        patch.object(Bot, "unsubscribe", new=AsyncMock()) as unsubscribe,
+    ):
+        result = await bot.clear_subscriptions()
+
+    unsubscribe.assert_not_awaited()
+    assert result.removed == []
+    assert result.kept == []
+
+
+async def test_clear_subscriptions_reports_failed_urls(bot: Bot) -> None:
+    subscriptions = GetSubscriptionsResult(
+        subscriptions=[
+            Subscription(time=NOW, url="https://one.example/webhook"),
+            Subscription(time=NOW, url="https://two.example/webhook"),
+        ],
+    )
+    failure = MockMaxBotApiError("boom")
+
+    async def unsubscribe_side_effect(url: str) -> SimpleQueryResult:
+        if url == "https://one.example/webhook":
+            raise failure
+        return SimpleQueryResult(success=True)
+
+    unsubscribe = AsyncMock(side_effect=unsubscribe_side_effect)
+
+    with (
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(return_value=subscriptions),
+        ),
+        patch.object(Bot, "unsubscribe", new=unsubscribe),
+        pytest.raises(ExceptionGroup) as exc_info,
+    ):
+        await bot.clear_subscriptions()
+
+    errors = exc_info.value.exceptions
+    assert len(errors) == 1
+    error = errors[0]
+    assert isinstance(error, UnsubscribeError)
+    assert error.url == "https://one.example/webhook"
+    assert error.error is failure
+    assert error.__cause__ is failure
+    # Упавший запрос не отменяет остальные
+    assert [call.kwargs["url"] for call in unsubscribe.await_args_list] == [
+        "https://one.example/webhook",
+        "https://two.example/webhook",
+    ]
+
+
+async def test_clear_subscriptions_collects_every_error(bot: Bot) -> None:
+    subscriptions = GetSubscriptionsResult(
+        subscriptions=[
+            Subscription(time=NOW, url="https://one.example/webhook"),
+            Subscription(time=NOW, url="https://two.example/webhook"),
+        ],
+    )
+
+    with (
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(return_value=subscriptions),
+        ),
+        patch.object(
+            Bot,
+            "unsubscribe",
+            new=AsyncMock(side_effect=MockMaxBotApiError("boom")),
+        ),
+        pytest.raises(ExceptionGroup) as exc_info,
+    ):
+        await bot.clear_subscriptions()
+
+    assert [
+        error.url
+        for error in exc_info.value.exceptions
+        if isinstance(error, UnsubscribeError)
+    ] == [
+        "https://one.example/webhook",
+        "https://two.example/webhook",
+    ]
+
+
+async def test_clear_subscriptions_does_not_wrap_cancellation(bot: Bot) -> None:
+    # CancelledError нельзя прятать в UnsubscribeError - она едет в группе как есть.
+    subscriptions = GetSubscriptionsResult(
+        subscriptions=[
+            Subscription(time=NOW, url="https://one.example/webhook"),
+        ],
+    )
+
+    with (
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(return_value=subscriptions),
+        ),
+        patch.object(Bot, "unsubscribe", new=AsyncMock(side_effect=CancelledError)),
+        pytest.raises(BaseExceptionGroup) as exc_info,
+    ):
+        await bot.clear_subscriptions()
+
+    # Группа с BaseException не сужается до ExceptionGroup.
+    assert not isinstance(exc_info.value, ExceptionGroup)
+    assert [type(error) for error in exc_info.value.exceptions] == [CancelledError]
+
+
+async def test_clear_subscriptions_keeps_errors_next_to_cancellation(bot: Bot) -> None:
+    # Отмена одного запроса не должна прятать провалы остальных.
+    subscriptions = GetSubscriptionsResult(
+        subscriptions=[
+            Subscription(time=NOW, url="https://one.example/webhook"),
+            Subscription(time=NOW, url="https://two.example/webhook"),
+        ],
+    )
+    failure = MockMaxBotApiError("boom")
+
+    async def unsubscribe_side_effect(url: str) -> SimpleQueryResult:
+        if url == "https://one.example/webhook":
+            raise CancelledError
+        raise failure
+
+    with (
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(return_value=subscriptions),
+        ),
+        patch.object(
+            Bot,
+            "unsubscribe",
+            new=AsyncMock(side_effect=unsubscribe_side_effect),
+        ),
+        pytest.raises(BaseExceptionGroup) as exc_info,
+    ):
+        await bot.clear_subscriptions()
+
+    cancelled, unsubscribe_error = exc_info.value.exceptions
+    assert isinstance(cancelled, CancelledError)
+    assert isinstance(unsubscribe_error, UnsubscribeError)
+    assert unsubscribe_error.url == "https://two.example/webhook"
+    assert unsubscribe_error.error is failure
+
+
+async def test_clear_subscriptions_propagates_get_subscriptions_error(bot: Bot) -> None:
+    unsubscribe = AsyncMock()
+
+    with (
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(side_effect=MockMaxBotApiError("boom")),
+        ),
+        patch.object(Bot, "unsubscribe", new=unsubscribe),
+        pytest.raises(MaxBotApiError),
+    ):
+        await bot.clear_subscriptions()
+
+    unsubscribe.assert_not_awaited()

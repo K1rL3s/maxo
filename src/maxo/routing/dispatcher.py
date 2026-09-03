@@ -77,6 +77,7 @@ class Dispatcher(Router):
         types: Omittable[Sequence[str]] = Omitted(),
         auto_close_bot: bool = True,
         drop_pending_updates: bool = False,
+        clear_subscriptions: bool = False,
         **workflow_data: Any,
     ) -> None:
         from maxo.transport.long_polling import LongPolling  # noqa: PLC0415
@@ -94,6 +95,7 @@ class Dispatcher(Router):
             types=types,
             auto_close_bot=auto_close_bot,
             drop_pending_updates=drop_pending_updates,
+            clear_subscriptions=clear_subscriptions,
             **workflow_data,
         )
 
@@ -107,6 +109,7 @@ class Dispatcher(Router):
         types: Omittable[Sequence[str]] = Omitted(),
         auto_close_bot: bool = True,
         drop_pending_updates: bool = False,
+        clear_subscriptions: bool = False,
         **workflow_data: Any,
     ) -> None:
         asyncio.run(
@@ -119,6 +122,7 @@ class Dispatcher(Router):
                 types=types,
                 auto_close_bot=auto_close_bot,
                 drop_pending_updates=drop_pending_updates,
+                clear_subscriptions=clear_subscriptions,
                 **workflow_data,
             ),
         )

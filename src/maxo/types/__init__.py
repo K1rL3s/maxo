@@ -28,6 +28,7 @@ from .chat_list import ChatList
 from .chat_member import ChatMember
 from .chat_members_list import ChatMembersList
 from .chat_title_changed import ChatTitleChanged
+from .clear_subscriptions_result import ClearSubscriptionsResult
 from .clipboard_button import ClipboardButton
 from .comment_created import CommentCreated
 from .comment_edited import CommentEdited
@@ -153,6 +154,7 @@ __all__ = (
     "ChatMember",
     "ChatMembersList",
     "ChatTitleChanged",
+    "ClearSubscriptionsResult",
     "ClipboardButton",
     "CommentCreated",
     "CommentEdited",

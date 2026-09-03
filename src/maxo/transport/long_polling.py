@@ -43,6 +43,7 @@ class LongPolling:
         types: Omittable[Sequence[str]] = Omitted(),
         auto_close_bot: bool = True,
         drop_pending_updates: bool = False,
+        clear_subscriptions: bool = False,
         **workflow_data: Any,
     ) -> None:
         asyncio.run(
@@ -54,6 +55,7 @@ class LongPolling:
                 types=types,
                 auto_close_bot=auto_close_bot,
                 drop_pending_updates=drop_pending_updates,
+                clear_subscriptions=clear_subscriptions,
                 **workflow_data,
             ),
         )
@@ -67,6 +69,7 @@ class LongPolling:
         types: Omittable[Sequence[str]] = Omitted(),
         auto_close_bot: bool = True,
         drop_pending_updates: bool = False,
+        clear_subscriptions: bool = False,
         **workflow_data: Any,
     ) -> None:
         dispatcher = self._dispatcher
@@ -85,6 +88,34 @@ class LongPolling:
                     bot.state.info.username,
                     bot.state.info.user_id,
                 )
+
+                if clear_subscriptions:
+                    cleared = await bot.clear_subscriptions()
+                    loggers.long_polling.info(
+                        "Удалено WebHook-подписок перед запуском "
+                        "Long Polling (%d): %s",
+                        len(cleared.removed),
+                        [subscription.url for subscription in cleared.removed],
+                    )
+                else:
+                    try:
+                        subscriptions = await bot.get_subscriptions()
+                    except Exception as exception:  # noqa: BLE001
+                        loggers.long_polling.warning(
+                            "Не удалось проверить WebHook-подписки перед "
+                            "запуском Long Polling - %s: %s",
+                            type(exception).__name__,
+                            exception,
+                        )
+                    else:
+                        if subscriptions.subscriptions:
+                            loggers.long_polling.warning(
+                                "У бота @%s есть активные WebHook-подписки (%d). "
+                                "Они не были очищены перед запуском Long Polling. "
+                                "Передайте clear_subscriptions=True, чтобы удалить их.",
+                                bot.state.info.username,
+                                len(subscriptions.subscriptions),
+                            )
 
                 await dispatcher.feed_signal(AfterStartup(), bot)
 
