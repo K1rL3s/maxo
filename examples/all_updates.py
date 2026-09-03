@@ -68,7 +68,7 @@ async def message_removed_handler(message_removed: MessageRemoved) -> None:
 
 @dp.bot_started()
 async def bot_started_handler(bot_started: BotStarted) -> None:
-    bot_info = await bot_started.get_my_info()
+    bot_info = await bot_started.bot.get_my_info()
     await bot_started.send_message(
         f"Привет! Я {bot_info.first_name}. Спасибо, что запустил меня!",
     )
