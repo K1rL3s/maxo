@@ -26,8 +26,11 @@ OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import base64
+import binascii
 from typing import Any
-from urllib.parse import urlencode, urljoin
+from urllib.parse import urlencode, urljoin, urlsplit
+
+_MESSAGE_ID_BYTE_LENGTH = 8
 
 
 def _format_url(
@@ -62,7 +65,7 @@ Based on реверс-инженере генерируемых ссылок н�
 def id_to_message_url(sequence_id: int, chat_id: int) -> str:
     """Преобразует числовой ID сообщения в ссылку на сообщение."""
     # Преобразуем число в 8 байт в формате big-endian
-    bytes_data = sequence_id.to_bytes(8, byteorder="big")
+    bytes_data = sequence_id.to_bytes(_MESSAGE_ID_BYTE_LENGTH, byteorder="big")
 
     # Кодируем в base64
     base64_std = base64.b64encode(bytes_data).decode("ascii")
@@ -75,17 +78,26 @@ def id_to_message_url(sequence_id: int, chat_id: int) -> str:
 
 def url_to_message_id(url: str) -> int:
     """Обратное преобразование: из URL-safe base64 в числовой ID."""
-    # Извлекаем последнюю часть URL (после последнего /)
-    base64_url = url.strip("/").split("/")[-1]
+    try:
+        # Извлекаем последнюю часть пути URL (без query и fragment)
+        path = urlsplit(url).path
+        base64_url = path.rstrip("/").rsplit("/", 1)[-1]
 
-    # Восстанавливаем стандартный base64
-    base64_std = base64_url.replace("-", "+").replace("_", "/")
+        # Восстанавливаем стандартный base64
+        base64_std = base64_url.replace("-", "+").replace("_", "/")
 
-    # Восстанавливаем padding
-    padding = (4 - len(base64_std) % 4) % 4
-    if padding:
-        base64_std += "=" * padding
+        # Восстанавливаем padding
+        padding = (4 - len(base64_std) % 4) % 4
+        if padding:
+            base64_std += "=" * padding
 
-    # Декодируем
-    bytes_data = base64.b64decode(base64_std)
+        # Декодируем, отклоняя мусорные символы вместо их молчаливого пропуска
+        bytes_data = base64.b64decode(base64_std, validate=True)
+    except (binascii.Error, ValueError) as error:
+        raise ValueError(f"Invalid message URL: {url!r}") from error
+
+    # id_to_message_url всегда кодирует ровно _MESSAGE_ID_BYTE_LENGTH байт
+    if len(bytes_data) != _MESSAGE_ID_BYTE_LENGTH:
+        raise ValueError(f"Invalid message URL: {url!r}")
+
     return int.from_bytes(bytes_data, byteorder="big")
