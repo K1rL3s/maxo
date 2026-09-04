@@ -368,7 +368,7 @@ class IntentMiddlewareFactory:
         result = await next(ctx)
         if result is UNHANDLED and ctx.get(FORBIDDEN_STACK_KEY):
             # Гасим "часики" на кнопке: чужой/протухший стек хендлер не обработает.
-            await update.callback_answer()
+            await update.callback_answer(notification="")
         return result
 
     async def process_bot_started(
