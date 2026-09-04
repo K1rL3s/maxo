@@ -19,7 +19,8 @@ from maxo.types import (
     UploadMediaResult,
     VideoAttachmentRequest,
 )
-from maxo.types.facades import AttachmentsFacade, MediaInput, MessageMethodsFacade
+from maxo.types.facades.attachments import AttachmentsFacade, MediaInput
+from maxo.types.facades.message import MessageMethodsFacade
 from maxo.utils.upload_media import BufferedInputFile
 
 

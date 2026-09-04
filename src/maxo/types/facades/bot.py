@@ -1,7 +1,7 @@
 from maxo.omit import Omittable, Omitted
-from maxo.types.base import BaseMethodsFacade
 from maxo.types.bot_command import BotCommand
 from maxo.types.bot_info import BotInfo
+from maxo.types.facades.base import BaseMethodsFacade
 from maxo.types.photo_attachment_request_payload import PhotoAttachmentRequestPayload
 
 

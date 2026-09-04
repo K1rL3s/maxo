@@ -4,7 +4,7 @@ from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
 from maxo.types.comment_linked_message import CommentLinkedMessage
 from maxo.types.comment_message_body import CommentMessageBody
-from maxo.types.facades import CommentMethodsFacade
+from maxo.types.facades.comment import CommentMethodsFacade
 from maxo.types.message import Message
 from maxo.types.recipient import Recipient
 from maxo.types.user import User
