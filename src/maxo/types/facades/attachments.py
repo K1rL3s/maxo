@@ -10,8 +10,8 @@ from maxo.errors.api import RetvalReturnedServerException
 from maxo.omit import is_defined
 from maxo.types.attachments import AttachmentsRequests, MediaAttachmentsRequests
 from maxo.types.audio_attachment_request import AudioAttachmentRequest
-from maxo.types.base import BaseMethodsFacade
 from maxo.types.buttons import InlineButtons
+from maxo.types.facades.subscription import SubscriptionMethodsFacade
 from maxo.types.file_attachment_request import FileAttachmentRequest
 from maxo.types.inline_keyboard_attachment_request import (
     InlineKeyboardAttachmentRequest,
@@ -36,7 +36,7 @@ MEDIA_ATTACHMENT_FACTORIES: dict[UploadType, MediaAttachmentFactory] = {
 }
 
 
-class AttachmentsFacade(BaseMethodsFacade):
+class AttachmentsFacade(SubscriptionMethodsFacade):
     __slots__ = ()
 
     async def build_attachments(

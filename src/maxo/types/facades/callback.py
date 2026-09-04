@@ -1,13 +1,13 @@
 from abc import abstractmethod
 
 from maxo.omit import Omittable, Omitted, is_not_omitted
-from maxo.types.base import BaseMethodsFacade
 from maxo.types.callback import Callback
+from maxo.types.facades.subscription import SubscriptionMethodsFacade
 from maxo.types.new_message_body import NewMessageBody
 from maxo.types.simple_query_result import SimpleQueryResult
 
 
-class CallbackMethodsFacade(BaseMethodsFacade):
+class CallbackMethodsFacade(SubscriptionMethodsFacade):
     __slots__ = ()
 
     @property
