@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from maxo.enums import MessageLinkType
@@ -28,13 +30,31 @@ def test_url_to_message_id_ignores_trailing_slash() -> None:
 
 
 def test_url_to_message_id_rejects_garbage_characters() -> None:
-    with pytest.raises(ValueError, match="Invalid message URL"):
-        url_to_message_id("https://max.ru/c/1/!!!!!!!!")
+    url = "https://max.ru/c/1/!!!!!!!!"
+    expected = f"^{re.escape(f'Invalid message URL: {url!r}')}$"
+    with pytest.raises(ValueError, match=expected):
+        url_to_message_id(url)
 
 
 def test_url_to_message_id_rejects_wrong_decoded_length() -> None:
-    with pytest.raises(ValueError, match="Invalid message URL"):
-        url_to_message_id("https://max.ru/c/1/AAAA?x=1")
+    url = "https://max.ru/c/1/AAAA?x=1"
+    expected = f"^{re.escape(f'Invalid message URL: {url!r}')}$"
+    with pytest.raises(ValueError, match=expected):
+        url_to_message_id(url)
+
+
+def test_url_to_message_id_rejects_malformed_netloc() -> None:
+    url = "https://[::1"
+    expected = f"^{re.escape(f'Invalid message URL: {url!r}')}$"
+    with pytest.raises(ValueError, match=expected):
+        url_to_message_id(url)
+
+
+def test_url_to_message_id_rejects_non_ascii_segment() -> None:
+    url = "https://max.ru/c/1/\xe9"
+    expected = f"^{re.escape(f'Invalid message URL: {url!r}')}$"
+    with pytest.raises(ValueError, match=expected):
+        url_to_message_id(url)
 
 
 def test_linked_message_generated_url() -> None:

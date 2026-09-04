@@ -78,22 +78,22 @@ def id_to_message_url(sequence_id: int, chat_id: int) -> str:
 
 def url_to_message_id(url: str) -> int:
     """Обратное преобразование: из URL-safe base64 в числовой ID."""
-    # Извлекаем последнюю часть пути URL (без query и fragment)
-    path = urlsplit(url).path
-    base64_url = path.rstrip("/").rsplit("/", 1)[-1]
-
-    # Восстанавливаем стандартный base64
-    base64_std = base64_url.replace("-", "+").replace("_", "/")
-
-    # Восстанавливаем padding
-    padding = (4 - len(base64_std) % 4) % 4
-    if padding:
-        base64_std += "=" * padding
-
-    # Декодируем, отклоняя мусорные символы вместо их молчаливого пропуска
     try:
+        # Извлекаем последнюю часть пути URL (без query и fragment)
+        path = urlsplit(url).path
+        base64_url = path.rstrip("/").rsplit("/", 1)[-1]
+
+        # Восстанавливаем стандартный base64
+        base64_std = base64_url.replace("-", "+").replace("_", "/")
+
+        # Восстанавливаем padding
+        padding = (4 - len(base64_std) % 4) % 4
+        if padding:
+            base64_std += "=" * padding
+
+        # Декодируем, отклоняя мусорные символы вместо их молчаливого пропуска
         bytes_data = base64.b64decode(base64_std, validate=True)
-    except binascii.Error as error:
+    except (binascii.Error, ValueError) as error:
         raise ValueError(f"Invalid message URL: {url!r}") from error
 
     # id_to_message_url всегда кодирует ровно _MESSAGE_ID_BYTE_LENGTH байт
