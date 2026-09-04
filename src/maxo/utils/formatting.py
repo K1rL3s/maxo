@@ -159,7 +159,7 @@ class Text(Iterable[NodeType]):
         .. code-block:: python
 
             entities = Text(...)
-            await facade.answer_text(**entities.as_kwargs())
+            await update.answer_text(**entities.as_kwargs())
         """
         text_value, _ = self.render()
         result: dict[str, Any] = {text_key: text_value}

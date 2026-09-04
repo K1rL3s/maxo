@@ -18,7 +18,7 @@
 - [Сигналы](https://maxo.readthedocs.io/ru/latest/pages/event-handling/signals.html): Сигналы жизненного цикла (startup, shutdown).
 - [Long-polling](https://maxo.readthedocs.io/ru/latest/pages/event-handling/long-polling.html): Получение апдейтов через long-polling.
 - [Webhooks](https://maxo.readthedocs.io/ru/latest/pages/event-handling/webhooks.html): Вебхуки через `aiohttp` или `fastapi`.
-- [Инъекция бота в типы (BotMixin)](https://maxo.readthedocs.io/ru/latest/pages/event-handling/bot-mixin.html): Как `MaxoType`-объекты получают доступ к `bot` и как настроить ретроту.
+- [Инъекция бота в типы (BaseMethodsFacade)](https://maxo.readthedocs.io/ru/latest/pages/event-handling/bot-mixin.html): Как `MaxoType`-объекты получают доступ к `bot` и как настроить ретроту.
 
 ## Диалоги (maxo.dialogs)
 

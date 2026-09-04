@@ -344,6 +344,19 @@ CLASS_MIXINS: dict[str, tuple[str, ...]] = {
 
 FACADES_MODULE = "maxo.types.facades"
 
+#: Модуль внутри `maxo.types.facades`, где лежит каждый миксин.
+#:
+#: `maxo.types.facades.__init__` пустой (реэкспорт всех фасадов оттуда
+#: зацикливает импорт с `maxo.types.base` - см. AGENTS.md), поэтому импорт
+#: всегда идёт из конкретного файла: `from maxo.types.facades.chat import
+#: ChatMethodsFacade`, а не `from maxo.types.facades import ChatMethodsFacade`.
+FACADE_MODULES: dict[str, str] = {
+    "CallbackMethodsFacade": "callback",
+    "ChatMethodsFacade": "chat",
+    "CommentMethodsFacade": "comment",
+    "MessageMethodsFacade": "message",
+}
+
 
 # --- ручные символы в __init__.py -------------------------------------------
 
@@ -365,7 +378,6 @@ TYPES_EXTRA_EXPORTS: tuple[ExtraExport, ...] = (
         module="base",
         names=(
             "BaseMaxoType",
-            "BaseMethodsFacade",
             "BaseUpdate",
             "MaxUpdate",
             "MaxoType",

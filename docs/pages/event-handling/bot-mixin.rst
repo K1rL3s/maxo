@@ -1,14 +1,14 @@
-Инъекция бота в типы (BotMixin)
-================================
+Инъекция бота в типы (BaseMethodsFacade)
+=========================================
 
-``BotMixin`` - это mixin, который добавляет в датакласс ссылку на экземпляр бота.
-Все типы, наследующие ``MaxoType``, автоматически получают эту функциональность, так как ``MaxoType`` уже включает ``BotMixin``.
+``BaseMethodsFacade`` - это mixin, который добавляет в датакласс ссылку на экземпляр бота.
+Все типы, наследующие ``MaxoType``, автоматически получают эту функциональность, так как ``MaxoType`` уже включает ``BaseMethodsFacade``.
 
 Зачем это нужно?
 ----------------
 
 Иногда удобно, чтобы десериализованный объект сам мог обращаться к боту - например,
-для выполнения API-вызовов прямо из метода типа. Благодаря ``BotMixin`` вам не нужно
+для выполнения API-вызовов прямо из метода типа. Благодаря ``BaseMethodsFacade`` вам не нужно
 вручную пробрасывать ``bot`` через аргументы каждого метода.
 
 .. code-block:: python
@@ -25,7 +25,7 @@
 Свойство ``bot``
 ----------------
 
-``BotMixin`` добавляет свойство ``bot``, которое возвращает экземпляр :class:`~maxo.Bot`.
+``BaseMethodsFacade`` добавляет свойство ``bot``, которое возвращает экземпляр :class:`~maxo.Bot`.
 
 .. code-block:: python
 
@@ -58,7 +58,7 @@
 Автоматическая инъекция через ретроту
 --------------------------------------
 
-Основной сценарий использования ``BotMixin`` - автоматическое внедрение бота при десериализации
+Основной сценарий использования ``BaseMethodsFacade`` - автоматическое внедрение бота при десериализации
 через `Retort <https://adaptix.readthedocs.io/>`_. Реторта бота (``bot.retort``) настроена так,
 что при загрузке любого ``MaxoType`` бот автоматически присваивается каждому объекту в дереве вложенности.
 
@@ -123,25 +123,26 @@
 ------------------------------
 
 Если вы хотите добавить функциональность бота только к отдельным типам, не используя ``MaxoType``,
-можно унаследоваться напрямую от ``BotMixin``:
+можно унаследоваться напрямую от ``BaseMethodsFacade``:
 
 .. code-block:: python
 
-    from maxo.types import BaseMaxoType, BotMixin
+    from maxo.types import BaseMaxoType
+    from maxo.types.facades.base import BaseMethodsFacade
 
-    class LightType(BaseMaxoType, BotMixin):
+    class LightType(BaseMaxoType, BaseMethodsFacade):
         value: int
 
 .. note::
 
-   При использовании ``BotMixin`` без ``MaxoType`` инъекция через ``bot.retort`` работает
+   При использовании ``BaseMethodsFacade`` без ``MaxoType`` инъекция через ``bot.retort`` работает
    только для типов, которые являются подклассами ``MaxoType``. Для ``LightType`` потребуется
    вызвать ``as_(bot)`` вручную.
 
 API
 ---
 
-.. autoclass:: maxo.types.BotMixin
+.. autoclass:: maxo.types.facades.base.BaseMethodsFacade
    :members:
    :undoc-members:
    :no-index:

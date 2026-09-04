@@ -88,7 +88,7 @@ from maxo.types import (
     VideoAttachmentRequest,
     base,
 )
-from maxo.types.facades import comment, message
+from maxo.types.facades import base as facades_base, comment, message
 
 if TYPE_CHECKING:
     from maxo import Bot
@@ -201,6 +201,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
             return datetime.min.replace(tzinfo=UTC)
 
     exec_type_checking(base)
+    exec_type_checking(facades_base)
     exec_type_checking(comment)
     exec_type_checking(message)
 
