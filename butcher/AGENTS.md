@@ -120,7 +120,8 @@ false` - это `Omittable[...] = Omitted()`, а не `= <default>`.
 
 Butcher не создаёт и при генерации затрёт, если файл лежит на его пути:
 
-- `src/maxo/types/base.py` (`MaxoType`, `MaxUpdate`, `BaseMethodsFacade`).
+- `src/maxo/types/base.py` (`MaxoType`, `MaxUpdate`) и
+  `src/maxo/types/facades/base.py` (`BaseMethodsFacade`).
 - `factory()` и `to_request()` у attachment-типов, `generated_url` у
   `Message`, `keyboard`/`content_type` у `MessageBody` и подобные хелперы.
 - Методы вне свагера: `GetChatByLink`, `DeleteChat`, `UploadMedia`,
@@ -214,7 +215,7 @@ has_tag_provider(NewAttachment, "type", AttachmentType.NEW)
 - Для нового вложения ещё ручной хвост: `factory()` и `to_request()` у самого
   типа и его пары `*Request`, свойство-хелпер и ветка `attachment_type` в
   `MessageBody`, а если файл заливается через `UploadType` - запись в
-  `MEDIA_ATTACHMENT_FACTORIES` в `routing/mixins/attachments.py`.
+  `MEDIA_ATTACHMENT_FACTORIES` в `types/facades/attachments.py`.
 
 ## Правила разработки
 

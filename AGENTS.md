@@ -271,7 +271,7 @@ router.callback_query = router.message_callback  # алиас
 
 **Конфликт метаклассов: фасады не могут быть ABC**
 
-`BaseMethodsFacade` (`src/maxo/types/base.py`) - корень цепочки фасадов и
+`BaseMethodsFacade` (`src/maxo/types/facades/base.py`) - корень цепочки фасадов и
 одновременно подмешан в `MaxoType`. Наследоваться от `ABC`/`Protocol` он не
 может: `_MaxoTypeMetaClass` конфликтует с `ABCMeta`. Поэтому `@abstractmethod`
 на фасадах декоративный, а поля вроде `message` объявлены раздвоённо через

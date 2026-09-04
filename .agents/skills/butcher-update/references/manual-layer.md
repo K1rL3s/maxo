@@ -13,7 +13,8 @@
 при чистке:
 
 - `src/maxo/types/base.py` - `MaxoType`, `BaseMaxoType`, `MaxUpdate`,
-  `BaseUpdate`, `BaseMethodsFacade`.
+  `BaseUpdate`.
+- `src/maxo/types/facades/base.py` - `BaseMethodsFacade`.
 - `src/maxo/types/error_event.py`, `update_context.py`, `upload_media_result.py`.
 - `src/maxo/bot/methods/base.py`, `markers.py`.
 - Методы вне свагера: `bots/edit_bot_info.py`, `chats/delete_chat.py`,
@@ -32,7 +33,7 @@
 `InlineKeyboardAttachmentRequest`, `PhotoAttachmentRequest`,
 `ShareAttachmentRequest`, `StickerAttachmentRequest`, `VideoAttachmentRequest`.
 
-На них завязаны `maxo/routing/mixins/attachments.py`,
+На них завязаны `maxo/types/facades/attachments.py`,
 `maxo/utils/builders/attachment_request.py`, `maxo/utils/hide_link.py` - без
 `factory` падает уже `import maxo`.
 
@@ -70,9 +71,9 @@
 - `ShareAttachment.payload` - `field(default_factory=ShareAttachmentPayload)`
   вместо обязательного поля.
 - `MessageCallback` - `# type: ignore[misc]` на классе, `message: Message | None`
-  с `# type: ignore[assignment]`, импорты фасадов из
-  `maxo.types.facades.callback` и `maxo.types.facades.message` (генератор
-  печатает плоский `from maxo.types.facades import ...`).
+  с `# type: ignore[assignment]`. Импорты фасадов (`maxo.types.facades.callback`,
+  `maxo.types.facades.message`) генерирует сам butcher по `FACADE_MODULES` в
+  `overrides.py` - руками их поправлять больше не нужно.
 
 `MessageButton.text` и `PhotoAttachmentRequestPayload.photos` руками уже **не**
 правятся - они генерируются через `MODEL_FIELD_OVERRIDES`.
@@ -107,7 +108,7 @@
 - `src/maxo/serialization.py` - `TAG_PROVIDERS`, регистрация полиморфных типов
   в retort. Union-алиасы генерируются, а эта таблица - нет.
 - `src/maxo/bot/warming_up.py` - кортежи `_types` и `_methods`.
-- `../../../../src/maxo/types/facades/attachments.py` - `MEDIA_ATTACHMENT_FACTORIES`,
+- `src/maxo/types/facades/attachments.py` - `MEDIA_ATTACHMENT_FACTORIES`,
   карта `UploadType` -> `factory` для заливаемых медиа.
 - `src/maxo/routing/middlewares/update_context.py` - ветки `isinstance`,
   которые заполняют `chat_id`/`user`/`user_id` в `UpdateContext`.
