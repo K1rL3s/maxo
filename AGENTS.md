@@ -281,6 +281,18 @@ router.callback_query = router.message_callback  # алиас
 когда наследование уберут, фасады станут настоящими ABC. Не пытайся
 использовать ABC с MaxoType сейчас - будут ошибки инициализации.
 
+**`maxo/types/facades/__init__.py` пустой намеренно**
+
+Реэкспорт всех фасадов оттуда зацикливает импорт: `maxo/types/base.py`
+(первый модуль, который тянет весь пакет `types` при `import maxo`)
+импортирует `maxo.types.facades.base`, а если `facades/__init__.py` при этом
+eagerly импортирует, например, `facades.attachments` -> `maxo.types.attachments`
+-> `maxo.types.audio_attachment` -> `maxo.types.attachment` - тот модуль ещё не
+доинициализирован (мы в него уже входим через `types/base.py`). Поэтому импорт
+фасадов всегда идёт из конкретного файла (`from maxo.types.facades.chat import
+ChatMethodsFacade`), а не из пакета. Butcher генерирует такие импорты сам через
+`FACADE_MODULES` в `butcher/overrides.py`.
+
 ### Bot API и unihttp
 
 **Marker-based declarative API**
