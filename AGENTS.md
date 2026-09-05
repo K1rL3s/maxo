@@ -164,7 +164,7 @@ class Message:
 
 **Важно**: Если явно указать `__slots__`, метакласс не применит `@dataclass`.
 
-**Автопривязка бота через BotMixin**
+**Автопривязка бота через BaseMethodsFacade**
 
 Все `MaxoType` получают метод `as_(bot)` для привязки бота. В
 `serialization.py` есть специальный loader, который автоматически привязывает
@@ -264,27 +264,34 @@ router.callback_query = router.message_callback  # алиас
 
 ### Исключения, алиасы и канонические импорты
 
-- Канонические update-типы находятся в `maxo.types`. Пакет
-  `maxo.routing.updates` сохраняется только как устаревший слой совместимости.
+- Канонические update-типы находятся в `maxo.types`.
 - Общие и API-исключения находятся в `maxo.errors`, dialog-исключения - в
   `maxo.dialogs.api.exceptions`, а управляющие исключения routing - в
   `maxo.routing.sentinels`.
 
-**Конфликт метаклассов: BaseMethodsFacade = BotMixin**
+**Конфликт метаклассов: фасады не могут быть ABC**
 
-`src/maxo/routing/mixins/base.py` содержит комментарий-исповедь:
+`BaseMethodsFacade` (`src/maxo/types/facades/base.py`) - корень цепочки фасадов и
+одновременно подмешан в `MaxoType`. Наследоваться от `ABC`/`Protocol` он не
+может: `_MaxoTypeMetaClass` конфликтует с `ABCMeta`. Поэтому `@abstractmethod`
+на фасадах декоративный, а поля вроде `message` объявлены раздвоённо через
+`if TYPE_CHECKING`.
 
-```python
-"""
-Класс должен наследоваться от ABC для работы @abstractmethod,
-но MaxoType сделан через метакласс, который конфликтует с ABC.
-Из-за этого фасады не наследуются от ABC.
-"""
-BaseMethodsFacade = BotMixin
-```
+Это технический долг. `MaxoType` наследует `BaseMethodsFacade` временно -
+когда наследование уберут, фасады станут настоящими ABC. Не пытайся
+использовать ABC с MaxoType сейчас - будут ошибки инициализации.
 
-Это технический долг. Не пытайся использовать ABC с MaxoType - будут ошибки
-инициализации.
+**`maxo/types/facades/__init__.py` пустой намеренно**
+
+Реэкспорт всех фасадов оттуда зацикливает импорт: `maxo/types/base.py`
+(первый модуль, который тянет весь пакет `types` при `import maxo`)
+импортирует `maxo.types.facades.base`, а если `facades/__init__.py` при этом
+eagerly импортирует, например, `facades.attachments` -> `maxo.types.attachments`
+-> `maxo.types.audio_attachment` -> `maxo.types.attachment` - тот модуль ещё не
+доинициализирован (мы в него уже входим через `types/base.py`). Поэтому импорт
+фасадов всегда идёт из конкретного файла (`from maxo.types.facades.chat import
+ChatMethodsFacade`), а не из пакета. Butcher генерирует такие импорты сам через
+`FACADE_MODULES` в `butcher/overrides.py`.
 
 ### Bot API и unihttp
 
@@ -472,7 +479,7 @@ SendMessage(text=None)  # отправляется {"text": null}
 
 ```python
 message = update.message.as_(bot)
-await message.send_message(text="Reply")  # работает через BotMixin
+await message.send_message(text="Reply")  # работает через BaseMethodsFacade
 ```
 
 **✅ Можно**: Использовать `unsafe_*` для гарантированно присутствующих полей
@@ -506,8 +513,9 @@ TAG_PROVIDERS = concat_provider(
 - `maxo.exceptions` и `maxo.filters` - постоянные алиасы `maxo.errors` и
   `maxo.routing.filters` для портирования ботов с `aiogram`. Они не
   предупреждают при импорте и не планируются к удалению. Не путай их с
-  переездами внутри пакета (`maxo.routing.updates`, `maxo.utils.facades`,
-  `maxo.utils.long_polling`) - те остаются с `DeprecationWarning`.
+  переездами внутри пакета (`maxo.utils.long_polling` ->
+  `maxo.transport.long_polling`) - те кидают `DeprecationWarning` и будут
+  удалены.
 - Документация и примеры должны импортировать из публичных модулей, а не из
   `maxo._internal`.
 - При добавлении публичного символа обновляй ближайший `__init__.py` и
@@ -945,8 +953,8 @@ uv run sphinx-build -b html docs docs/_build/html
 - `src/maxo/types/` и `src/maxo/enums/` содержат много файлов, которые
   фактически являются generated API surface. Генерирует их `just butcher` -
   правила в `butcher/AGENTS.md`.
-- `src/maxo/bot/methods/` и `src/maxo/routing/updates/` тоже относятся к API
-  surface и требуют синхронизации с типами, enum и сериализацией.
+- `src/maxo/bot/methods/` тоже относится к API surface и требует синхронизации
+  с типами, enum и сериализацией.
 - Движок кодогенерации `unihttp-openapi-generator==0.3.1` устанавливается из
   PyPI через dependency group `butcher`.
 - `maxo.dialogs` и `maxo.transport.webhook` исторически портированы из

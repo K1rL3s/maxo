@@ -9,7 +9,6 @@ from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
 from maxo.fsm.storages.memory import MemoryStorage, SimpleEventIsolation
 from maxo.omit import Omittable, Omitted
 from maxo.routing.ctx import Ctx
-from maxo.routing.facades.middleware import FacadeMiddleware
 from maxo.routing.flags import HANDLER_KEY
 from maxo.routing.middlewares.error import ErrorMiddleware
 from maxo.routing.middlewares.fsm_context import FSMContextMiddleware
@@ -67,9 +66,6 @@ class Dispatcher(Router):
             self.update.middleware.outer(
                 FSMContextMiddleware(storage, events_isolation),
             )
-
-        # Facade settings
-        self.update.middleware.outer(FacadeMiddleware())
 
     async def start_polling(
         self,

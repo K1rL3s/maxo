@@ -394,7 +394,8 @@ class _Profile:
 
         mixins = overrides.CLASS_MIXINS.get(class_name, ())
         for mixin in mixins:
-            imports.add(Import(overrides.MIXINS_MODULE, mixin))
+            module = overrides.FACADE_MODULES[mixin]
+            imports.add(Import(f"{overrides.FACADES_MODULE}.{module}", mixin))
 
         fields = tuple(
             self._build_model_field(name, ir_field, imports, is_update=is_update)

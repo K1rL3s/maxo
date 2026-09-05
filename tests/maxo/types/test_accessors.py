@@ -871,7 +871,7 @@ def test_maxo_type_bot_accessors() -> None:
 
     class DummyBot: ...
 
-    # cast нужен для проверки BotMixin без создания реального Bot с сетевым клиентом.
+    # cast нужен для проверки BaseMethodsFacade без создания реального Bot с сетевым клиентом.
     bot = cast(Bot, DummyBot())
     assert user.as_(bot) is user
     assert user.bot is bot

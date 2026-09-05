@@ -47,7 +47,7 @@ def test_comment_declares_message_and_facade_bases(document: MaxoDocument) -> No
 
     assert "class CommentMessage(Message, CommentMethodsFacade):" in source
     assert "from maxo.types.message import Message" in source
-    assert "from maxo.routing.mixins import CommentMethodsFacade" in source
+    assert "from maxo.types.facades.comment import CommentMethodsFacade" in source
 
 
 def test_model_renders_unsafe_property(document: MaxoDocument) -> None:
@@ -142,10 +142,7 @@ def test_emit_uses_project_import_sorting(
     emit.write(document, tmp_path)
 
     source = (tmp_path / "types" / "__init__.py").read_text(encoding="utf-8")
-    assert (
-        "from .base import BaseMaxoType, BaseUpdate, BotMixin, MaxUpdate, MaxoType"
-        in source
-    )
+    assert "from .base import BaseMaxoType, BaseUpdate, MaxUpdate, MaxoType" in source
 
 
 def test_links_become_absolute() -> None:

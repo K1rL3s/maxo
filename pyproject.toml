@@ -284,7 +284,6 @@ ignore = [
 "src/maxo/types/*.py" = ["E501", "D", "W291", "W293"]
 "src/maxo/enums/*.py" = ["E501", "D", "W291", "W293"]
 "src/maxo/bot/methods/*.py" = ["E501", "D", "W291", "W293"]
-"src/maxo/routing/updates/*.py" = ["E501", "D"]
 "src/maxo/dialogs/test_tools/**/*.py" = ["S101"]
 "src/maxo/serialization.py" = ["PLW0603"]
 

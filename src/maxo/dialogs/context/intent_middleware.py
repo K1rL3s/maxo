@@ -29,8 +29,6 @@ from maxo.dialogs.utils import remove_intent_id
 from maxo.enums import ChatType
 from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
 from maxo.routing.ctx import Ctx
-from maxo.routing.facades import MessageCallbackFacade
-from maxo.routing.facades.middleware import FACADE_KEY
 from maxo.routing.interfaces import BaseMiddleware, NextMiddleware
 from maxo.routing.middlewares.fsm_context import FSM_STORAGE_KEY
 from maxo.routing.middlewares.update_context import (
@@ -369,8 +367,8 @@ class IntentMiddlewareFactory:
             await self._load_default_context(update, ctx, event_context)
         result = await next(ctx)
         if result is UNHANDLED and ctx.get(FORBIDDEN_STACK_KEY):
-            facade: MessageCallbackFacade = ctx[FACADE_KEY]
-            await facade.callback_answer(notification="")
+            # Гасим "часики" на кнопке: чужой/протухший стек хендлер не обработает.
+            await update.callback_answer(notification="")
         return result
 
     async def process_bot_started(

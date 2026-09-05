@@ -2,7 +2,7 @@ Updates
 =======
 
 Апдейты живут в :mod:`maxo.types`. Импорт из ``maxo.routing.updates``
-устарел и оставлен только для обратной совместимости.
+удалён - используйте ``maxo.types``.
 
 .. autoclass:: maxo.types.BaseUpdate
    :members:

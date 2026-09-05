@@ -23,4 +23,4 @@
 * :doc:`signals` - сигналы жизненного цикла (startup, shutdown) для инициализации и освобождения ресурсов.
 * :doc:`long-polling` - механизм получения обновлений через Long Polling.
 * :doc:`webhooks` - механизм получения обновлений через Webhook.
-* :doc:`bot-mixin` - инъекция экземпляра бота в датаклассы ``MaxoType`` через ``BotMixin`` и реторту.
+* :doc:`bot-mixin` - инъекция экземпляра бота в датаклассы ``MaxoType`` через ``BaseMethodsFacade`` и реторту.
