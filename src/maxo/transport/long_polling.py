@@ -82,67 +82,90 @@ class LongPolling:
 
             await dispatcher.feed_signal(BeforeStartup(), bot)
 
-            async with bot.context(auto_close=auto_close_bot):
-                loggers.dispatcher.info(
-                    "Polling started for @%s id=%s",
-                    bot.state.info.username,
-                    bot.state.info.user_id,
-                )
-
-                if clear_subscriptions:
-                    cleared = await bot.clear_subscriptions()
-                    loggers.long_polling.info(
-                        "Удалено WebHook-подписок перед запуском Long Polling (%d): %s",
-                        len(cleared.removed),
-                        [subscription.url for subscription in cleared.removed],
+            # `try`/`finally` here (and around the polling loop below) instead of
+            # plain sequential awaits: a cancelled polling task - the normal way
+            # to stop an application that catches its own shutdown signal, per
+            # AGENTS.md - raises `CancelledError` out of the `TaskGroup` below,
+            # which `contextlib.suppress(KeyboardInterrupt)` does not catch. That
+            # unwinds straight out of this `async with`, and previously past both
+            # `feed_signal(BeforeShutdown, ...)` and `feed_signal(AfterShutdown)`
+            # below without ever running them - the exact same gap any other
+            # exception from a handler or from `_get_updates` had. `finally`
+            # closes it for every early exit, not just cancellation. The two
+            # signals stay split across `bot.context()`'s boundary on purpose:
+            # `before_shutdown` still runs with the bot open (as it did before),
+            # `after_shutdown` after it's closed - matching `SimpleWebhookEngine`,
+            # which also passes its bot to `AfterShutdown` for the same reason:
+            # `feed_update` only sets `ctx["bots"]`/`update.bot` when a bot is
+            # given, so a handler reading either off the signal (rather than off
+            # a `bot`-named parameter, which `workflow_data` backfills either
+            # way) used to see `None` here, unlike everywhere else in this
+            # method.
+            try:
+                async with bot.context(auto_close=auto_close_bot):
+                    loggers.dispatcher.info(
+                        "Polling started for @%s id=%s",
+                        bot.state.info.username,
+                        bot.state.info.user_id,
                     )
-                else:
-                    try:
-                        subscriptions = await bot.get_subscriptions()
-                    except Exception as exception:  # noqa: BLE001
-                        loggers.long_polling.warning(
-                            "Не удалось проверить WebHook-подписки перед "
-                            "запуском Long Polling - %s: %s",
-                            type(exception).__name__,
-                            exception,
+
+                    if clear_subscriptions:
+                        cleared = await bot.clear_subscriptions()
+                        loggers.long_polling.info(
+                            "Удалено WebHook-подписок перед запуском "
+                            "Long Polling (%d): %s",
+                            len(cleared.removed),
+                            [subscription.url for subscription in cleared.removed],
                         )
                     else:
-                        if subscriptions.subscriptions:
+                        try:
+                            subscriptions = await bot.get_subscriptions()
+                        except Exception as exception:  # noqa: BLE001
                             loggers.long_polling.warning(
-                                "У бота @%s есть активные WebHook-подписки (%d). "
-                                "Они не были очищены перед запуском Long Polling. "
-                                "Передайте clear_subscriptions=True, чтобы удалить их.",
-                                bot.state.info.username,
-                                len(subscriptions.subscriptions),
+                                "Не удалось проверить WebHook-подписки перед "
+                                "запуском Long Polling - %s: %s",
+                                type(exception).__name__,
+                                exception,
                             )
+                        else:
+                            if subscriptions.subscriptions:
+                                loggers.long_polling.warning(
+                                    "У бота @%s есть активные WebHook-подписки (%d). "
+                                    "Они не были очищены перед запуском Long Polling. "
+                                    "Передайте clear_subscriptions=True, чтобы "
+                                    "удалить их.",
+                                    bot.state.info.username,
+                                    len(subscriptions.subscriptions),
+                                )
 
-                await dispatcher.feed_signal(AfterStartup(), bot)
+                    await dispatcher.feed_signal(AfterStartup(), bot)
 
-                updates_poller = self._get_updates(
-                    bot=bot,
-                    timeout=timeout,
-                    limit=limit,
-                    marker=marker,
-                    types=used_types,
-                    drop_pending_updates=drop_pending_updates,
-                )
+                    updates_poller = self._get_updates(
+                        bot=bot,
+                        timeout=timeout,
+                        limit=limit,
+                        marker=marker,
+                        types=used_types,
+                        drop_pending_updates=drop_pending_updates,
+                    )
 
-                with contextlib.suppress(KeyboardInterrupt):
-                    async with asyncio.TaskGroup() as tg:
-                        async for update in updates_poller:
-                            tg.create_task(  # type: ignore[unused-awaitable]
-                                dispatcher.feed_max_update(update, bot),
-                            )
+                    try:
+                        with contextlib.suppress(KeyboardInterrupt):
+                            async with asyncio.TaskGroup() as tg:
+                                async for update in updates_poller:
+                                    tg.create_task(  # type: ignore[unused-awaitable]
+                                        dispatcher.feed_max_update(update, bot),
+                                    )
+                    finally:
+                        await dispatcher.feed_signal(BeforeShutdown(), bot)
 
-                await dispatcher.feed_signal(BeforeShutdown(), bot)
-
-                loggers.dispatcher.info(
-                    "Polling stop for @%s bot id=%s",
-                    bot.state.info.username,
-                    bot.state.info.user_id,
-                )
-
-        await dispatcher.feed_signal(AfterShutdown())
+                        loggers.dispatcher.info(
+                            "Polling stop for @%s bot id=%s",
+                            bot.state.info.username,
+                            bot.state.info.user_id,
+                        )
+            finally:
+                await dispatcher.feed_signal(AfterShutdown(), bot)
 
     async def _get_updates(
         self,
