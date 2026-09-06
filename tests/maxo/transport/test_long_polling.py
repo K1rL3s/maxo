@@ -17,6 +17,7 @@ from maxo.bot.state import RunningBotState
 from maxo.errors import UnsubscribeError
 from maxo.omit import Omitted
 from maxo.routing.dispatcher import Dispatcher
+from maxo.routing.signals.shutdown import AfterShutdown, BeforeShutdown
 from maxo.routing.signals.update import MaxoUpdate
 from maxo.transport.long_polling import LongPolling
 from maxo.types import (
@@ -391,6 +392,92 @@ async def test_start_clears_subscriptions_before_after_startup(
         )
 
     assert fired == ["before_startup"]
+
+
+async def test_start_feeds_bot_to_after_shutdown(
+    mock_dispatcher: Dispatcher,
+    long_polling: LongPolling,
+    mock_bot: Bot,
+    mock_get_subscriptions: AsyncMock,
+) -> None:
+    # `feed_signal(AfterShutdown())` was called with no `bot` at all, unlike
+    # every other signal here (including this same method's own
+    # `BeforeShutdown`) and unlike `SimpleWebhookEngine`'s `AfterShutdown`,
+    # which does pass its bot. `feed_update` backfills `ctx["bot"]` from
+    # `workflow_data` regardless, so a handler parameter named `bot` still
+    # resolved either way - but `bot` not being passed also means
+    # `feed_update` skips `ctx["bots"] = [bot]` and `update.bot = bot`, so a
+    # handler reading the signal object's own `.bot` (as opposed to a `bot`
+    # parameter) saw `None` instead of the real bot. Asserting on the actual
+    # call to `feed_signal`, rather than on what a handler receives, is what
+    # catches that - a handler-side assertion can't tell "backfilled from
+    # workflow_data" apart from "passed explicitly".
+    real_feed_signal = mock_dispatcher.feed_signal
+
+    with (
+        patch.object(
+            mock_dispatcher,
+            "feed_signal",
+            new=AsyncMock(side_effect=real_feed_signal),
+        ) as feed_signal,
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates),
+    ):
+        await long_polling.start(mock_bot, auto_close_bot=False)
+
+    feed_signal.assert_any_call(ANY, mock_bot)
+    shutdown_calls = [
+        call_args
+        for call_args in feed_signal.call_args_list
+        if isinstance(call_args.args[0], (BeforeShutdown, AfterShutdown))
+    ]
+    assert shutdown_calls == [
+        call(ANY, mock_bot),
+        call(ANY, mock_bot),
+    ]
+    assert isinstance(shutdown_calls[0].args[0], BeforeShutdown)
+    assert isinstance(shutdown_calls[1].args[0], AfterShutdown)
+
+
+async def test_start_fires_shutdown_signals_when_polling_task_is_cancelled(
+    mock_dispatcher: Dispatcher,
+    long_polling: LongPolling,
+    mock_bot: Bot,
+    mock_get_subscriptions: AsyncMock,
+) -> None:
+    # `task.cancel()` on the task running `start()` is the standard way to stop
+    # an application that catches its own shutdown signal (SIGTERM), per
+    # AGENTS.md. That raises `CancelledError` out of the `TaskGroup`, which
+    # `contextlib.suppress(KeyboardInterrupt)` does not catch - previously this
+    # unwound straight out of `start()` and skipped both `before_shutdown` and
+    # `after_shutdown` entirely, so nothing ever got to close the DB, flush
+    # metrics or remove the webhook subscription on a cancelled shutdown.
+    order: list[str] = []
+
+    @mock_dispatcher.before_shutdown()
+    async def _before_shutdown() -> None:
+        order.append("before_shutdown")
+
+    @mock_dispatcher.after_shutdown()
+    async def _after_shutdown() -> None:
+        order.append("after_shutdown")
+
+    async def hanging_updates(**_kwargs: Any) -> AsyncIterator[Any]:
+        await asyncio.sleep(60)
+        nothing: tuple[Any, ...] = ()
+        for update in nothing:
+            yield update
+
+    with patch.object(long_polling, "_get_updates", side_effect=hanging_updates):
+        task = asyncio.create_task(
+            long_polling.start(mock_bot, auto_close_bot=False),
+        )
+        await asyncio.sleep(0.1)
+        task.cancel()
+
+        with pytest.raises(CancelledError):
+            await task
+
+    assert order == ["before_shutdown", "after_shutdown"]
 
 
 async def test_start_warns_about_subscriptions_when_not_cleared(
