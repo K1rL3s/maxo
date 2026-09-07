@@ -364,7 +364,13 @@ async def test_start_clears_subscriptions_before_after_startup(
     mock_bot: Bot,
 ) -> None:
     # Падение очистки не должно оставлять приложение со сработавшими
-    # startup-хуками и несработавшими shutdown.
+    # startup-хуками и несработавшими shutdown - `after_startup` не должен
+    # сработать (очистка ещё не завершилась), но `before_shutdown`/
+    # `after_shutdown` обязаны сработать оба, в паре, раз бот уже открыт
+    # (`before_startup` уже сработал). Раньше выход из `clear_subscriptions()`
+    # пропускал `before_shutdown` целиком, но всё равно бы дошёл до
+    # `after_shutdown` - нарушая пару, которую вправе ожидать любой
+    # shutdown-хендлер.
     fired: list[str] = []
 
     @mock_dispatcher.before_startup()
@@ -374,6 +380,14 @@ async def test_start_clears_subscriptions_before_after_startup(
     @mock_dispatcher.after_startup()
     async def _after_startup() -> None:
         fired.append("after_startup")
+
+    @mock_dispatcher.before_shutdown()
+    async def _before_shutdown() -> None:
+        fired.append("before_shutdown")
+
+    @mock_dispatcher.after_shutdown()
+    async def _after_shutdown() -> None:
+        fired.append("after_shutdown")
 
     failure = ExceptionGroup(
         "Не удалось удалить WebHook-подписки",
@@ -390,6 +404,40 @@ async def test_start_clears_subscriptions_before_after_startup(
             auto_close_bot=False,
             clear_subscriptions=True,
         )
+
+    assert fired == ["before_startup", "before_shutdown", "after_shutdown"]
+
+
+async def test_start_skips_shutdown_signals_when_bot_never_started(
+    mock_dispatcher: Dispatcher,
+) -> None:
+    # Если сам `bot.context()` не смог открыть бота (его `bot.start()` упал),
+    # тело `async with` (и его `finally` с `before_shutdown`) не выполняется
+    # вообще. `after_shutdown` не должен сработать в одиночку без пары -
+    # `shutdown_started` в `LongPolling.start()` как раз это и гарантирует.
+    fired: list[str] = []
+
+    @mock_dispatcher.before_startup()
+    async def _before_startup() -> None:
+        fired.append("before_startup")
+
+    @mock_dispatcher.before_shutdown()
+    async def _before_shutdown() -> None:
+        fired.append("before_shutdown")
+
+    @mock_dispatcher.after_shutdown()
+    async def _after_shutdown() -> None:
+        fired.append("after_shutdown")
+
+    fresh_bot = make_bot()
+    error = RuntimeError("network is unreachable")
+    long_polling = LongPolling(dispatcher=mock_dispatcher)
+
+    with (
+        patch.object(Bot, "get_my_info", new=AsyncMock(side_effect=error)),
+        pytest.raises(RuntimeError, match="network is unreachable"),
+    ):
+        await long_polling.start(fresh_bot, auto_close_bot=False)
 
     assert fired == ["before_startup"]
 
