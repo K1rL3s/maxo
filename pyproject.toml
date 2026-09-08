@@ -142,7 +142,8 @@ dev = [
     { include-group = "tests" },
     { include-group = "lint" },
     { include-group = "butcher" },
-    "maxo[magic_filter,dishka,redis,fastapi,preview]"
+    "maxo[magic_filter,dishka,redis,fastapi,preview]",
+    "twine==7.0.0",
 ]
 
 [project.urls]

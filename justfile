@@ -44,7 +44,7 @@ build:
     uv build
 
 check-dist: build
-    uvx twine check --strict dist/*
+    uv run twine check --strict dist/*
     uv run --no-project python check_dist.py dist
 
 docs *args:

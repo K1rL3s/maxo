@@ -31,7 +31,7 @@ jobs:
 
       - name: Check metadata
         run: |
-          uvx twine check --strict dist/*
+          uv run twine check --strict dist/*
 
       - name: Check distribution contents
         run: |
