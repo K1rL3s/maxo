@@ -10,7 +10,12 @@ WHEEL_REQUIRED = (
     "dist-info/licenses/LICENSE",
     "dist-info/licenses/THIRD_PARTY_LICENSES",
 )
-SDIST_REQUIRED = ("LICENSE", "THIRD_PARTY_LICENSES")
+SDIST_REQUIRED = (
+    "LICENSE",
+    "THIRD_PARTY_LICENSES",
+    "src/maxo/py.typed",
+    "src/maxo/bot/russiantrustedca.pem",
+)
 JUNK = ("graphify", "__pycache__", ".pyc", ".env", ".ds_store")
 
 

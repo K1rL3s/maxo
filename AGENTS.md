@@ -975,7 +975,13 @@ uv run sphinx-build -b html docs docs/_build/html
   Ручного триггера у него нет намеренно: `workflow_dispatch` шел бы мимо сверки
   версии с тегом, то есть мимо единственной защиты от выкладки не той версии.
 - `.github/workflows/relator.yml` отправляет уведомления о новых issues и PR в
-  Telegram через закрепленный action `reagento/relator`.
+  Telegram через action `reagento/relator`.
+- Все сторонние actions закреплены по полному SHA коммита с комментарием версии
+  рядом. Подвижный тег `vN` можно переназначить, и тогда в CI приедет чужой код;
+  `zizmor` ловит это правилом `unpinned-uses`. Обновляет пины dependabot, он же
+  правит комментарий с версией, поэтому вручную их трогать не нужно. Новый шаг
+  добавляй сразу с SHA, а `actions/checkout` - с `persist-credentials: false`,
+  иначе токен останется в рабочем дереве после чекаута.
 - `just lint` запускает `black`, `codespell`, `slotscheck` и `bandit` наравне с
   `ruff`. Учитывай их при изменении пользовательского текста, `__slots__`,
   dataclass-моделей и security-sensitive кода.
