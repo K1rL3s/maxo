@@ -10,7 +10,8 @@ name = "maxo"
 description = "Асинхронный Python-фреймворк для разработки ботов мессенджера MAX (max.ru) с поддержкой long-polling, вебхуков, FSM, диалогов, фильтров и DI"
 version = "0.8.3"
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "Apache-2.0"
+license-files = ["LICENSE", "THIRD_PARTY_LICENSES"]
 keywords = [
     "max",
     "max.ru",
@@ -54,7 +55,6 @@ authors = [
 ]
 maintainers = [{ name = "K1rL3s - Kirill Lesovoy", email = "kirill.lesovoi@mail.ru" }]
 classifiers = [
-    "License :: OSI Approved :: Apache Software License",
     "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Framework :: AsyncIO",
@@ -131,7 +131,7 @@ lint = [
     "codespell==2.4.1",
     "bandit==1.9.1",
     "slotscheck==0.19.1",
-    "black==25.11.0",
+    "black==26.5.1",
 ]
 butcher = ["unihttp-openapi-generator==0.3.1"]
 dev = [
@@ -300,7 +300,7 @@ line-ending = "auto"
 [tool.black]
 line-length = 88
 target-version = ["py312"]
-include = 'src/.*\.py$|tests/.*\.py$|examples/.*\.py$'
+extend-exclude = 'docs/conf\.py'
 
 [tool.pytest.ini_options]
 # log_cli печатал DEBUG-лог на каждый тест и раздувал вывод в несколько раз.

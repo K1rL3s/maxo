@@ -1,0 +1,78 @@
+name: Build
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  dist:
+    name: Build and check distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: 0.11.23
+          enable-cache: true
+
+      - name: Build sdist and wheel
+        run: |
+          uv build
+
+      - name: Check metadata
+        run: |
+          uvx twine check --strict dist/*
+
+      - name: Wheel must ship py.typed, CA bundle, licenses and no junk
+        run: |
+          python3 -m zipfile -l dist/*.whl > "$RUNNER_TEMP/wheel.txt"
+          for entry in \
+            'maxo/py.typed' \
+            'maxo/dialogs/py.typed' \
+            'maxo/bot/russiantrustedca.pem' \
+            'dist-info/licenses/LICENSE' \
+            'dist-info/licenses/THIRD_PARTY_LICENSES'
+          do
+            grep -qF "$entry" "$RUNNER_TEMP/wheel.txt" || {
+              echo "В колесе нет $entry"; exit 1;
+            }
+          done
+          if grep -qiE 'graphify|__pycache__|\.pyc|\.env|\.DS_Store' \
+            "$RUNNER_TEMP/wheel.txt"; then
+            echo "В колесо попал локальный мусор:"
+            grep -iE 'graphify|__pycache__|\.pyc|\.env|\.DS_Store' \
+              "$RUNNER_TEMP/wheel.txt"
+            exit 1
+          fi
+
+      - name: Sdist must ship licenses
+        run: |
+          tar -tzf dist/*.tar.gz > "$RUNNER_TEMP/sdist.txt"
+          for entry in 'LICENSE' 'THIRD_PARTY_LICENSES'; do
+            grep -qE "/$entry\$" "$RUNNER_TEMP/sdist.txt" || {
+              echo "В sdist нет $entry"; exit 1;
+            }
+          done
+
+      - name: Package must be importable from the wheel alone
+        run: |
+          uv venv "$RUNNER_TEMP/venv"
+          uv pip install --python "$RUNNER_TEMP/venv/bin/python" dist/*.whl
+          "$RUNNER_TEMP/venv/bin/python" -c "import maxo; print(maxo.__version__)"
+
+      - name: Upload distribution
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/

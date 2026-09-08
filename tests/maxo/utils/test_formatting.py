@@ -219,16 +219,14 @@ class TestNode:
                 ),
             ],
         )
-        assert (
-            node.as_pretty_string(indent=True)
-            == r"""Strikethrough(
+        expected = r"""Strikethrough(
     Mention(
         'X',
         user_id=42,
         user_link=<Omitted>
     )
 )"""
-        )
+        assert node.as_pretty_string(indent=True) == expected
 
 
 class TestUtils:

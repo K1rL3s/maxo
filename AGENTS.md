@@ -56,11 +56,13 @@ uv run ruff check --no-fix src/maxo/path.py tests/path/test_file.py
 Все рецепты сами вызывают `uv run`, поэтому активировать venv не нужно:
 
 ```bash
-just lint       # ruff + codespell + slotscheck + bandit
+just lint       # ruff + black + codespell + slotscheck + bandit
 just mypy
 just test
 just test-all
 just all
+just build         # uv build
+just check-dist    # сборка + twine check --strict
 just butcher       # генерация типов/enum'ов/методов по max-swagger.json
 just butcher-test  # тесты самого генератора
 ```
@@ -69,10 +71,10 @@ just butcher-test  # тесты самого генератора
 
 - `pyproject.toml` задает `ruff` c `fix = true`, поэтому для проверки без
   изменений используй `--no-fix`.
-- Рецепт `just ruff` запускает `ruff check --fix .` и может менять файлы.
-  Поэтому `lint.yml` зовет линтеры напрямую через `uv run`, а не через just:
-  иначе CI чинил бы найденное и зеленел. Для проверки без правок локально -
-  `uv run ruff check --no-fix .`.
+- Рецепты `just ruff` и `just black` меняют файлы (`ruff check --fix .`,
+  `black .`). Поэтому `lint.yml` зовет линтеры напрямую через `uv run`, а не
+  через just: иначе CI чинил бы найденное и зеленел. Для проверки без правок
+  локально - `uv run ruff check --no-fix .` и `uv run black --check .`.
 - `just test` принимает дополнительные аргументы pytest, например
   `just test --cov-report=xml` (так делает CI) или `just test -k dialogs`.
 - `pytest` в проекте работает с `asyncio_mode = auto`.
@@ -931,19 +933,31 @@ uv run sphinx-build -b html docs docs/_build/html
 
 - `.github/workflows/lint.yml` запускает Python `3.14`, установку через
   `uv sync --all-groups`, затем отдельными шагами через `uv run`:
-  `ruff check --no-fix .`, `mypy --config-file pyproject.toml`,
+  `ruff check --no-fix .`, `black --check .`, `mypy --config-file pyproject.toml`,
   `codespell src examples`, `slotscheck -m maxo`, `bandit -c pyproject.toml src -r`.
 - `.github/workflows/test.yml` запускает Python `3.12`, `3.13`, `3.14` с
   dependency resolution `lowest-direct` и `highest`, затем
   `just test --cov-report=xml`. Матрицу версий гоняет сам GitHub Actions,
   поэтому `just test-all` (nox) в CI не используется.
+- `.github/workflows/build.yml` собирает `sdist` и `wheel`, проверяет метаданные
+  через `twine check --strict`, содержимое колеса (`py.typed`,
+  `russiantrustedca.pem`, `dist-info/licenses/*`, отсутствие локального мусора)
+  и импортируемость пакета из одного колеса. Запускается на PR и push, а также
+  вызывается из `publish.yml` через `workflow_call`, чтобы публиковался ровно
+  тот артефакт, который проверен.
+- `.github/workflows/publish.yml` публикует на PyPI по `release: published`
+  через OIDC Trusted Publishing (environment `pypi`, `id-token: write`),
+  сверяет версию в имени артефакта с тегом и прикладывает дистрибутив к
+  GitHub Release. Долгоживущего токена PyPI в секретах нет и быть не должно.
 - `.github/workflows/relator.yml` отправляет уведомления о новых issues и PR в
   Telegram через закрепленный action `reagento/relator`.
-- `just lint` запускает `codespell`, `slotscheck` и `bandit` наравне с `ruff`.
-  Учитывай их при изменении пользовательского текста, `__slots__`,
+- `just lint` запускает `black`, `codespell`, `slotscheck` и `bandit` наравне с
+  `ruff`. Учитывай их при изменении пользовательского текста, `__slots__`,
   dataclass-моделей и security-sensitive кода.
-- `black` есть в lint-группе, но форматирование проекта задает `ruff format`.
-  Не переформатируй весь репозиторий без отдельной задачи.
+- Форматирование задают `ruff format` и `black` одновременно, их области
+  совпадают. Дерево - неподвижная точка обоих; если они разошлись на новом
+  коде, перепиши код так, чтобы оба оставили его как есть, а не подстраивай
+  конфиги под один. Не переформатируй весь репозиторий без отдельной задачи.
 
 ## Что важно помнить о текущем проекте
 
