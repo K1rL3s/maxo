@@ -13,5 +13,5 @@ def is_async_callable(obj: Callable[..., Any]) -> bool:
     """
     unwrapped = inspect.unwrap(obj)
     return inspect.iscoroutinefunction(unwrapped) or inspect.iscoroutinefunction(
-        type(unwrapped).__call__,
+        inspect.unwrap(type(unwrapped).__call__),
     )

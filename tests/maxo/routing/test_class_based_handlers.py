@@ -86,3 +86,15 @@ async def test_class_based_signal_handler_is_executed() -> None:
     handler = SignalHandler[Any, str](handler_fn)
 
     assert await handler(Ctx({"update": None})) == "done"
+
+
+class DecoratedCallableHandler:
+    @decorator
+    async def __call__(self, update: Any, **kwargs: Any) -> str:
+        return "done"
+
+
+async def test_decorated_call_class_based_handler_is_executed() -> None:
+    handler = UpdateHandler[MessageCreated, str](DecoratedCallableHandler())
+
+    assert await handler(Ctx({"update": make_update()})) == "done"
