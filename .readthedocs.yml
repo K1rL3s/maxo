@@ -6,7 +6,7 @@ build:
     python: "3.13"
   jobs:
     post_create_environment:
-      - pip install uv
+      - pip install uv==0.11.28
     install:
       - uv pip install -e ".[dishka,redis]" --group=docs -p $READTHEDOCS_VIRTUALENV_PATH/bin/python
 
