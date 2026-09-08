@@ -28,8 +28,6 @@ jobs:
         with:
           version: 0.11.28
           python-version: ${{ matrix.python-version }}
-          enable-cache: true
-          cache-dependency-glob: "pyproject.toml"
           cache-suffix: ${{ matrix.dependency-resolution }}
 
       - name: Install just

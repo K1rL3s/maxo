@@ -947,11 +947,10 @@ uv run sphinx-build -b html docs docs/_build/html
 - Python в `lint.yml` и `test.yml` ставит сам `setup-uv` через вход
   `python-version`. Отдельного `actions/setup-python` в workflow нет, и версия
   Python из этого входа попадает в ключ кэша.
-- Кэш `uv` включен явно во всех workflow: `enable-cache: true` и
-  `cache-dependency-glob: "pyproject.toml"`. Дефолтный `auto` дал бы то же
-  самое на GitHub-хостед раннерах, но явное значение не зависит от смены
-  дефолта в новой мажорной версии экшена, а glob сужен до единственного файла,
-  который задает зависимости, потому что `uv.lock` игнорируется.
+- Кэш `uv` в workflow не настраивается: `enable-cache` по умолчанию `auto`,
+  то есть включен на GitHub-хостед раннерах, а дефолтный `cache-dependency-glob`
+  уже содержит `**/pyproject.toml` - единственный файл репозитория, который
+  в него попадает. Не добавляй эти входы обратно, они ничего не меняют.
 - В `test.yml` нужен `cache-suffix: ${{ matrix.dependency-resolution }}`.
   Ключ `setup-uv` знает про `python-version`, но не про стратегию резолвинга,
   и без суффикса шесть job матрицы дерутся за одну запись кэша.
