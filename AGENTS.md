@@ -82,6 +82,11 @@ just butcher-test  # тесты самого генератора
   с разрешением зависимостей `lowest-direct` и `highest`.
 - `uv.lock` игнорируется в этом репозитории. Не добавляй его в коммит без
   отдельного решения мейнтейнера.
+- Версия `uv` закреплена в трех местах и должна меняться во всех сразу:
+  `[tool.uv] required-version`, `build-system.requires` (`uv_build`) и вход
+  `version` у `astral-sh/setup-uv` в каждом workflow. `required-version` -
+  единственный источник правды: любой другой `uv` откажется работать локально,
+  а в CI расхождение с пином в workflow валит job на первой же команде.
 
 ## Архитектура проекта
 
@@ -939,6 +944,17 @@ uv run sphinx-build -b html docs docs/_build/html
   dependency resolution `lowest-direct` и `highest`, затем
   `just test --cov-report=xml`. Матрицу версий гоняет сам GitHub Actions,
   поэтому `just test-all` (nox) в CI не используется.
+- Python в `lint.yml` и `test.yml` ставит сам `setup-uv` через вход
+  `python-version`. Отдельного `actions/setup-python` в workflow нет, и версия
+  Python из этого входа попадает в ключ кэша.
+- Кэш `uv` включен явно во всех workflow: `enable-cache: true` и
+  `cache-dependency-glob: "pyproject.toml"`. Дефолтный `auto` дал бы то же
+  самое на GitHub-хостед раннерах, но явное значение не зависит от смены
+  дефолта в новой мажорной версии экшена, а glob сужен до единственного файла,
+  который задает зависимости, потому что `uv.lock` игнорируется.
+- В `test.yml` нужен `cache-suffix: ${{ matrix.dependency-resolution }}`.
+  Ключ `setup-uv` знает про `python-version`, но не про стратегию резолвинга,
+  и без суффикса шесть job матрицы дерутся за одну запись кэша.
 - `.github/workflows/build.yml` собирает `sdist` и `wheel`, проверяет метаданные
   через `twine check --strict` и содержимое дистрибутива через `check_dist.py`.
   Запускается на PR и push, а также вызывается из `publish.yml` через

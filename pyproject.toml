@@ -1,6 +1,9 @@
 [build-system]
-requires = ["uv_build==0.11.23"]
+requires = ["uv_build==0.11.28"]
 build-backend = "uv_build"
+
+[tool.uv]
+required-version = "==0.11.28"
 
 [tool.uv.build-backend]
 source-exclude = ["graphify-out"]

@@ -5,7 +5,7 @@
 ## Требования
 
 - Python 3.12+
-- [uv](https://docs.astral.sh/uv/) - менеджер пакетов
+- [uv](https://docs.astral.sh/uv/) `0.11.28` - менеджер пакетов. Версия закреплена в `pyproject.toml` через `required-version`, другая версия откажется работать: `uv self update 0.11.28`
 - [just](https://github.com/casey/just) - запуск команд (опционально, но рекомендуется)
 
 ## Начало работы

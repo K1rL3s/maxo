@@ -10,9 +10,6 @@ on:
 permissions:
   contents: read
 
-env:
-  UV_SYSTEM_PYTHON: "true"
-
 jobs:
   tests:
     name: ${{ matrix.python-version }} ${{ matrix.dependency-resolution }}
@@ -26,15 +23,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v7
-        with:
-          python-version: ${{ matrix.python-version }}
-
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          version: 0.11.23
+          version: 0.11.28
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+          cache-suffix: ${{ matrix.dependency-resolution }}
 
       - name: Install just
         uses: extractions/setup-just@v4
