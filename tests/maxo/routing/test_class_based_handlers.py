@@ -5,7 +5,6 @@ from maxo.enums import ChatType
 from maxo.routing.ctx import Ctx
 from maxo.routing.handlers.signal import SignalHandler
 from maxo.routing.handlers.update import UpdateHandler
-from maxo.routing.utils import is_async_callable
 from maxo.types import Message, MessageBody, MessageCreated, Recipient
 from tests.constants import NOW
 
@@ -28,14 +27,6 @@ class SyncCallableHandler:
         return "done"
 
 
-async def async_fn(update: Any, **kwargs: Any) -> str:
-    return "done"
-
-
-def sync_fn(update: Any, **kwargs: Any) -> str:
-    return "done"
-
-
 def decorator(fn: Any) -> Any:
     @functools.wraps(fn)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -55,12 +46,16 @@ def make_update() -> MessageCreated:
     )
 
 
-def test_is_async_callable() -> None:
-    assert is_async_callable(async_fn)
-    assert is_async_callable(AsyncCallableHandler())
-    assert is_async_callable(decorator(async_fn))
-    assert not is_async_callable(sync_fn)
-    assert not is_async_callable(SyncCallableHandler())
+async def handler_with_params(update: Any, bot: Any) -> Any:
+    return bot
+
+
+async def test_decorated_handler_receives_only_declared_params() -> None:
+    handler = UpdateHandler[MessageCreated, Any](decorator(handler_with_params))
+
+    ctx = Ctx({"update": make_update(), "bot": "bot", "extra": 1})
+
+    assert await handler(ctx) == "bot"
 
 
 async def test_class_based_update_handler_is_executed() -> None:
