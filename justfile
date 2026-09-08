@@ -45,6 +45,7 @@ build:
 
 check-dist: build
     uvx twine check --strict dist/*
+    uv run --no-project python check_dist.py dist
 
 docs *args:
     uv run sphinx-build -b html docs docs/_build/html {{ args }}

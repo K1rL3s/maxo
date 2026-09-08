@@ -3,7 +3,6 @@ name: Publish
 on:
   release:
     types: [ published ]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -29,7 +28,6 @@ jobs:
           path: dist/
 
       - name: Verify version matches tag
-        if: github.event_name == 'release'
         run: |
           tag="${GITHUB_REF_NAME#v}"
           sdist="$(basename dist/maxo-*.tar.gz)"
@@ -43,7 +41,6 @@ jobs:
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # v1.14.2
 
       - name: Attach distribution to the GitHub Release
-        if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

@@ -62,7 +62,7 @@ just test
 just test-all
 just all
 just build         # uv build
-just check-dist    # сборка + twine check --strict
+just check-dist    # сборка + twine check --strict + check_dist.py
 just butcher       # генерация типов/enum'ов/методов по max-swagger.json
 just butcher-test  # тесты самого генератора
 ```
@@ -940,15 +940,23 @@ uv run sphinx-build -b html docs docs/_build/html
   `just test --cov-report=xml`. Матрицу версий гоняет сам GitHub Actions,
   поэтому `just test-all` (nox) в CI не используется.
 - `.github/workflows/build.yml` собирает `sdist` и `wheel`, проверяет метаданные
-  через `twine check --strict`, содержимое колеса (`py.typed`,
-  `russiantrustedca.pem`, `dist-info/licenses/*`, отсутствие локального мусора)
-  и импортируемость пакета из одного колеса. Запускается на PR и push, а также
-  вызывается из `publish.yml` через `workflow_call`, чтобы публиковался ровно
-  тот артефакт, который проверен.
+  через `twine check --strict` и содержимое дистрибутива через `check_dist.py`.
+  Запускается на PR и push, а также вызывается из `publish.yml` через
+  `workflow_call`, чтобы публиковался ровно тот артефакт, который проверен.
+- `check_dist.py` в корне - единственный источник правды по содержимому
+  дистрибутива: `py.typed`, `russiantrustedca.pem`, `dist-info/licenses/*`,
+  отсутствие локального мусора и импортируемость пакета из одного колеса.
+  Его зовут и CI, и `just check-dist`, поэтому локальная проверка не расходится
+  с CI. Скрипт на голой стандартной библиотеке и запускается через
+  `uv run --no-project`, окружение проекта ему не нужно.
+  `twine check --strict` эти отказы не ловит: на дистрибутиве без лицензий он
+  зеленый, так что убирать `check_dist.py` из проверок нельзя.
 - `.github/workflows/publish.yml` публикует на PyPI по `release: published`
   через OIDC Trusted Publishing (environment `pypi`, `id-token: write`),
   сверяет версию в имени артефакта с тегом и прикладывает дистрибутив к
   GitHub Release. Долгоживущего токена PyPI в секретах нет и быть не должно.
+  Ручного триггера у него нет намеренно: `workflow_dispatch` шел бы мимо сверки
+  версии с тегом, то есть мимо единственной защиты от выкладки не той версии.
 - `.github/workflows/relator.yml` отправляет уведомления о новых issues и PR в
   Telegram через закрепленный action `reagento/relator`.
 - `just lint` запускает `black`, `codespell`, `slotscheck` и `bandit` наравне с
