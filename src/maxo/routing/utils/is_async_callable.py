@@ -4,14 +4,9 @@ from typing import Any
 
 
 def is_async_callable(obj: Callable[..., Any]) -> bool:
-    """
-    Проверяет, вернёт ли вызов объекта корутину.
-
-    В отличие от :func:`inspect.iscoroutinefunction` понимает экземпляры
-    классов с ``async def __call__``: сам объект корутинной функцией не
-    является, ей является его ``__call__``.
-    """
     unwrapped = inspect.unwrap(obj)
-    return inspect.iscoroutinefunction(unwrapped) or inspect.iscoroutinefunction(
-        inspect.unwrap(type(unwrapped).__call__),
+    call = type(unwrapped).__call__
+    return any(
+        inspect.iscoroutinefunction(candidate)
+        for candidate in (obj, unwrapped, call, inspect.unwrap(call))
     )

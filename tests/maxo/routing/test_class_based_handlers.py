@@ -98,3 +98,33 @@ async def test_decorated_call_class_based_handler_is_executed() -> None:
     handler = UpdateHandler[MessageCreated, str](DecoratedCallableHandler())
 
     assert await handler(Ctx({"update": make_update()})) == "done"
+
+
+def async_decorator(fn: Any) -> Any:
+    @functools.wraps(fn)
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return fn(*args, **kwargs)
+
+    return wrapper
+
+
+def sync_handler(update: Any, **kwargs: Any) -> str:
+    return "done"
+
+
+class AsyncDecoratedCallableHandler:
+    @async_decorator
+    def __call__(self, update: Any, **kwargs: Any) -> str:
+        return "done"
+
+
+async def test_async_decorated_handler_is_awaited() -> None:
+    handler = UpdateHandler[MessageCreated, str](async_decorator(sync_handler))
+
+    assert await handler(Ctx({"update": make_update()})) == "done"
+
+
+async def test_async_decorated_call_handler_is_awaited() -> None:
+    handler = UpdateHandler[MessageCreated, str](AsyncDecoratedCallableHandler())
+
+    assert await handler(Ctx({"update": make_update()})) == "done"
