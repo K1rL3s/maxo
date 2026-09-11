@@ -7,6 +7,7 @@ from typing import Any, cast
 
 from maxo.dialogs.integrations.magic_filter import DialogMagic
 from maxo.routing.interfaces import Filter
+from maxo.routing.utils.is_async_callable import is_async_callable
 
 CallbackType = Callable[..., Any]
 CallbackVariant = CallbackType | DialogMagic
@@ -26,9 +27,7 @@ class CallableObject:
 
     def __post_init__(self) -> None:
         callback = inspect.unwrap(self._callable())
-        self.awaitable = inspect.isawaitable(callback) or inspect.iscoroutinefunction(
-            callback,
-        )
+        self.awaitable = is_async_callable(callback)
         spec = inspect.getfullargspec(callback)
         self.params = {*spec.args, *spec.kwonlyargs}
         self.varkw = spec.varkw is not None

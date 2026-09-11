@@ -178,9 +178,7 @@ def test_query_routing(
     # Check that all expected query params are present
     assert dict(actual.query) == dict(
         expected.query,
-    ), (
-        f"Query parameters mismatch. Expected: {dict(expected.query)}, Got: {dict(actual.query)}"
-    )
+    ), f"Query mismatch: expected {dict(expected.query)}, got {dict(actual.query)}"
 
     # Check token extraction
     req = DummyBoundRequest(DummyRequest(query_params=query_params))

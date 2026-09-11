@@ -34,16 +34,14 @@ async def test_render_jinja(mock_manager: DialogManager) -> None:
         manager=mock_manager,
     )
 
-    assert (
-        rendered_text
-        == """
+    expected = """
 <b>Animals list</b>
 * <a href="https://yandex.ru/search/?text=cat">Cat</a>
 * <a href="https://yandex.ru/search/?text=dog">Dog</a>
 * <a href="https://yandex.ru/search/?text=my brother&#39;s tortoise">\
 My brother&#39;s tortoise</a>
 """
-    )
+    assert rendered_text == expected
 
 
 async def test_render_jinja_from_bot_middleware_data(

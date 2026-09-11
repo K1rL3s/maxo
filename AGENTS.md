@@ -56,11 +56,13 @@ uv run ruff check --no-fix src/maxo/path.py tests/path/test_file.py
 Все рецепты сами вызывают `uv run`, поэтому активировать venv не нужно:
 
 ```bash
-just lint       # ruff + codespell + slotscheck + bandit
+just lint       # ruff + black + codespell + slotscheck + bandit
 just mypy
 just test
 just test-all
 just all
+just build         # uv build
+just check-dist    # сборка + twine check --strict + check_dist.py
 just butcher       # генерация типов/enum'ов/методов по max-swagger.json
 just butcher-test  # тесты самого генератора
 ```
@@ -69,10 +71,10 @@ just butcher-test  # тесты самого генератора
 
 - `pyproject.toml` задает `ruff` c `fix = true`, поэтому для проверки без
   изменений используй `--no-fix`.
-- Рецепт `just ruff` запускает `ruff check --fix .` и может менять файлы.
-  Поэтому `lint.yml` зовет линтеры напрямую через `uv run`, а не через just:
-  иначе CI чинил бы найденное и зеленел. Для проверки без правок локально -
-  `uv run ruff check --no-fix .`.
+- Рецепты `just ruff` и `just black` меняют файлы (`ruff check --fix .`,
+  `black .`). Поэтому `lint.yml` зовет линтеры напрямую через `uv run`, а не
+  через just: иначе CI чинил бы найденное и зеленел. Для проверки без правок
+  локально - `uv run ruff check --no-fix .` и `uv run black --check .`.
 - `just test` принимает дополнительные аргументы pytest, например
   `just test --cov-report=xml` (так делает CI) или `just test -k dialogs`.
 - `pytest` в проекте работает с `asyncio_mode = auto`.
@@ -80,6 +82,13 @@ just butcher-test  # тесты самого генератора
   с разрешением зависимостей `lowest-direct` и `highest`.
 - `uv.lock` игнорируется в этом репозитории. Не добавляй его в коммит без
   отдельного решения мейнтейнера.
+- Версия `uv` закреплена в четырех местах и должна меняться во всех сразу:
+  `[tool.uv] required-version`, `build-system.requires` (`uv_build`), вход
+  `version` у `astral-sh/setup-uv` в каждом workflow и `pip install uv==...`
+  в `.readthedocs.yml`. `required-version` - единственный источник правды: любой
+  другой `uv` откажется работать, а расхождение с пином валит сборку на первой
+  же команде `uv`. Read the Docs ставит `uv` обычным `pip`, поэтому пин там
+  нужен явный: без него приедет свежий `uv` и билд документации упадет.
 
 ## Архитектура проекта
 
@@ -931,19 +940,59 @@ uv run sphinx-build -b html docs docs/_build/html
 
 - `.github/workflows/lint.yml` запускает Python `3.14`, установку через
   `uv sync --all-groups`, затем отдельными шагами через `uv run`:
-  `ruff check --no-fix .`, `mypy --config-file pyproject.toml`,
+  `ruff check --no-fix .`, `black --check .`, `mypy --config-file pyproject.toml`,
   `codespell src examples`, `slotscheck -m maxo`, `bandit -c pyproject.toml src -r`.
 - `.github/workflows/test.yml` запускает Python `3.12`, `3.13`, `3.14` с
   dependency resolution `lowest-direct` и `highest`, затем
   `just test --cov-report=xml`. Матрицу версий гоняет сам GitHub Actions,
   поэтому `just test-all` (nox) в CI не используется.
+- Python в `lint.yml` и `test.yml` ставит сам `setup-uv` через вход
+  `python-version`. Отдельного `actions/setup-python` в workflow нет, и версия
+  Python из этого входа попадает в ключ кэша.
+- Кэш `uv` в workflow не настраивается: `enable-cache` по умолчанию `auto`,
+  то есть включен на GitHub-хостед раннерах, а дефолтный `cache-dependency-glob`
+  уже содержит `**/pyproject.toml` - единственный файл репозитория, который
+  в него попадает. Не добавляй эти входы обратно, они ничего не меняют.
+- В `test.yml` нужен `cache-suffix: ${{ matrix.dependency-resolution }}`.
+  Ключ `setup-uv` знает про `python-version`, но не про стратегию резолвинга,
+  и без суффикса шесть job матрицы дерутся за одну запись кэша.
+- `.github/workflows/build.yml` собирает `sdist` и `wheel`, проверяет метаданные
+  через `twine check --strict` и содержимое дистрибутива через `check_dist.py`.
+  Запускается на PR и push, а также вызывается из `publish.yml` через
+  `workflow_call`, чтобы публиковался ровно тот артефакт, который проверен.
+- `twine` закреплен в группе `dev` и зовется через `uv run`, а не `uvx`.
+  `uvx` тянул бы свежий `twine` на каждый прогон - в job, который решает, что
+  уедет на PyPI, версия проверяльщика не должна меняться сама. Из-за этого
+  `build.yml` синхронизирует окружение проекта, хотя больше ему это не нужно.
+- `check_dist.py` в корне - единственный источник правды по содержимому
+  дистрибутива: `py.typed`, `russiantrustedca.pem`, `dist-info/licenses/*`,
+  отсутствие локального мусора и импортируемость пакета из одного колеса.
+  Его зовут и CI, и `just check-dist`, поэтому локальная проверка не расходится
+  с CI. Скрипт на голой стандартной библиотеке и запускается через
+  `uv run --no-project`, окружение проекта ему не нужно.
+  `twine check --strict` эти отказы не ловит: на дистрибутиве без лицензий он
+  зеленый, так что убирать `check_dist.py` из проверок нельзя.
+- `.github/workflows/publish.yml` публикует на PyPI по `release: published`
+  через OIDC Trusted Publishing (environment `pypi`, `id-token: write`),
+  сверяет версию в имени артефакта с тегом и прикладывает дистрибутив к
+  GitHub Release. Долгоживущего токена PyPI в секретах нет и быть не должно.
+  Ручного триггера у него нет намеренно: `workflow_dispatch` шел бы мимо сверки
+  версии с тегом, то есть мимо единственной защиты от выкладки не той версии.
 - `.github/workflows/relator.yml` отправляет уведомления о новых issues и PR в
-  Telegram через закрепленный action `reagento/relator`.
-- `just lint` запускает `codespell`, `slotscheck` и `bandit` наравне с `ruff`.
-  Учитывай их при изменении пользовательского текста, `__slots__`,
+  Telegram через action `reagento/relator`.
+- Все сторонние actions закреплены по полному SHA коммита с комментарием версии
+  рядом. Подвижный тег `vN` можно переназначить, и тогда в CI приедет чужой код;
+  `zizmor` ловит это правилом `unpinned-uses`. Обновляет пины dependabot, он же
+  правит комментарий с версией, поэтому вручную их трогать не нужно. Новый шаг
+  добавляй сразу с SHA, а `actions/checkout` - с `persist-credentials: false`,
+  иначе токен останется в рабочем дереве после чекаута.
+- `just lint` запускает `black`, `codespell`, `slotscheck` и `bandit` наравне с
+  `ruff`. Учитывай их при изменении пользовательского текста, `__slots__`,
   dataclass-моделей и security-sensitive кода.
-- `black` есть в lint-группе, но форматирование проекта задает `ruff format`.
-  Не переформатируй весь репозиторий без отдельной задачи.
+- Форматирование задают `ruff format` и `black` одновременно, их области
+  совпадают. Дерево - неподвижная точка обоих; если они разошлись на новом
+  коде, перепиши код так, чтобы оба оставили его как есть, а не подстраивай
+  конфиги под один. Не переформатируй весь репозиторий без отдельной задачи.
 
 ## Что важно помнить о текущем проекте
 

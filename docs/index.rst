@@ -79,8 +79,7 @@ maxo - асинхронный Python-фреймворк для ботов MAX (m
       :link: pages/getting-started
       :link-type: doc
 
-      Мощная система диалогов, портированная из ``aiogram_dialog``.
-      Создавайте сложные сценарии взаимодействия с пользователями легко и просто.
+      Система диалогов, портированная из ``aiogram_dialog``: окна, виджеты и стек вложенных диалогов, как вызов функции.
 
    .. grid-item-card:: :octicon:`plug` Интеграции
       :link: pages/getting-started
@@ -93,13 +92,13 @@ maxo - асинхронный Python-фреймворк для ботов MAX (m
       :link: pages/getting-started
       :link-type: doc
 
-      Разработан для Python 3.12+. Использует все преимущества последних версий языка.
+      Поддерживает Python 3.12, 3.13 и 3.14, без совместимости со старыми версиями.
 
    .. grid-item-card:: :octicon:`book` Документация
       :link: pages/getting-started
       :link-type: doc
 
-      Подробная документация и примеры для быстрого старта.
+      Разделы по роутингу, FSM, диалогам и Bot API - с рабочими примерами, на русском.
 
 
 Если у вас есть вопросы, вы можете задать их в Телеграме `@maxo_py <https://t.me/maxo_py>`_ или `MAX <https://max.ru/join/rwJmWA4B5AipBiJdWRkORGjxFmqnJPUhJbQxxmscrnc>`__

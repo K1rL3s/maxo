@@ -1,0 +1,47 @@
+name: Publish
+
+on:
+  release:
+    types: [ published ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build distribution
+    uses: ./.github/workflows/build.yml
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write  # обязателен для Trusted Publishing
+      contents: write  # для заливки артефактов в GitHub Release
+    steps:
+      - name: Download distribution
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131  # v7.0.0
+        with:
+          name: dist
+          path: dist/
+
+      - name: Verify version matches tag
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          sdist="$(basename dist/maxo-*.tar.gz)"
+          ver="${sdist#maxo-}"
+          ver="${ver%.tar.gz}"
+          test "$tag" = "$ver" || {
+            echo "Тег $tag != версия пакета $ver"; exit 1;
+          }
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # v1.14.2
+
+      - name: Attach distribution to the GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY"
