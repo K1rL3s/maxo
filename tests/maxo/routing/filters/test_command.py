@@ -14,12 +14,8 @@ class BotInfoStub:
     username = "maxobot"
 
 
-class BotStateStub:
-    info = BotInfoStub()
-
-
 class BotStub:
-    state = BotStateStub()
+    info = BotInfoStub()
 
 
 def make_bot() -> Bot:

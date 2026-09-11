@@ -2,17 +2,32 @@ from json import JSONDecodeError
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from adaptix.load_error import LoadError
 
 from maxo import Bot, Dispatcher
 from maxo.routing.signals import MaxoUpdate
 from maxo.transport.webhook.adapters.base_adapter import BoundRequest, WebAdapter
+from maxo.transport.webhook.engines import base as engine_base
 from maxo.transport.webhook.engines.base import WebhookEngine
 from maxo.transport.webhook.routing import StaticRouting
 from maxo.transport.webhook.security import Security
 from maxo.types import Updates
 
 from .fixtures import DummyAdapter, DummyBoundRequest, DummyRequest
+
+
+@pytest.fixture(autouse=True)
+def retort(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+    """
+    Движок грузит апдейт через модульный `get_retort()`, а не `bot.retort`.
+
+    Костыль после отказа от `create_retort_with_bot`: подменяем ретортом-моком.
+    """
+    retort_mock = MagicMock()
+    retort_mock.load.return_value = MagicMock(spec=Updates)
+    monkeypatch.setattr(engine_base, "get_retort", lambda: retort_mock)
+    return retort_mock
 
 
 class JsonBoundRequest(DummyBoundRequest):
@@ -67,13 +82,8 @@ class DummyEngine(WebhookEngine):
         return None
 
 
-def make_bot(update: Updates | None = None, load_error: bool = False) -> MagicMock:
+def make_bot() -> MagicMock:
     bot = MagicMock(spec=Bot)
-    bot.retort = MagicMock()
-    if load_error:
-        bot.retort.load.side_effect = LoadError
-    else:
-        bot.retort.load.return_value = update or MagicMock(spec=Updates)
     bot.silent_call_method = AsyncMock()
     return bot
 
@@ -110,22 +120,24 @@ async def test_handle_request_returns_400_for_invalid_json() -> None:
     )
 
 
-async def test_handle_request_returns_400_for_load_error() -> None:
-    bot = make_bot(load_error=True)
+async def test_handle_request_returns_400_for_load_error(retort: MagicMock) -> None:
+    retort.load.side_effect = LoadError
+    bot = make_bot()
     engine = DummyEngine(Dispatcher(), DummyAdapter(), bot=bot)
 
     assert await engine.handle_request(JsonBoundRequest({"bad": "payload"})) == (
         400,
         {"detail": "Bad request"},
     )
-    bot.retort.load.assert_called_once_with({"bad": "payload"}, Updates)
+    retort.load.assert_called_once_with({"bad": "payload"}, Updates)
 
 
-async def test_handle_request_dispatches_update() -> None:
+async def test_handle_request_dispatches_update(retort: MagicMock) -> None:
     dispatcher = Dispatcher()
     dispatcher.feed_max_update = AsyncMock(return_value=None)  # type: ignore[method-assign]
     update = MagicMock(spec=Updates)
-    bot = make_bot(update)
+    retort.load.return_value = update
+    bot = make_bot()
     engine = DummyEngine(dispatcher, DummyAdapter(), bot=bot)
 
     assert await engine.handle_request(JsonBoundRequest({"update": "payload"})) == (

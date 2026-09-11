@@ -1,7 +1,5 @@
 from unittest.mock import MagicMock
 
-from multidict import CIMultiDict, CIMultiDictProxy
-
 from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.kbd import Button, Row
 from maxo.dialogs.widgets.kbd.base import Or as KbdOr
@@ -9,7 +7,6 @@ from maxo.dialogs.widgets.media import MultiMedia, StaticMedia
 from maxo.dialogs.widgets.media.base import Media, Or as MediaOr
 from maxo.dialogs.widgets.text import Const, Multi
 from maxo.dialogs.widgets.text.base import Or as TextOr
-from maxo.transport.webhook.adapters.aiohttp.mapping import AiohttpHeadersMapping
 
 
 class TestTextAdd:
@@ -251,20 +248,3 @@ class TestMediaOperators:
 
     def test_multi_find(self) -> None:
         assert MultiMedia(StaticMedia(url="a")).find("nope") is None
-
-
-class TestMappingABC:
-    def test_delegates_to_underlying_mapping(self) -> None:
-        mapping = AiohttpHeadersMapping(
-            CIMultiDictProxy(CIMultiDict({"A": "1", "B": "2"})),
-        )
-
-        assert mapping["A"] == "1"
-        assert mapping.get("missing", "d") == "d"
-        assert "B" in mapping
-        assert len(mapping) == 2
-        assert set(mapping) == {"A", "B"}
-        assert set(mapping.keys()) == {"A", "B"}
-        assert set(mapping.values()) == {"1", "2"}
-        assert dict(mapping.items()) == {"A": "1", "B": "2"}
-        assert mapping.getlist("A") == ["1"]

@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 from abc import abstractmethod
+from typing import TYPE_CHECKING
 
 from maxo.omit import Omittable, Omitted, is_not_omitted
-from maxo.types.callback import Callback
 from maxo.types.facades.subscription import SubscriptionMethodsFacade
-from maxo.types.new_message_body import NewMessageBody
-from maxo.types.simple_query_result import SimpleQueryResult
+
+if TYPE_CHECKING:
+    from maxo.types.callback import Callback
+    from maxo.types.new_message_body import NewMessageBody
+    from maxo.types.simple_query_result import SimpleQueryResult
 
 
 class CallbackMethodsFacade(SubscriptionMethodsFacade):

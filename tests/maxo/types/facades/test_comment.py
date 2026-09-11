@@ -22,7 +22,8 @@ from maxo.types.facades.message import MessageMethodsFacade
 from tests.constants import NOW
 
 
-def make_comment() -> CommentMessage:
+@pytest.fixture
+def comment() -> CommentMessage:
     return CommentMessage(
         body=CommentMessageBody(mid="comment", seq=1, text="old"),
         recipient=Recipient(
@@ -34,22 +35,22 @@ def make_comment() -> CommentMessage:
     )
 
 
-def make_bot(comment: CommentMessage) -> MagicMock:
+@pytest.fixture
+def bot(comment: CommentMessage) -> MagicMock:
     bot = MagicMock()
     bot.send_comment = AsyncMock(return_value=SendCommentResult(message=comment))
     bot.edit_comment = AsyncMock(return_value=SimpleQueryResult(success=True))
     bot.delete_comment = AsyncMock(return_value=SimpleQueryResult(success=True))
     bot.get_comment_by_id = AsyncMock(return_value=comment)
+    comment.as_(bot)
     return bot
 
 
 async def test_unsupported_parameters_are_warned_and_ignored(
     caplog: pytest.LogCaptureFixture,
+    comment: CommentMessage,
+    bot: MagicMock,
 ) -> None:
-    comment = make_comment()
-    bot = make_bot(comment)
-    comment.as_(bot)
-
     with caplog.at_level(logging.WARNING, logger="maxo.utils"):
         result = await comment.send_message(
             text="new",
@@ -69,9 +70,10 @@ async def test_unsupported_parameters_are_warned_and_ignored(
     assert len(caplog.records) == 1
 
 
-async def test_reply_link_is_passed_to_comment_api() -> None:
-    comment = make_comment()
-    bot = make_bot(comment)
+async def test_reply_link_is_passed_to_comment_api(
+    comment: CommentMessage,
+    bot: MagicMock,
+) -> None:
     comment.as_(bot)
     link = NewMessageLink(type=MessageLinkType.REPLY, mid="source")
 
@@ -82,11 +84,9 @@ async def test_reply_link_is_passed_to_comment_api() -> None:
 
 async def test_edit_ignores_unsupported_parameters(
     caplog: pytest.LogCaptureFixture,
+    comment: CommentMessage,
+    bot: MagicMock,
 ) -> None:
-    comment = make_comment()
-    bot = make_bot(comment)
-    comment.as_(bot)
-
     with caplog.at_level(logging.WARNING, logger="maxo.utils"):
         await comment.edit_message(
             link=NewMessageLink(type=MessageLinkType.FORWARD, mid="source"),
@@ -98,9 +98,10 @@ async def test_edit_ignores_unsupported_parameters(
     assert len(caplog.records) == 1
 
 
-async def test_message_facade_redispatches_to_comment() -> None:
-    comment = make_comment()
-    bot = make_bot(comment)
+async def test_message_facade_redispatches_to_comment(
+    comment: CommentMessage,
+    bot: MagicMock,
+) -> None:
     update = MessageCreated(message=comment, timestamp=NOW).as_(bot)
 
     await update.send_message("new")
@@ -124,9 +125,9 @@ async def test_message_facade_redispatches_to_comment() -> None:
 @pytest.mark.parametrize("update_type", [CommentCreated, CommentEdited])
 async def test_comment_update_answer_uses_comment_api(
     update_type: type[CommentCreated | CommentEdited],
+    comment: CommentMessage,
+    bot: MagicMock,
 ) -> None:
-    comment = make_comment()
-    bot = make_bot(comment)
     comment.as_(bot)
     update = update_type(message=comment, timestamp=NOW).as_(bot)
 

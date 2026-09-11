@@ -1,5 +1,5 @@
 from maxo.bot.methods import DeleteAdmins
-from maxo.serialization import create_retort
+from maxo.serialization import get_retort
 from maxo.types import SimpleQueryResult
 
 
@@ -10,7 +10,7 @@ def test_wire_contract() -> None:
 
 
 def test_dump() -> None:
-    retort = create_retort(warming_up=False)
+    retort = get_retort()
 
     assert retort.dump(DeleteAdmins(chat_id=-42, user_id=7)) == {
         "path": {"chat_id": -42, "user_id": 7},

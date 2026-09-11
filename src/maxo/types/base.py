@@ -34,19 +34,19 @@ class BaseMaxoType(metaclass=_MaxoTypeMetaClass):
     pass
 
 
-# TODO: `MaxoType` наследует `BaseMethodsFacade` только ради слота `_bot` -
-# `bot`/`as_` не нужны большинству DTO (`User`, `Chat`, ...). Убрать это
-# наследование можно, сузив `_load_bot` в `serialization` до фасад-типов.
+# КОСТЫЛЬ: единственный держатель бота - `BaseMethodsFacade`. `MaxoType` тащит
+# его слот `_bot` + `bot`/`as_` во все DTO (большинству, вроде `User`, он не
+# нужен - это отдельная уборка). `__post_init__` для инициализации `_bot`
+# наследуется от `BaseMethodsFacade`, свой не нужен.
 #
 # Отдельная, большая проблема: `*MethodsFacade` подмешаны прямо в типы апдейтов
 # (`class BotStarted(MaxUpdate, ChatMethodsFacade)`), а те под метаклассом,
 # который конфликтует с `ABCMeta`. Поэтому фасады не могут быть ABC - отсюда
 # декоративные `@abstractmethod`, раздвоённые `if TYPE_CHECKING`-объявления полей
 # и `type: ignore[misc]` на апдейтах. Это лечится только выносом фасада из базы
-# типа (отдельный объект `update.facade` или `Protocol`), не строкой ниже.
+# типа (отдельный объект `update.facade` или `Protocol`).
 class MaxoType(BaseMaxoType, BaseMethodsFacade):
-    def __post_init__(self) -> None:
-        BaseMethodsFacade.__init__(self)
+    pass
 
 
 class BaseUpdate(MaxoType):

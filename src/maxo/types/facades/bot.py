@@ -1,8 +1,16 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from maxo.omit import Omittable, Omitted
-from maxo.types.bot_command import BotCommand
-from maxo.types.bot_info import BotInfo
 from maxo.types.facades.base import BaseMethodsFacade
-from maxo.types.photo_attachment_request_payload import PhotoAttachmentRequestPayload
+
+if TYPE_CHECKING:
+    from maxo.types.bot_command import BotCommand
+    from maxo.types.bot_info import BotInfo
+    from maxo.types.photo_attachment_request_payload import (
+        PhotoAttachmentRequestPayload,
+    )
 
 
 class BotMethodsFacade(BaseMethodsFacade):

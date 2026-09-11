@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import asyncio
-from collections.abc import Callable, Sequence
-from typing import TypeAlias
+from collections.abc import Callable
+from typing import TYPE_CHECKING, TypeAlias
 
 from unihttp.http import UploadFile
 
@@ -8,9 +10,8 @@ from maxo import loggers
 from maxo.enums import UploadType
 from maxo.errors.api import RetvalReturnedServerException
 from maxo.omit import is_defined
-from maxo.types.attachments import AttachmentsRequests, MediaAttachmentsRequests
+from maxo.types.attachments import MediaAttachmentsRequests
 from maxo.types.audio_attachment_request import AudioAttachmentRequest
-from maxo.types.buttons import InlineButtons
 from maxo.types.facades.subscription import SubscriptionMethodsFacade
 from maxo.types.file_attachment_request import FileAttachmentRequest
 from maxo.types.inline_keyboard_attachment_request import (
@@ -20,10 +21,16 @@ from maxo.types.inline_keyboard_attachment_request_payload import (
     InlineKeyboardAttachmentRequestPayload,
 )
 from maxo.types.photo_attachment_request import PhotoAttachmentRequest
-from maxo.types.upload_endpoint import UploadEndpoint
-from maxo.types.upload_media_result import UploadMediaResult
 from maxo.types.video_attachment_request import VideoAttachmentRequest
 from maxo.utils.upload_media import InputFile
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from maxo.types.attachments import AttachmentsRequests
+    from maxo.types.buttons import InlineButtons
+    from maxo.types.upload_endpoint import UploadEndpoint
+    from maxo.types.upload_media_result import UploadMediaResult
 
 MediaInput: TypeAlias = InputFile | MediaAttachmentsRequests
 MediaAttachmentFactory: TypeAlias = Callable[[str], MediaAttachmentsRequests]
