@@ -116,3 +116,15 @@ async def test_chat_members_iterator_stops_on_none_marker(bot: Bot) -> None:
 
     assert len(members) == 1
     assert bot.get_members.await_count == 1
+
+
+async def test_chat_members_iterator_stops_on_omitted_marker(bot: Bot) -> None:
+    bot.get_members = AsyncMock(
+        return_value=ChatMembersList(members=[create_chat_member(1)]),
+    )
+
+    iterator = ChatMembersIterator(bot=bot, chat_id=1)
+    members = [member async for member in iterator]
+
+    assert [member.user_id for member in members] == [1]
+    assert bot.get_members.await_count == 1

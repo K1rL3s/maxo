@@ -3,7 +3,7 @@ from collections.abc import AsyncIterator, Sequence
 from typing import Self, cast
 
 from maxo.bot.bot import Bot
-from maxo.omit import Omittable, Omitted
+from maxo.omit import Omittable, Omitted, is_defined
 from maxo.types.chat_member import ChatMember
 
 
@@ -49,7 +49,7 @@ class ChatMembersIterator(AsyncIterator[ChatMember]):
             marker=self._marker,
             count=self._count,
         )
-        self._marker = result.marker
+        self._marker = result.marker if is_defined(result.marker) else None
 
         if not result.members:
             raise StopAsyncIteration
