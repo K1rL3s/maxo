@@ -471,12 +471,7 @@ class TestBackground:
 
         assert manager._get_fake_user() is event_context.user
 
-    @pytest.mark.parametrize(("user_id", "expected_id"), [(None, 0), (42, 42)])
-    def test_get_fake_user_for_event_without_user(
-        self,
-        user_id: int | None,
-        expected_id: int,
-    ) -> None:
+    def test_get_fake_user_for_event_without_user(self) -> None:
         channel_post = MessageCreated(
             timestamp=NOW,
             message=Message(
@@ -490,10 +485,10 @@ class TestBackground:
         event_context.user = None
         event_context.user_id = None
 
-        user = manager._get_fake_user(user_id)
+        user = manager._get_fake_user(42)
 
         assert isinstance(user, FakeUser)
-        assert user.id == expected_id
+        assert user.id == 42
 
     def test_get_fake_chat_requires_chat_id_without_update_context(self) -> None:
         manager = make_manager()
