@@ -143,7 +143,7 @@ class BotClient:
                     message=self._new_message(text, reply_to),
                     timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
                     user_locale="ru",
-                ),
+                ).as_(self.bot),
             ),
             self.bot,
         )
@@ -172,7 +172,7 @@ class BotClient:
                     message=msg,
                     timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
                     user_locale="ru",
-                ),
+                ).as_(self.bot),
             ),
             self.bot,
         )
@@ -196,7 +196,7 @@ class BotClient:
                 update=MessageEdited(
                     message=msg,
                     timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
-                ),
+                ).as_(self.bot),
             ),
             self.bot,
         )
@@ -210,7 +210,7 @@ class BotClient:
                     chat_id=self.chat.chat_id,
                     user_id=self.bot.state.info.user_id,
                     timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
-                ),
+                ).as_(self.bot),
             ),
             self.bot,
         )
@@ -247,7 +247,7 @@ class BotClient:
                     callback=callback,
                     message=message,
                     user_locale="ru",
-                ),
+                ).as_(self.bot),
             ),
             self.bot,
         )
@@ -261,7 +261,7 @@ class BotClient:
                     is_channel=self.chat.type == ChatType.CHANNEL,
                     user=self.user,
                     timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
-                ),
+                ).as_(self.bot),
             ),
             self.bot,
         )
@@ -274,7 +274,7 @@ class BotClient:
                     is_channel=self.chat.type == ChatType.CHANNEL,
                     user=self.user,
                     timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
-                ),
+                ).as_(self.bot),
             ),
             self.bot,
         )
