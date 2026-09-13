@@ -78,13 +78,16 @@ class BgManager(BaseDialogManager):
         new_event_context = EventContext(
             bot=self._event_context.bot,
             user=user,
-            chat_id=chat_id,
-            user_id=user_id,
+            chat_id=self._event_context.chat_id if chat_id is None else chat_id,
+            user_id=self._event_context.user_id if user_id is None else user_id,
             chat_type=self._event_context.chat_type,
             chat=None,
         )
         if stack_id is None:
-            if self._event_context == new_event_context:
+            if (
+                self._event_context.user_id == new_event_context.user_id
+                and self._event_context.chat_id == new_event_context.chat_id
+            ):
                 stack_id = self.stack_id
                 intent_id = self.intent_id
             else:
