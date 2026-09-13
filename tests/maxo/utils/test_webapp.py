@@ -6,6 +6,7 @@ from urllib.parse import urlencode
 
 import pytest
 
+from maxo.errors import InvalidWebAppInitDataError
 from maxo.utils.webapp import (
     WebAppChat,
     WebAppInitData,
@@ -85,5 +86,41 @@ def test_safe_parse_webapp_init_data_valid(valid_init_data: str) -> None:
 
 
 def test_safe_parse_webapp_init_data_invalid() -> None:
-    with pytest.raises(ValueError, match="Invalid init data signature"):
+    with pytest.raises(
+        InvalidWebAppInitDataError,
+        match="Invalid init data signature",
+    ) as exc_info:
         safe_parse_webapp_init_data(TOKEN, "hash=invalid&...some_other_data")
+    assert isinstance(exc_info.value, ValueError)
+
+
+def test_parse_webapp_init_data_ignores_unknown_fields() -> None:
+    init_data = urlencode(
+        {
+            "hash": "x",
+            "some_new_field": "1",
+            "user": json.dumps({"id": 1, "first_name": "Test", "is_premium": True}),
+            "chat": json.dumps({"id": 2, "type": "DIALOG", "title": "Chat"}),
+        },
+    )
+
+    parsed_data = parse_webapp_init_data(init_data)
+
+    assert parsed_data.hash == "x"
+    assert parsed_data.user.id == 1
+    assert parsed_data.chat.id == 2
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"hash": "x"},
+        {"hash": "x", "chat": TEST_DATA["chat"]},
+        {"chat": TEST_DATA["chat"], "user": TEST_DATA["user"]},
+        {"hash": "x", "chat": '{"id": 1}', "user": TEST_DATA["user"]},
+        {"hash": "x", "chat": "{broken}", "user": TEST_DATA["user"]},
+    ],
+)
+def test_parse_webapp_init_data_malformed(data: dict[str, str]) -> None:
+    with pytest.raises(InvalidWebAppInitDataError):
+        parse_webapp_init_data(urlencode(data))

@@ -31,10 +31,12 @@ import hashlib
 import hmac
 import json
 from collections.abc import Callable
+from dataclasses import fields
 from operator import itemgetter
 from typing import Any
 from urllib.parse import parse_qsl
 
+from maxo.errors.webapp import InvalidWebAppInitDataError
 from maxo.types import MaxoType
 
 
@@ -99,13 +101,17 @@ def parse_webapp_init_data(
         if (value.startswith("[") and value.endswith("]")) or (
             value.startswith("{") and value.endswith("}")
         ):
-            value = loads(value)
+            try:
+                value = loads(value)
+            except ValueError as e:
+                raise InvalidWebAppInitDataError(
+                    f"Invalid JSON in init data field {key!r}",
+                ) from e
         result[key] = value
 
-    chat: dict[str, Any] = result.pop("chat", {})
-    user: dict[str, Any] = result.pop("user", {})
-
-    return WebAppInitData(**result, chat=WebAppChat(**chat), user=WebAppUser(**user))
+    result["chat"] = _load_model(WebAppChat, result.get("chat"), "chat")
+    result["user"] = _load_model(WebAppUser, result.get("user"), "user")
+    return _load_model(WebAppInitData, result, "init data")
 
 
 def safe_parse_webapp_init_data(
@@ -116,4 +122,18 @@ def safe_parse_webapp_init_data(
 ) -> WebAppInitData:
     if check_webapp_signature(token, init_data):
         return parse_webapp_init_data(init_data, loads=loads)
-    raise ValueError("Invalid init data signature")
+    raise InvalidWebAppInitDataError("Invalid init data signature")
+
+
+def _load_model[ModelT: MaxoType](
+    model: type[ModelT],
+    data: object,
+    name: str,
+) -> ModelT:
+    if not isinstance(data, dict):
+        raise InvalidWebAppInitDataError(f"Init data {name!r} is not an object")
+    names = {field.name for field in fields(model)}
+    try:
+        return model(**{k: v for k, v in data.items() if k in names})
+    except TypeError as e:
+        raise InvalidWebAppInitDataError(f"Invalid init data {name!r}: {e}") from e
