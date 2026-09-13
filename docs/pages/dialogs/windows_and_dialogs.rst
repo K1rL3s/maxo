@@ -23,7 +23,7 @@ Window
     window = Window(
         Const("Текст окна"),
         state=MySG.first,
-        # Опционально: disable_web_page_preview, parse_mode
+        # Опционально: parse_mode, protect_content
     )
 
 Двойной рендер медиа на iOS
