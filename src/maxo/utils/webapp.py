@@ -97,21 +97,23 @@ def parse_webapp_init_data(
     loads: Callable[..., Any] = json.loads,
 ) -> WebAppInitData:
     result: dict[str, Any] = {}
-    for key, value in parse_qsl(init_data):
-        if (value.startswith("[") and value.endswith("]")) or (
-            value.startswith("{") and value.endswith("}")
-        ):
-            try:
+    try:
+        for key, value in parse_qsl(init_data):
+            if (value.startswith("[") and value.endswith("]")) or (
+                value.startswith("{") and value.endswith("}")
+            ):
                 value = loads(value)
-            except ValueError as e:
-                raise InvalidWebAppInitDataError(
-                    f"Invalid JSON in init data field {key!r}",
-                ) from e
-        result[key] = value
+            result[key] = value
 
-    result["chat"] = _load_model(WebAppChat, result.get("chat"), "chat")
-    result["user"] = _load_model(WebAppUser, result.get("user"), "user")
-    return _load_model(WebAppInitData, result, "init data")
+        chat = WebAppChat(**_known_fields(WebAppChat, result.pop("chat")))
+        user = WebAppUser(**_known_fields(WebAppUser, result.pop("user")))
+        return WebAppInitData(
+            **_known_fields(WebAppInitData, result),
+            chat=chat,
+            user=user,
+        )
+    except (AttributeError, KeyError, TypeError, ValueError) as e:
+        raise InvalidWebAppInitDataError(f"Invalid init data: {e!r}") from e
 
 
 def safe_parse_webapp_init_data(
@@ -125,15 +127,6 @@ def safe_parse_webapp_init_data(
     raise InvalidWebAppInitDataError("Invalid init data signature")
 
 
-def _load_model[ModelT: MaxoType](
-    model: type[ModelT],
-    data: object,
-    name: str,
-) -> ModelT:
-    if not isinstance(data, dict):
-        raise InvalidWebAppInitDataError(f"Init data {name!r} is not an object")
+def _known_fields(model: type[MaxoType], data: dict[str, Any]) -> dict[str, Any]:
     names = {field.name for field in fields(model)}
-    try:
-        return model(**{k: v for k, v in data.items() if k in names})
-    except TypeError as e:
-        raise InvalidWebAppInitDataError(f"Invalid init data {name!r}: {e}") from e
+    return {key: value for key, value in data.items() if key in names}
