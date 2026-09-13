@@ -99,23 +99,16 @@ def parse_webapp_init_data(
     *,
     loads: Callable[..., Any] = json.loads,
 ) -> WebAppInitData:
-    result: dict[str, Any] = {}
+    result = dict(parse_qsl(init_data))
     try:
-        for key, value in parse_qsl(init_data):
-            if (value.startswith("[") and value.endswith("]")) or (
-                value.startswith("{") and value.endswith("}")
-            ):
-                value = loads(value)
-            result[key] = value
-
-        chat = WebAppChat(**_known_fields(WebAppChat, result.pop("chat")))
-        user = WebAppUser(**_known_fields(WebAppUser, result.pop("user")))
+        chat_data = _loads(loads, result.pop("chat"))
+        user_data = _loads(loads, result.pop("user"))
         return WebAppInitData(
             **_known_fields(WebAppInitData, result),
-            chat=chat,
-            user=user,
+            chat=WebAppChat(**_known_fields(WebAppChat, chat_data)),
+            user=WebAppUser(**_known_fields(WebAppUser, user_data)),
         )
-    except (AttributeError, KeyError, TypeError, ValueError) as e:
+    except (AttributeError, KeyError, TypeError) as e:
         raise InvalidWebAppInitDataError(f"Invalid init data: {e!r}") from e
 
 
@@ -133,3 +126,10 @@ def safe_parse_webapp_init_data(
 def _known_fields(model: type[MaxoType], data: dict[str, Any]) -> dict[str, Any]:
     names = {field.name for field in fields(model)}
     return {key: value for key, value in data.items() if key in names}
+
+
+def _loads(loads: Callable[..., Any], value: str) -> Any:
+    try:
+        return loads(value)
+    except Exception as e:
+        raise InvalidWebAppInitDataError(f"Invalid init data: {e!r}") from e

@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 from typing import Any
+from unittest.mock import Mock
 from urllib.parse import urlencode
 
 import pytest
@@ -118,14 +119,35 @@ def test_parse_webapp_init_data_ignores_unknown_fields() -> None:
 @pytest.mark.parametrize(
     "data",
     [
-        {"hash": "x"},
         {"hash": "x", "chat": TEST_DATA["chat"]},
         {"chat": TEST_DATA["chat"], "user": TEST_DATA["user"]},
         {"hash": "x", "chat": '{"id": 1}', "user": TEST_DATA["user"]},
         {"hash": "x", "chat": "{broken}", "user": TEST_DATA["user"]},
-        {"hash": "x", "chat": "private", "user": TEST_DATA["user"]},
+        {"hash": "x", "chat": "[1, 2]", "user": TEST_DATA["user"]},
+        {"hash": "x", "chat": "null", "user": TEST_DATA["user"]},
+        {"hash": "x", "chat": "[" * 10000 + "]" * 10000, "user": TEST_DATA["user"]},
     ],
 )
 def test_parse_webapp_init_data_malformed(data: dict[str, str]) -> None:
     with pytest.raises(InvalidWebAppInitDataError):
         parse_webapp_init_data(urlencode(data))
+
+
+class LoaderError(Exception):
+    pass
+
+
+def test_parse_webapp_init_data_wraps_loader_error(valid_init_data: str) -> None:
+    error = LoaderError()
+
+    with pytest.raises(InvalidWebAppInitDataError) as exc_info:
+        parse_webapp_init_data(valid_init_data, loads=Mock(side_effect=error))
+
+    assert exc_info.value.__cause__ is error
+
+
+@pytest.mark.parametrize("start_param", ["[1,2]", "{abc}"])
+def test_parse_webapp_init_data_keeps_other_fields_as_strings(start_param: str) -> None:
+    init_data = urlencode({**TEST_DATA, "hash": "x", "start_param": start_param})
+
+    assert parse_webapp_init_data(init_data).start_param == start_param
