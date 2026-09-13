@@ -21,10 +21,12 @@ from maxo.errors.network import MaxBotNetworkError, MaxBotTimeoutError
 from maxo.errors.routing import CycleRoutersError, RouterAlreadyIncludedError
 from maxo.errors.subscriptions import UnsubscribeError
 from maxo.errors.types import AttributeIsEmptyError
+from maxo.errors.webapp import InvalidWebAppInitDataError
 
 __all__ = (
     "AttributeIsEmptyError",
     "CycleRoutersError",
+    "InvalidWebAppInitDataError",
     "MaxBotApiError",
     "MaxBotBadGatewayError",
     "MaxBotBadRequestError",
