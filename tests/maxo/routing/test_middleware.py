@@ -308,3 +308,56 @@ async def test_fsm_enabled_by_default() -> None:
         isinstance(m, FSMContextMiddleware)
         for m in dp.update.middleware.outer.middlewares
     )
+
+
+async def test_parent_inner_middleware_wraps_child_inner_middleware(ctx: Ctx) -> None:
+    dp = Dispatcher()
+    child = Router("child")
+    dp.include(child)
+
+    dp.message_created.middleware.inner(middleware_factory("dp_inner"))
+    child.message_created.middleware.inner(middleware_factory("child_inner"))
+    child.message_created.handler(handler)
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert ctx["execution_order"] == [
+        "dp_inner_pre",
+        "child_inner_pre",
+        "handler",
+        "child_inner_post",
+        "dp_inner_post",
+    ]
+
+
+async def test_inner_middlewares_nest_from_root_to_grandchild(ctx: Ctx) -> None:
+    dp = Dispatcher()
+    child = Router("child")
+    grandchild = Router("grandchild")
+    dp.include(child)
+    child.include(grandchild)
+
+    dp.message_created.middleware.inner(middleware_factory("dp_inner"))
+    child.message_created.middleware.inner(middleware_factory("child_inner"))
+    grandchild.message_created.middleware.inner(
+        middleware_factory("grandchild_inner"),
+    )
+    grandchild.message_created.handler(handler)
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert ctx["execution_order"] == [
+        "dp_inner_pre",
+        "child_inner_pre",
+        "grandchild_inner_pre",
+        "handler",
+        "grandchild_inner_post",
+        "child_inner_post",
+        "dp_inner_post",
+    ]
