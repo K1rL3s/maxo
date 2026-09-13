@@ -67,7 +67,7 @@ class WebAppInitData(MaxoType):
 def check_webapp_signature(token: str, init_data: str) -> bool:
     try:
         parsed_data = dict(parse_qsl(init_data, strict_parsing=True))
-    except ValueError:  # pragma: no cover
+    except ValueError:
         # Init data is not a valid query string
         return False
     if "hash" not in parsed_data:
@@ -85,10 +85,13 @@ def check_webapp_signature(token: str, init_data: str) -> bool:
     )
     calculated_hash = hmac.new(
         key=secret_key.digest(),
-        msg=data_check_string.encode(),
+        msg=data_check_string.encode(errors="surrogatepass"),
         digestmod=hashlib.sha256,
     ).hexdigest()
-    return hmac.compare_digest(calculated_hash, hash_)
+    return hmac.compare_digest(
+        calculated_hash.encode(),
+        hash_.encode(errors="surrogatepass"),
+    )
 
 
 def parse_webapp_init_data(

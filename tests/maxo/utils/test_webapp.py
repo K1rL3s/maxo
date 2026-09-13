@@ -85,12 +85,16 @@ def test_safe_parse_webapp_init_data_valid(valid_init_data: str) -> None:
     assert isinstance(parsed_data, WebAppInitData)
 
 
-def test_safe_parse_webapp_init_data_invalid() -> None:
+@pytest.mark.parametrize(
+    "init_data",
+    ["hash=invalid&...some_other_data", "hash=%D1%84", "hash=x&a=\ud800"],
+)
+def test_safe_parse_webapp_init_data_invalid(init_data: str) -> None:
     with pytest.raises(
         InvalidWebAppInitDataError,
         match="Invalid init data signature",
     ) as exc_info:
-        safe_parse_webapp_init_data(TOKEN, "hash=invalid&...some_other_data")
+        safe_parse_webapp_init_data(TOKEN, init_data)
     assert isinstance(exc_info.value, ValueError)
 
 
