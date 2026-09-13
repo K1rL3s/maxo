@@ -61,7 +61,7 @@ def check_importable(wheel: Path) -> None:
             str(wheel),
             "python",
             "-c",
-            "import maxo",
+            "import maxo, maxo.dialogs.tools.web_preview",
         ],
         check=False,
     )
