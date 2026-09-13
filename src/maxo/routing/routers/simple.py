@@ -2,6 +2,7 @@ from collections.abc import MutableMapping, MutableSequence
 from functools import partial
 from typing import Any
 
+from maxo.errors.routing import RouterAlreadyIncludedError
 from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces import BaseRouter, Observer
 from maxo.routing.interfaces.router import RouterState
@@ -109,6 +110,7 @@ class Router(BaseRouter):
 
         self._name = name
         self._children_routers: MutableSequence[BaseRouter] = []
+        self._parent_router: BaseRouter | None = None
         self._state: RouterState = EmptyRouterState()
 
     def __repr__(self) -> str:
@@ -136,7 +138,11 @@ class Router(BaseRouter):
 
     def include(self, *routers: BaseRouter) -> None:
         self.state.ensure_include()
-        self.children_routers.extend(routers)
+        for router in routers:
+            if router.parent_router is not None:
+                raise RouterAlreadyIncludedError(router, router.parent_router)
+            router.parent_router = self
+            self.children_routers.append(router)
 
     async def trigger_child(self, ctx: Ctx) -> Any:
         for child_router in self.children_routers:
@@ -184,3 +190,11 @@ class Router(BaseRouter):
 
             observer.middleware.inner.state = EmptyMiddlewareManagerState()
             observer.middleware.outer.state = EmptyMiddlewareManagerState()
+
+    @property
+    def parent_router(self) -> BaseRouter | None:
+        return self._parent_router
+
+    @parent_router.setter
+    def parent_router(self, value: BaseRouter | None) -> None:
+        self._parent_router = value
