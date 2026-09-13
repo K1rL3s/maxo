@@ -12,7 +12,7 @@ from maxo.routing.middlewares.fsm_context import FSMContextMiddleware
 from maxo.routing.routers.simple import Router
 from maxo.routing.sentinels import UNHANDLED
 from maxo.routing.signals import BeforeStartup
-from maxo.types import Message, MessageBody, Recipient, User
+from maxo.types import Message, MessageBody, MessageEdited, Recipient, User
 from maxo.types.message_created import MessageCreated
 from tests.constants import NOW
 
@@ -361,3 +361,21 @@ async def test_inner_middlewares_nest_from_root_to_grandchild(ctx: Ctx) -> None:
         "child_inner_post",
         "dp_inner_post",
     ]
+
+
+async def test_shared_observer_inherits_parent_inner_middleware_once(ctx: Ctx) -> None:
+    dp = Dispatcher()
+    child = Router("child")
+    dp.include(child)
+    dp.observers[MessageEdited] = dp.message_created
+    child.observers[MessageEdited] = child.message_created
+
+    dp.message_created.middleware.inner(middleware_factory("dp_inner"))
+    child.message_created.handler(handler)
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert ctx["execution_order"] == ["dp_inner_pre", "handler", "dp_inner_post"]
