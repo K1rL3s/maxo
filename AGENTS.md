@@ -522,9 +522,7 @@ TAG_PROVIDERS = concat_provider(
 - `maxo.exceptions` и `maxo.filters` - постоянные алиасы `maxo.errors` и
   `maxo.routing.filters` для портирования ботов с `aiogram`. Они не
   предупреждают при импорте и не планируются к удалению. Не путай их с
-  переездами внутри пакета (`maxo.utils.long_polling` ->
-  `maxo.transport.long_polling`) - те кидают `DeprecationWarning` и будут
-  удалены.
+  переездами внутри пакета - те кидают `DeprecationWarning` и будут удалены.
 - Документация и примеры должны импортировать из публичных модулей, а не из
   `maxo._internal`.
 - При добавлении публичного символа обновляй ближайший `__init__.py` и
