@@ -238,6 +238,10 @@ class BgManager(BaseDialogManager):
         task = self._updater.notify_task(bot=bot, update=event)
         try:
             manager = await event.entered
+        except BaseException:
+            await task
+            raise
+        try:
             yield manager
         except Exception as e:
             event.exited.set_exception(e)
