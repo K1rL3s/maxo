@@ -1,4 +1,3 @@
-import warnings
 from typing import Any
 
 from maxo import loggers
@@ -22,7 +21,6 @@ from .api.protocols import DialogManager, DialogProtocol
 from .dialog import OnResultEvent
 from .widgets.data import PreviewAwareGetter
 from .widgets.kbd import Keyboard
-from .widgets.link_preview import LinkPreview
 from .widgets.markup.inline_keyboard import InlineKeyboardFactory
 from .widgets.utils import (
     GetterVariant,
@@ -43,7 +41,6 @@ class Window(WindowProtocol):
         on_process_result: OnResultEvent | None = None,
         markup_factory: MarkupFactory = _DEFAULT_MARKUP_FACTORY,
         parse_mode: Omittable[TextFormat | None] = Omitted(),
-        disable_web_page_preview: bool | None = None,
         protect_content: bool | None = None,
         two_step_media_edit: bool = False,
         preview_add_transitions: list[Keyboard] | None = None,
@@ -68,19 +65,6 @@ class Window(WindowProtocol):
         # https://github.com/K1rL3s/maxo/issues/156
         self.two_step_media_edit = two_step_media_edit
         self.preview_add_transitions = preview_add_transitions
-        if disable_web_page_preview is not None:
-            if self.link_preview:
-                raise ValueError(
-                    "Cannot use LinkPreview widget "
-                    "together with disable_web_page_preview",
-                )
-            warnings.warn(
-                "disable_web_page_preview is deprecated, "
-                "use `LinkPreview` widget instead",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
-            self.link_preview = LinkPreview(is_disabled=True)
 
     async def render_text(
         self,
