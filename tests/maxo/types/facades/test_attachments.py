@@ -7,7 +7,7 @@ import pytest
 from maxo.bot.bot import Bot
 from maxo.bot.upload import UploadConfig, UploadMethod
 from maxo.enums import UploadType
-from maxo.errors.api import RetvalReturnedServerException
+from maxo.errors.api import RetvalReturnedError
 from maxo.types import (
     AudioAttachmentRequest,
     CallbackButton,
@@ -344,7 +344,7 @@ async def test_upload_media_single_retval_falls_back_to_endpoint_token(
             token="endpoint-token",  # noqa: S106
         ),
     )
-    bot_mock.upload_media = AsyncMock(side_effect=RetvalReturnedServerException())
+    bot_mock.upload_media = AsyncMock(side_effect=RetvalReturnedError())
 
     assert await facade.upload_media(file) == (UploadType.VIDEO, "endpoint-token")
 

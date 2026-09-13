@@ -12,7 +12,7 @@ from maxo.errors.api import (
     MaxBotUnauthorizedError,
     MaxBotUnknownServerError,
     MaxBotUnsupportedMediaTypeError,
-    RetvalReturnedServerException,
+    RetvalReturnedError,
 )
 from maxo.errors.base import MaxoError
 from maxo.errors.network import MaxBotNetworkError, MaxBotTimeoutError
@@ -39,7 +39,7 @@ __all__ = (
     "MaxBotUnknownServerError",
     "MaxBotUnsupportedMediaTypeError",
     "MaxoError",
-    "RetvalReturnedServerException",
+    "RetvalReturnedError",
     "RouterAlreadyIncludedError",
     "UnsubscribeError",
 )
