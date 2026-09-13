@@ -280,6 +280,31 @@ class TestCallbackHandlers:
         on_click.assert_awaited_once()
         assert on_click.call_args.args[-1] == selected
 
+    @pytest.mark.parametrize(
+        ("data", "expected"),
+        [
+            (CALLBACK_PREV_YEAR, date(2023, 2, 28)),
+            (CALLBACK_NEXT_YEAR, date(2025, 2, 28)),
+            (CALLBACK_PREV_YEARS_PAGE, date(2021, 2, 28)),
+            (CALLBACK_NEXT_YEARS_PAGE, date(2027, 2, 28)),
+        ],
+    )
+    async def test_year_shift_from_leap_day(
+        self,
+        mock_manager: DialogManager,
+        data: str,
+        expected: date,
+    ) -> None:
+        calendar = Calendar(
+            id="cal",
+            config=CalendarConfig(timezone=UTC, years_per_page=3),
+        )
+        calendar.set_offset(date(2024, 2, 29), mock_manager)
+
+        await self.process(calendar, data, mock_manager)
+
+        assert calendar.get_offset(mock_manager) == expected
+
 
 class TestRenderingBounds:
     async def test_render_all_scopes(self, mock_manager: DialogManager) -> None:
