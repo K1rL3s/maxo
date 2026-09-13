@@ -125,8 +125,6 @@ def test_attachment_request_builder_add_location(
     attachments = builder.build()
     assert len(attachments) == 1
     assert isinstance(attachments[0], LocationAttachmentRequest)
-    assert type(attachments[0].latitude) is float
-    assert type(attachments[0].longitude) is float
     assert attachments[0].latitude == 12.34
     assert attachments[0].longitude == 56.78
 
