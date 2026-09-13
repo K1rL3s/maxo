@@ -13,6 +13,8 @@ class StateFilter(BaseFilter[Any]):
     __slots__ = ("_states",)
 
     def __init__(self, *states: StateType) -> None:
+        if not states:
+            raise ValueError("At least one state is required")
         self._states = states
 
     async def __call__(self, update: Any, ctx: Ctx) -> bool:
