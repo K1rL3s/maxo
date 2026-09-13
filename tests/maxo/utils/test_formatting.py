@@ -1,12 +1,16 @@
+from typing import Any, get_args
+
 import pytest
 
 from maxo.enums import MarkupElementType
 from maxo.types import StrikethroughMarkup
 from maxo.types.emphasized_markup import EmphasizedMarkup
+from maxo.types.markup_elements import MarkupElements
 from maxo.types.strong_markup import StrongMarkup
 from maxo.types.underline_markup import UnderlineMarkup
 from maxo.types.user_mention_markup import UserMentionMarkup
 from maxo.utils.formatting import (
+    NODE_TYPES,
     BlockQuote,
     Bold,
     Heading,
@@ -227,6 +231,24 @@ class TestNode:
     )
 )"""
         assert node.as_pretty_string(indent=True) == expected
+
+    @pytest.mark.parametrize("markup_type", list(MarkupElementType))
+    def test_render_entity_is_concrete_markup(
+        self,
+        markup_type: MarkupElementType,
+    ) -> None:
+        params: dict[MarkupElementType, dict[str, Any]] = {
+            MarkupElementType.LINK: {"url": "https://example.com"},
+            MarkupElementType.USER_MENTION: {"user_id": 42},
+        }
+        node = NODE_TYPES[markup_type]("test", **params.get(markup_type, {}))
+
+        _, entities = node.render()
+
+        assert len(entities) == 1
+        entity = entities[0]
+        assert type(entity) in get_args(MarkupElements)
+        assert entity.type == markup_type
 
 
 class TestUtils:

@@ -28,14 +28,16 @@ OR OTHER DEALINGS IN THE SOFTWARE.
 import dataclasses
 import textwrap
 from collections.abc import Generator, Iterable, Iterator
-from typing import Any, ClassVar, Self, TypeAlias, cast
+from typing import Any, ClassVar, Self, TypeAlias
 
 from maxo.enums import MarkupElementType
 from maxo.types.emphasized_markup import EmphasizedMarkup
+from maxo.types.heading_markup import HeadingMarkup
+from maxo.types.highlighted_markup import HighlightedMarkup
 from maxo.types.link_markup import LinkMarkup
-from maxo.types.markup_element import MarkupElement
 from maxo.types.markup_elements import MarkupElements
 from maxo.types.monospaced_markup import MonospacedMarkup
+from maxo.types.quote_markup import QuoteMarkup
 from maxo.types.strikethrough_markup import StrikethroughMarkup
 from maxo.types.strong_markup import StrongMarkup
 from maxo.types.underline_markup import UnderlineMarkup
@@ -55,6 +57,9 @@ _MARKUP_MAP: dict[MarkupElementType, type[MarkupElements]] = {
     MarkupElementType.MONOSPACED: MonospacedMarkup,
     MarkupElementType.LINK: LinkMarkup,
     MarkupElementType.USER_MENTION: UserMentionMarkup,
+    MarkupElementType.QUOTE: QuoteMarkup,
+    MarkupElementType.HEADING: HeadingMarkup,
+    MarkupElementType.HIGHLIGHTED: HighlightedMarkup,
 }
 
 NodeType: TypeAlias = Any
@@ -135,11 +140,7 @@ class Text(Iterable[NodeType]):
         if self.type is None:
             raise ValueError("Node without type can't be rendered as entity")
 
-        markup_class: type[MarkupElements] = _MARKUP_MAP.get(
-            self.type,
-            cast(type[MarkupElements], MarkupElement),
-        )
-        return markup_class(
+        return _MARKUP_MAP[self.type](
             type=self.type,
             from_=offset,
             length=length,
