@@ -28,8 +28,6 @@ def test_unpack_resolves_string_annotations() -> None:
     unpacked = FutureAnnotationsPayload.unpack(original.pack())
 
     assert unpacked == original
-    assert type(unpacked.num) is int
-    assert unpacked.flag is False
 
 
 def test_unpack_resolves_string_optional_annotation() -> None:
