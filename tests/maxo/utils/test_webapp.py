@@ -119,6 +119,7 @@ def test_parse_webapp_init_data_ignores_unknown_fields() -> None:
         {"chat": TEST_DATA["chat"], "user": TEST_DATA["user"]},
         {"hash": "x", "chat": '{"id": 1}', "user": TEST_DATA["user"]},
         {"hash": "x", "chat": "{broken}", "user": TEST_DATA["user"]},
+        {"hash": "x", "chat": "private", "user": TEST_DATA["user"]},
     ],
 )
 def test_parse_webapp_init_data_malformed(data: dict[str, str]) -> None:
