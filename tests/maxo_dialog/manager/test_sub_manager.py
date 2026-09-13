@@ -1,3 +1,4 @@
+import copy
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
@@ -318,30 +319,41 @@ async def test_fg_context_manager(
         assert manager is sub
 
 
-async def test_dialog(mock_widget: MagicMock, mock_manager: MagicMock) -> None:
+async def test_forwards_manager_impl_members(
+    mock_widget: MagicMock,
+    mock_manager: MagicMock,
+) -> None:
     dialog = MagicMock()
+    storage = MagicMock()
     mock_manager.dialog = Mock(return_value=dialog)
+    mock_manager.storage = Mock(return_value=storage)
+    mock_manager.is_event_simulated = Mock(return_value=True)
+    mock_manager.disabled = False
 
     sub = SubManager(mock_widget, mock_manager, "widget_1", "item_1")
 
     assert sub.dialog() is dialog
-
-
-async def test_storage(mock_widget: MagicMock, mock_manager: MagicMock) -> None:
-    storage = MagicMock()
-    mock_manager.storage = Mock(return_value=storage)
-
-    sub = SubManager(mock_widget, mock_manager, "widget_1", "item_1")
-
     assert sub.storage() is storage
+    assert sub.is_event_simulated() is True
+    assert sub.disabled is False
 
 
-async def test_is_event_simulated(
+async def test_forwards_through_nested_sub_managers(
     mock_widget: MagicMock,
     mock_manager: MagicMock,
 ) -> None:
-    mock_manager.is_event_simulated = Mock(return_value=True)
+    dialog = MagicMock()
+    mock_manager.dialog = Mock(return_value=dialog)
 
+    inner = SubManager(mock_widget, mock_manager, "widget_1", "item_1")
+    outer = SubManager(mock_widget, inner, "widget_2", "item_2")
+
+    assert outer.dialog() is dialog
+
+
+async def test_copy(mock_widget: MagicMock, mock_manager: MagicMock) -> None:
     sub = SubManager(mock_widget, mock_manager, "widget_1", "item_1")
 
-    assert sub.is_event_simulated() is True
+    copied = copy.copy(sub)
+
+    assert copied.manager is mock_manager
