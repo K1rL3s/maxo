@@ -1,4 +1,3 @@
-import copy
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
@@ -351,9 +350,16 @@ async def test_forwards_through_nested_sub_managers(
     assert outer.dialog() is dialog
 
 
-async def test_copy(mock_widget: MagicMock, mock_manager: MagicMock) -> None:
+async def test_does_not_forward_private_members(
+    mock_widget: MagicMock,
+    mock_manager: MagicMock,
+) -> None:
+    mock_manager._current_context_unsafe = Mock()
+
     sub = SubManager(mock_widget, mock_manager, "widget_1", "item_1")
 
-    copied = copy.copy(sub)
-
-    assert copied.manager is mock_manager
+    with pytest.raises(
+        AttributeError,
+        match="'SubManager' object has no attribute '_current_context_unsafe'",
+    ):
+        sub._current_context_unsafe()

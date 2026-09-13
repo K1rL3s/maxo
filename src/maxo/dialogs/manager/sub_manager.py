@@ -162,4 +162,16 @@ class SubManager(DialogManager):
         yield self
 
     def __getattr__(self, name: str) -> Any:
+        if name not in {
+            "dialog",
+            "storage",
+            "is_event_simulated",
+            "check_disabled",
+            "disabled",
+        }:
+            raise AttributeError(
+                f"{type(self).__name__!r} object has no attribute {name!r}",
+                name=name,
+                obj=self,
+            )
         return getattr(object.__getattribute__(self, "manager"), name)
