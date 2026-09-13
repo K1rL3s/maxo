@@ -9,10 +9,8 @@ from maxo.enums import ChatType
 from maxo.fsm import State, StatesGroup
 from maxo.fsm.key_builder import StorageKey
 from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
-from maxo.serialization import create_retort
+from maxo.serialization import get_retort
 from maxo.types import Attachments
-
-_retort = create_retort(warming_up=False)
 
 
 class StorageProxy:
@@ -70,7 +68,7 @@ class StorageProxy:
             return Stack(_id=fixed_stack_id, access_settings=access_settings)
 
         if "last_attachments" in data:
-            data["last_attachments"] = _retort.load(
+            data["last_attachments"] = get_retort().load(
                 data["last_attachments"],
                 list[Attachments],
             )
@@ -116,7 +114,7 @@ class StorageProxy:
                 "intents": stack.intents,
                 "last_message_id": stack.last_message_id,
                 "last_sequence_id": stack.last_sequence_id,
-                "last_attachments": _retort.dump(
+                "last_attachments": get_retort().dump(
                     stack.last_attachments,
                     list[Attachments],
                 ),
@@ -128,7 +126,7 @@ class StorageProxy:
 
     def _context_key(self, intent_id: str) -> StorageKey:
         return StorageKey(
-            bot_id=self.bot.state.info.user_id,
+            bot_id=self.bot.info.user_id,
             chat_id=self.chat_id,
             user_id=self.chat_id,  # Неожиданно, но это нужно для работы в группах
             destiny=f"aiogd:context:{intent_id}",
@@ -144,7 +142,7 @@ class StorageProxy:
     def _stack_key(self, stack_id: str) -> StorageKey:
         stack_id = self._fixed_stack_id(stack_id)
         return StorageKey(
-            bot_id=self.bot.state.info.user_id,
+            bot_id=self.bot.info.user_id,
             chat_id=self.chat_id,
             user_id=self.chat_id,  # Неожиданно, но это нужно для работы в группах
             destiny=f"aiogd:stack:{stack_id}",

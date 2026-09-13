@@ -5,13 +5,13 @@ from typing import Any
 
 from adaptix.load_error import LoadError
 
-from maxo import Bot, Dispatcher
+from maxo import Bot, Dispatcher, get_retort
 from maxo.bot.methods.base import MaxoMethod
 from maxo.routing.signals import MaxoUpdate
 from maxo.transport.webhook.adapters.base_adapter import BoundRequest, WebAdapter
 from maxo.transport.webhook.routing.base import BaseRouting
 from maxo.transport.webhook.security.security import Security
-from maxo.types import Updates
+from maxo.types import Updates, bind_bot
 
 
 class WebhookEngine(ABC):
@@ -90,7 +90,10 @@ class WebhookEngine(ABC):
             )
 
         try:
-            update = MaxoUpdate(update=bot.retort.load(raw_update, Updates))
+            update = bind_bot(
+                MaxoUpdate(update=get_retort().load(raw_update, Updates)),
+                bot=bot,
+            )
         except LoadError:
             return self.web_adapter.create_json_response(
                 status=400,
@@ -120,7 +123,7 @@ class WebhookEngine(ABC):
         if not isinstance(result, MaxoMethod):
             return self.web_adapter.create_json_response(status=200, payload={})
 
-        await bot.silent_call_method(method=result)
+        await bot.call_method(method=result)
         return self.web_adapter.create_json_response(status=200, payload={})
 
     async def _background_feed_update(self, bot: Bot, update: MaxoUpdate[Any]) -> None:
@@ -129,7 +132,7 @@ class WebhookEngine(ABC):
             update=update,
         )  # **self.data
         if isinstance(result, MaxoMethod):
-            await bot.silent_call_method(method=result)
+            await bot.call_method(method=result)
 
     async def _handle_request_background(
         self,

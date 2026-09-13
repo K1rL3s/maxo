@@ -1,24 +1,18 @@
 from typing import TYPE_CHECKING, Optional, Self
 
 from maxo.errors import AttributeIsEmptyError
-from maxo.omit import is_defined
 
 if TYPE_CHECKING:
-    from maxo import Bot
+    from maxo.bot.bot import Bot
 
 
 class BaseMethodsFacade:
     """
-    Базовый фасад: хранит ссылку на бота и отдаёт её наследникам.
+    Единственный держатель бота: слот `_bot` + `bot`/`as_`.
 
     От него растёт вся цепочка фасадов (`BotMethodsFacade` ->
-    `ChatMethodsFacade` -> ...). Он же подмешан в `MaxoType`, поэтому любой тип
-    несёт `bot`/`as_` (это наследование со временем уберём - бот на типе нужен
-    не всем).
-
-    Не наследуется от `ABC`/`Protocol`: `MaxoType` сделан через метакласс, а он
-    конфликтует с `ABCMeta` в апдейтах. См. историю в
-    https://github.com/K1rL3s/maxo/pull/103 и .../pull/107.
+    `ChatMethodsFacade` -> ...), и он же подмешан в `MaxoType`. Обход дерева и
+    простановку бота делает `bind_bot` (см. `types/binding.py`).
     """
 
     __slots__ = ("_bot",)
@@ -26,9 +20,12 @@ class BaseMethodsFacade:
     def __init__(self, bot: Optional["Bot"] = None) -> None:
         self._bot = bot
 
+    def __post_init__(self) -> None:
+        self._bot = None
+
     @property
     def bot(self) -> "Bot":
-        if is_defined(self._bot):
+        if self._bot is not None:
             return self._bot
 
         raise AttributeIsEmptyError(
@@ -38,8 +35,12 @@ class BaseMethodsFacade:
 
     @bot.setter
     def bot(self, bot: Optional["Bot"]) -> None:
-        self._bot = bot
+        from maxo.types.binding import bind_bot  # noqa: PLC0415
+
+        bind_bot(self, bot)
 
     def as_(self, bot: Optional["Bot"]) -> Self:
-        self.bot = bot
+        from maxo.types.binding import bind_bot  # noqa: PLC0415
+
+        bind_bot(self, bot)
         return self

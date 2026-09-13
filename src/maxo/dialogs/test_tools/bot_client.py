@@ -3,8 +3,9 @@ from datetime import UTC, datetime
 from typing import Any, cast
 from unittest.mock import AsyncMock
 
+from unihttp.clients.base import BaseAsyncClient
+
 from maxo import Bot, Dispatcher
-from maxo.bot.state import RunningBotState
 from maxo.enums import ChatStatus, ChatType, MessageLinkType
 from maxo.omit import Omitted, is_defined
 from maxo.routing.signals import MaxoUpdate
@@ -34,14 +35,14 @@ from .keyboard import InlineButtonLocator
 class FakeBot(Bot):
     def __init__(self) -> None:
         super().__init__("", warming_up=False)
-        info = BotInfo(
+        self._info = BotInfo(
             user_id=1000,
             first_name="bot",
             username="bot",
             is_bot=True,
             last_activity_time=datetime.fromtimestamp(1234567890, tz=UTC),
         )
-        self._state = RunningBotState(info=info, api_client=AsyncMock())
+        self._client = cast(BaseAsyncClient, AsyncMock())
 
     # `Bot.answer_on_callback` - это атрибут `bind_method(...)`, а не метод,
     # поэтому подмена его в наследнике для mypy выглядит как covariant override.
@@ -105,7 +106,7 @@ class BotClient:
             sender=self.user,
             recipient=Recipient(
                 chat_type=self.chat.type,
-                user_id=self.bot.state.info.user_id,
+                user_id=self.bot.info.user_id,
                 chat_id=self.chat.chat_id,
             ),
             timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
@@ -154,7 +155,7 @@ class BotClient:
         msg = Message(
             recipient=Recipient(
                 chat_type=ChatType.CHANNEL,
-                user_id=self.bot.state.info.user_id,
+                user_id=self.bot.info.user_id,
                 chat_id=self.chat.chat_id,
             ),
             timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
@@ -183,7 +184,7 @@ class BotClient:
         msg = Message(
             recipient=Recipient(
                 chat_type=ChatType.CHANNEL,
-                user_id=self.bot.state.info.user_id,
+                user_id=self.bot.info.user_id,
                 chat_id=self.chat.chat_id,
             ),
             timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
@@ -208,7 +209,7 @@ class BotClient:
                 update=MessageRemoved(
                     message_id=mid,
                     chat_id=self.chat.chat_id,
-                    user_id=self.bot.state.info.user_id,
+                    user_id=self.bot.info.user_id,
                     timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
                 ),
             ),

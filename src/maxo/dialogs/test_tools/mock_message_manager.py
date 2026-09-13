@@ -136,7 +136,7 @@ class MockMessageManager(MessageManagerProtocol):
 
         self.sent_messages.append(
             Message(
-                sender=bot.state.info,
+                sender=bot.info,
                 recipient=new_message.recipient,
                 timestamp=datetime.now(UTC),
                 body=MessageBody(

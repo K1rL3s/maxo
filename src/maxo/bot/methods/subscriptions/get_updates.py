@@ -1,3 +1,5 @@
+from typing import Any
+
 from adaptix.load_error import LoadError
 from unihttp.http import HTTPResponse
 from unihttp.serialize import ResponseLoader
@@ -51,7 +53,7 @@ class GetUpdates(MaxoMethod[UpdateList], slots=False):
 
     def make_response(
         self,
-        response: HTTPResponse,
+        response: HTTPResponse[Any],
         response_loader: ResponseLoader,
     ) -> UpdateList:
         try:
