@@ -1,3 +1,4 @@
+import importlib.util
 import os.path
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -171,16 +172,24 @@ async def test_controller_transitions(monkeypatch: pytest.MonkeyPatch) -> None:
     assert response.headers["Content-Type"] == "image/png"
 
 
-def test_main_registers_routes_and_runs_app(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_registers_routes_and_runs_app(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     started: dict[str, Any] = {}
     monkeypatch.setattr(sys, "path", list(sys.path))
+    (tmp_path / "bot.py").touch()
 
     def run_app(app: Any, port: int, print: Any) -> None:
         started["port"] = port
         started["app"] = app
 
     monkeypatch.setattr(web, "run_app", run_app)
-    monkeypatch.setattr(sys, "argv", ["maxo-dialog-preview", "bot:dialogs_router"])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["maxo-dialog-preview", f"{tmp_path / 'bot'}:dialogs_router"],
+    )
 
     web_preview.main()
 
@@ -191,16 +200,130 @@ def noop_run_app(*_args: Any, **_kwargs: Any) -> None:
     pass
 
 
-def test_main_appends_module_directory(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_appends_module_directory(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     paths: list[str] = []
+    (tmp_path / "bot.py").touch()
     monkeypatch.setattr(web, "run_app", noop_run_app)
     monkeypatch.setattr(sys, "path", paths)
     monkeypatch.setattr(
         sys,
         "argv",
-        ["maxo-dialog-preview", f"pkg{os.path.sep}bot:dialogs_router"],
+        ["maxo-dialog-preview", f"{tmp_path / 'bot'}:dialogs_router"],
     )
 
     web_preview.main()
 
-    assert paths == ["pkg"]
+    assert paths == [str(tmp_path)]
+
+
+def test_main_help(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["maxo-dialog-preview", "--help"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        web_preview.main()
+
+    assert exc_info.value.code == 0
+    assert "module:router" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("spec", ["bot", "bot:", ":router", "a:b:c"])
+def test_main_rejects_invalid_app_spec(
+    spec: str,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(web, "run_app", noop_run_app)
+    monkeypatch.setattr(sys, "argv", ["maxo-dialog-preview", spec])
+
+    with pytest.raises(SystemExit) as exc_info:
+        web_preview.main()
+
+    assert exc_info.value.code == 2
+    assert "ожидается формат module:router" in capsys.readouterr().err
+
+
+def test_main_rejects_py_suffix(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "bot.py").touch()
+    monkeypatch.setattr(web, "run_app", noop_run_app)
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["maxo-dialog-preview", f"{tmp_path / 'bot.py'}:dialogs_router"],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        web_preview.main()
+
+    assert exc_info.value.code == 2
+    assert "без .py" in capsys.readouterr().err
+
+
+def test_main_rejects_missing_module(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(web, "run_app", noop_run_app)
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["maxo-dialog-preview", f"{tmp_path / 'missing'}:dialogs_router"],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        web_preview.main()
+
+    assert exc_info.value.code == 2
+    assert "'missing' не найден" in capsys.readouterr().err
+
+
+def test_main_splits_directory_on_altsep(monkeypatch: pytest.MonkeyPatch) -> None:
+    paths: list[str] = []
+    found: list[str] = []
+
+    def find_spec(name: str) -> object:
+        found.append(name)
+        return object()
+
+    monkeypatch.setattr(os.path, "sep", "\\")
+    monkeypatch.setattr(os.path, "altsep", "/")
+    monkeypatch.setattr(importlib.util, "find_spec", find_spec)
+    monkeypatch.setattr(web, "run_app", noop_run_app)
+    monkeypatch.setattr(sys, "path", paths)
+    monkeypatch.setattr(sys, "argv", ["maxo-dialog-preview", "proj/bot:router"])
+
+    web_preview.main()
+
+    assert paths == ["proj"]
+    assert found == ["bot"]
+
+
+async def test_controller_transitions_without_diagrams(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        web_preview,
+        "ProcessPoolExecutor",
+        lambda **_kwargs: ImmediateExecutor(),
+    )
+    monkeypatch.setitem(sys.modules, "diagrams", None)
+    install_module(monkeypatch, "test_preview_no_diagrams", DummyRouter())
+    controller = web_preview.Controller("test_preview_no_diagrams", "dialogs_router")
+
+    response = await controller.transitions(cast(Any, None))
+
+    assert response.status == 500
+    assert response.text is not None
+    assert "maxo[preview]" in response.text
