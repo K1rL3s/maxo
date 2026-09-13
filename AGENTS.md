@@ -99,13 +99,13 @@ just butcher-test  # тесты самого генератора
 | `src/maxo/bot/`          | `Bot`, `MaxApiClient`, состояния бота, declarative Bot API methods на `unihttp`.                                                  |
 | `src/maxo/types/`        | Типы MAX Bot API. Многие файлы сгенерированы по документации API.                                                                 |
 | `src/maxo/enums/`        | Enum MAX Bot API. Многие файлы сгенерированы по документации API.                                                                 |
-| `src/maxo/routing/`      | `Dispatcher`, `Router`, observers, handlers, filters, middlewares, facades и signals.                                             |
+| `src/maxo/routing/`      | `Dispatcher`, `Router`, observers, handlers, filters, middlewares и signals.                                                      |
 | `src/maxo/fsm/`          | FSM: `State`, `StatesGroup`, `FSMContext`, storage, isolation, key builders.                                                      |
 | `src/maxo/dialogs/`      | Диалоги, портированные из `aiogram_dialog`: `Dialog`, `Window`, widgets, managers, preview, test tools.                           |
 | `src/maxo/transport/`    | Long polling и webhook engine/adapters/routing/security.                                                                          |
 | `src/maxo/errors/`       | Исключения публичного API и ошибки MAX Bot API.                                                                                   |
 | `src/maxo/integrations/` | Интеграции `dishka` и `magic_filter`.                                                                                             |
-| `src/maxo/utils/`        | Builders, upload helpers, formatting, deeplink/link helpers, facades.                                                             |
+| `src/maxo/utils/`        | Builders, upload helpers, formatting, deeplink/link helpers.                                                                      |
 | `docs/`                  | Sphinx-документация на русском языке.                                                                                             |
 | `examples/`              | Рабочие примеры использования публичного API.                                                                                     |
 | `tests/`                 | Pytest-тесты по подсистемам.                                                                                                      |
