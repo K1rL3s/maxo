@@ -271,6 +271,10 @@ class FakeManager(DialogManager):
     async def answer_callback(self) -> None:
         pass
 
+    def dialog(self) -> DialogProtocol:
+        assert self._dialog is not None  # noqa: S101
+        return self._dialog
+
 
 def create_photo(media: MediaAttachment | None) -> str | None:
     if not media:
