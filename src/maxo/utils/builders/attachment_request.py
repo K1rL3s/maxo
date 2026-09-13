@@ -107,6 +107,7 @@ class AttachmentRequestBuilder:
 
     def add_share(
         self,
+        *,
         url: Omittable[str | None] = Omitted(),
         token: Omittable[str | None] = Omitted(),
     ) -> Self:
