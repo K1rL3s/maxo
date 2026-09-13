@@ -10,6 +10,7 @@ from maxo.dialogs import Dialog, DialogManager, StartMode, Window, setup_dialogs
 from maxo.dialogs.api.entities import AccessSettings, EventContext, Stack
 from maxo.dialogs.api.entities.events import EVENT_CONTEXT_KEY
 from maxo.dialogs.context.access_validator import DefaultAccessValidator
+from maxo.dialogs.manager.bg_manager import BgManagerFactoryImpl
 from maxo.dialogs.test_tools import BotClient, MockMessageManager
 from maxo.dialogs.test_tools.memory_storage import JsonMemoryStorage
 from maxo.dialogs.widgets.text import Const
@@ -252,3 +253,42 @@ async def start_channel_client(
     await dp.feed_signal(BeforeStartup(), client.bot)
     await dp.feed_signal(AfterStartup(), client.bot)
     return client
+
+
+async def test_bg_factory_without_user_reaches_channel_default_stack(
+    message_manager: MockMessageManager,
+) -> None:
+    router = Router()
+    users: list[Any] = []
+
+    @router.message_created()
+    async def handler(event: MessageCreated, dialog_manager: DialogManager) -> None:
+        await dialog_manager.start(ChannelDefaultSG.first)
+
+    async def getter(dialog_manager: DialogManager, **_: Any) -> dict[str, Any]:
+        users.append(dialog_manager.middleware_data[EVENT_CONTEXT_KEY].user)
+        return {}
+
+    client = await start_channel_client(
+        message_manager,
+        router,
+        Dialog(
+            Window(Const("first"), state=ChannelDefaultSG.first),
+            Window(Const("second"), state=ChannelDefaultSG.second, getter=getter),
+        ),
+    )
+
+    await client.send_channel_post("start")
+    await wait_for_messages(message_manager)
+
+    bg = BgManagerFactoryImpl(client.dp).bg(
+        bot=client.bot,
+        user_id=None,
+        chat_id=-100,
+        chat_type=ChatType.CHANNEL,
+    )
+    await bg.switch_to(ChannelDefaultSG.second)
+
+    await wait_for_messages(message_manager, count=2)
+    assert message_manager.last_message().body.text == "second"
+    assert users == [None]

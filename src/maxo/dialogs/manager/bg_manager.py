@@ -252,18 +252,20 @@ class BgManagerFactoryImpl(BgManagerFactory):
     def bg(
         self,
         bot: Bot,
-        user_id: int,
+        user_id: int | None,
         chat_id: int,
         stack_id: str | None = None,
         load: bool = False,
         chat_type: ChatType = ChatType.CHAT,
     ) -> "BaseDialogManager":
-        user = FakeUser(
-            user_id=user_id,
-            is_bot=False,
-            first_name="",
-            last_activity_time=datetime.now(UTC),
-        )
+        user = None
+        if user_id is not None:
+            user = FakeUser(
+                user_id=user_id,
+                is_bot=False,
+                first_name="",
+                last_activity_time=datetime.now(UTC),
+            )
         if stack_id is None:
             stack_id = DEFAULT_STACK_ID
 
