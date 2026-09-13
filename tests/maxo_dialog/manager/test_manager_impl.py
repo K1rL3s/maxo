@@ -1,3 +1,4 @@
+from collections.abc import Awaitable, Callable
 from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
@@ -653,3 +654,27 @@ class TestGetLastMessage:
         manager = make_manager(event=error_event)
 
         assert manager._get_last_message() is None
+
+
+class TestClosedManager:
+    @pytest.mark.parametrize(
+        "call",
+        [
+            pytest.param(lambda m: m.next(), id="next"),
+            pytest.param(lambda m: m.back(), id="back"),
+            pytest.param(lambda m: m.update(), id="update"),
+            pytest.param(lambda m: m.show(), id="show"),
+            pytest.param(lambda m: m.answer_callback(), id="answer_callback"),
+        ],
+    )
+    async def test_raises_background_error(
+        self,
+        call: Callable[[ManagerImpl], Awaitable[None]],
+    ) -> None:
+        manager = make_manager(event=make_callback())
+        await manager.close_manager()
+
+        with pytest.raises(IncorrectBackgroundError) as info:
+            await call(manager)
+
+        assert info.value.__context__ is None
