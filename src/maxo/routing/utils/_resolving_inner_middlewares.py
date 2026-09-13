@@ -35,5 +35,5 @@ def _resolving_middlewares(
         new_inners = (*middlewares[update_tp],)
         current_inners = (*observer.middleware.inner.middlewares,)
 
-        observer.middleware.inner.middlewares.extend(new_inners)
+        observer.middleware.inner.middlewares[:0] = new_inners
         middlewares[update_tp].extend(current_inners)
