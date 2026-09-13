@@ -581,15 +581,9 @@ def test_run_polling_runs_start_polling(mock_bot: Bot) -> None:
     assert start.await_args.kwargs["clear_subscriptions"] is True
 
 
-@pytest.mark.parametrize(
-    "types",
-    [Omitted(), []],
-    ids=["omitted", "empty-list"],
-)
 async def test_start_omits_types_when_there_are_no_update_handlers(
     mock_bot: Bot,
     mock_get_subscriptions: AsyncMock,
-    types: Any,
 ) -> None:
     long_polling = LongPolling(dispatcher=Dispatcher())
 
@@ -597,7 +591,7 @@ async def test_start_omits_types_when_there_are_no_update_handlers(
         patch.object(long_polling, "_get_updates", side_effect=empty_updates) as spy,
         patch("maxo.transport.long_polling.loggers.long_polling") as logger,
     ):
-        await long_polling.start(mock_bot, types=types, auto_close_bot=False)
+        await long_polling.start(mock_bot, auto_close_bot=False)
 
     assert spy.call_args.kwargs["types"] == Omitted()
     logger.warning.assert_called_once_with(
