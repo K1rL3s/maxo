@@ -1,3 +1,4 @@
+from calendar import monthrange
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta, timezone as dt_timezone
@@ -871,7 +872,7 @@ class Calendar(Keyboard):
         manager: DialogManager,
     ) -> None:
         offset = self._require_offset(manager)
-        offset = offset.replace(offset.year - 1)
+        offset = shift_years(offset, -1)
         self.set_offset(offset, manager)
 
     async def _handle_next_year(
@@ -880,7 +881,7 @@ class Calendar(Keyboard):
         manager: DialogManager,
     ) -> None:
         offset = self._require_offset(manager)
-        offset = offset.replace(offset.year + 1)
+        offset = shift_years(offset, 1)
         self.set_offset(offset, manager)
 
     async def _handle_prev_years_page(
@@ -889,7 +890,7 @@ class Calendar(Keyboard):
         manager: DialogManager,
     ) -> None:
         offset = self._require_offset(manager)
-        offset = offset.replace(offset.year - self.config.years_per_page)
+        offset = shift_years(offset, -self.config.years_per_page)
         self.set_offset(offset, manager)
 
     async def _handle_next_years_page(
@@ -898,7 +899,7 @@ class Calendar(Keyboard):
         manager: DialogManager,
     ) -> None:
         offset = self._require_offset(manager)
-        offset = offset.replace(offset.year + self.config.years_per_page)
+        offset = shift_years(offset, self.config.years_per_page)
         self.set_offset(offset, manager)
 
     async def _handle_click_month(
@@ -975,3 +976,9 @@ class ManagedCalendar(ManagedWidget[Calendar]):
     ) -> None:
         """Set current scope showing in calendar."""
         return self.widget.set_scope(new_scope, self.manager)
+
+
+def shift_years(offset: date, years: int) -> date:
+    year = offset.year + years
+    day = min(offset.day, monthrange(year, offset.month)[1])
+    return offset.replace(year=year, day=day)
