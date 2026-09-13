@@ -1,7 +1,5 @@
 # ruff: noqa: S106, S105
 
-from decimal import Decimal
-
 import pytest
 
 from maxo.types.audio_attachment_request import AudioAttachmentRequest
@@ -114,7 +112,7 @@ def test_attachment_request_builder_add_inline_keyboard() -> None:
 
 def test_attachment_request_builder_add_location() -> None:
     builder = AttachmentRequestBuilder()
-    builder.add_location(latitude=Decimal("12.34"), longitude=Decimal("56.78"))
+    builder.add_location(latitude=12.34, longitude=56.78)
     attachments = builder.build()
     assert len(attachments) == 1
     assert isinstance(attachments[0], LocationAttachmentRequest)

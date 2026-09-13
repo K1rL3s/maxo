@@ -1,6 +1,5 @@
 from collections.abc import Sequence
 from copy import copy
-from decimal import Decimal
 from typing import Self, overload
 
 from maxo.omit import Omittable, Omitted
@@ -90,12 +89,9 @@ class AttachmentRequestBuilder:
         )
         return self
 
-    def add_location(self, latitude: Decimal, longitude: Decimal) -> Self:
+    def add_location(self, latitude: float, longitude: float) -> Self:
         self._items.append(
-            LocationAttachmentRequest(
-                latitude=float(latitude),
-                longitude=float(longitude),
-            ),
+            LocationAttachmentRequest(latitude=latitude, longitude=longitude),
         )
         return self
 
