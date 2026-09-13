@@ -121,7 +121,7 @@ Web-превью
 
 .. code-block:: bash
 
-    maxo-dialog-preview path/to/module.py:router_variable
+    maxo-dialog-preview path/to/module:router_variable
 
 Откройте в браузере:
 
