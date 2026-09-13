@@ -37,9 +37,6 @@ class ChatMembersIterator(AsyncIterator[ChatMember]):
         if self._chat_members:
             return self._chat_members.popleft()
 
-        # `marker is None` - предыдущая страница была последней.
-        # Отдать такой маркер обратно нельзя: для апи `marker: null` -
-        # это запрос первой страницы, и итерация пойдёт по кругу.
         if self._marker is None:
             raise StopAsyncIteration
 
