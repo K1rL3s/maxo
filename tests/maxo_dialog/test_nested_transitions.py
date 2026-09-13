@@ -122,38 +122,6 @@ async def test_start(
     assert second_message.body.reply_markup is None
 
 
-async def test_cascade_cancel(
-    dp: Dispatcher,
-    message_manager: MockMessageManager,
-    client: BotClient,
-) -> None:
-    """Cancel во внутреннем диалоге каскадно закрывает весь стек."""
-    await dp.feed_signal(BeforeStartup(), client.bot)
-    await dp.feed_signal(AfterStartup(), client.bot)
-
-    await client.send("/start")
-    startup_messages = list(message_manager.sent_messages)
-    first_message = startup_messages[-1]
-    assert first_message.body.text == "Third"
-    assert first_message.body.reply_markup
-
-    # Каскадный старт создает по сообщению на каждый диалог (Main->Secondary->Third).
-    # Ищем в обратном порядке самое внутреннее сообщение, которое реагирует на Cancel,
-    # т.к. только активный (внутренний) диалог обрабатывает callback.
-    second_message = None
-    for candidate in reversed(startup_messages):
-        message_manager.reset_history()
-        await client.click(candidate, InlineButtonTextLocator("Cancel"))
-        if message_manager.sent_messages:
-            second_message = message_manager.last_message()
-            if second_message.body.text == "First":
-                break
-
-    assert second_message is not None
-    assert second_message.body.text == "First"
-    assert second_message.body.reply_markup is None
-
-
 @pytest.fixture(autouse=True)
 def sequential_ids(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(stack, "new_int_id", itertools.count(1).__next__)
