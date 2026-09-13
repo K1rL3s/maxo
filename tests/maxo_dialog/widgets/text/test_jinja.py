@@ -5,7 +5,6 @@ from maxo import Dispatcher
 from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.text import Jinja, setup_jinja
 from maxo.dialogs.widgets.text.jinja import JINJA_ENV_FIELD, StubLoader
-from tests.factories import make_bot
 
 
 @pytest.fixture
@@ -44,17 +43,6 @@ My brother&#39;s tortoise</a>
     assert rendered_text == expected
 
 
-async def test_render_jinja_from_bot_middleware_data(
-    mock_manager: DialogManager,
-) -> None:
-    env = Environment(loader=StubLoader(), autoescape=True)
-    bot = type("BotWithJinja", (), {JINJA_ENV_FIELD: env})()
-    mock_manager.middleware_data = {"bot": bot}  # type: ignore[misc]
-    jinja = Jinja("Hello, {{ name }}!")
-
-    assert await jinja.render_text({"name": "Alice"}, mock_manager) == "Hello, Alice!"
-
-
 async def test_render_jinja_async_environment(mock_manager: DialogManager) -> None:
     env = Environment(loader=StubLoader(), autoescape=True, enable_async=True)
     mock_manager.middleware_data = {JINJA_ENV_FIELD: env}  # type: ignore[misc]
@@ -70,12 +58,3 @@ def test_setup_jinja_for_dispatcher_with_filters() -> None:
 
     assert dp.workflow_data[JINJA_ENV_FIELD] is env
     assert env.from_string("{{ 'ok'|shout }}").render() == "OK"
-
-
-def test_setup_jinja_for_bot_is_deprecated() -> None:
-    bot = make_bot()
-
-    with pytest.warns(DeprecationWarning, match="Passing `Bot` to setup_jinja"):
-        env = setup_jinja(bot)
-
-    assert getattr(bot, JINJA_ENV_FIELD) is env
