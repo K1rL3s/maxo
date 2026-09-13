@@ -14,6 +14,8 @@ jobs:
   tests:
     name: ${{ matrix.python-version }} ${{ matrix.dependency-resolution }}
     runs-on: ubuntu-latest
+    env:
+      UV_RESOLUTION: ${{ matrix.dependency-resolution }}
     strategy:
       fail-fast: false
       matrix:
@@ -37,7 +39,7 @@ jobs:
 
       - name: Install dependencies with ${{ matrix.dependency-resolution }} resolution
         run: |
-          uv sync --all-groups --resolution ${{ matrix.dependency-resolution }}
+          uv sync --all-groups
 
       - name: Run tests with coverage
         id: pytest

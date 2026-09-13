@@ -944,6 +944,12 @@ uv run sphinx-build -b html docs docs/_build/html
   dependency resolution `lowest-direct` и `highest`, затем
   `just test --cov-report=xml`. Матрицу версий гоняет сам GitHub Actions,
   поэтому `just test-all` (nox) в CI не используется.
+- Стратегию резолвинга в `test.yml` задает `UV_RESOLUTION` на уровне job, а не
+  флаг `uv sync --resolution`. Рецепты `just` зовут `uv run`, а тот без
+  переменной видит в `uv.lock` другой режим, перерезолвит зависимости до
+  `highest` и молча переустановит окружение: job `lowest-direct` тестировал бы
+  свежие версии. Локально минимальные версии проверяй так же:
+  `UV_RESOLUTION=lowest-direct just test`.
 - Python в `lint.yml` и `test.yml` ставит сам `setup-uv` через вход
   `python-version`. Отдельного `actions/setup-python` в workflow нет, и версия
   Python из этого входа попадает в ключ кэша.
