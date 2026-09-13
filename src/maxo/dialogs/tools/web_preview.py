@@ -1,8 +1,10 @@
+import argparse
 import asyncio
 import importlib
 import inspect
 import os.path
 import sys
+from collections.abc import Sequence
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -104,13 +106,25 @@ def disable_print(*_args: Any, **_kwargs: Any) -> None:
     pass
 
 
-def main() -> None:
-    path, _, app_spec = sys.argv[1].rpartition(os.path.sep)
+def main(argv: Sequence[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        prog="maxo-dialog-preview",
+        description="Локальный веб-сервер с HTML-превью и диаграммой переходов.",
+    )
+    parser.add_argument(
+        "app",
+        metavar="module:router",
+        help="[путь/]модуль и имя роутера или фабрики, которая его возвращает",
+    )
+    args = parser.parse_args(argv)
+    path, _, app_spec = args.app.rpartition(os.path.sep)
+    app_module, _, dialogs_router = app_spec.partition(":")
+    if not app_module or not dialogs_router or ":" in dialogs_router:
+        parser.error(f"ожидается формат module:router, получено {args.app!r}")
     if path:
         sys.path.append(path)
     else:
         sys.path.append(os.curdir)
-    app_module, dialogs_router = app_spec.split(":")
     controller = Controller(app_module, dialogs_router)
     routes = web.RouteTableDef()
     routes.get("/transitions")(controller.transitions)

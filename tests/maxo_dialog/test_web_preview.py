@@ -1,3 +1,4 @@
+import importlib
 import os.path
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -8,6 +9,7 @@ from typing import Any, cast
 import pytest
 from aiohttp import web
 
+import maxo.dialogs.tools
 from maxo.dialogs.tools import web_preview
 from maxo.dialogs.tools.web_preview import Renderer, removesuffix
 from maxo.routing.interfaces import BaseRouter
@@ -204,3 +206,37 @@ def test_main_appends_module_directory(monkeypatch: pytest.MonkeyPatch) -> None:
     web_preview.main()
 
     assert paths == ["pkg"]
+
+
+def test_web_preview_imports_without_diagrams(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setitem(sys.modules, "diagrams", None)
+    for name in list(sys.modules):
+        if name.startswith("maxo.dialogs.tools"):
+            monkeypatch.delitem(sys.modules, name)
+    monkeypatch.setattr(maxo.dialogs, "tools", maxo.dialogs.tools)
+
+    module = importlib.import_module("maxo.dialogs.tools.web_preview")
+
+    assert callable(module.main)
+
+
+def test_main_help(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        web_preview.main(["--help"])
+
+    assert exc_info.value.code == 0
+    assert "module:router" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("argv", [[], ["bot"], ["bot:"], [":router"], ["a:b:c"]])
+def test_main_rejects_invalid_app_spec(
+    argv: list[str],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        web_preview.main(argv)
+
+    assert exc_info.value.code == 2
+    assert "usage:" in capsys.readouterr().err
