@@ -25,6 +25,10 @@ class DialogStackOverflow(DialogsError):
     pass
 
 
+class StackAccessDeniedError(DialogsError):
+    pass
+
+
 # manager
 class IncorrectBackgroundError(DialogsError):
     pass
