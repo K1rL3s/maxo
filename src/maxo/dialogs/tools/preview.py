@@ -111,7 +111,7 @@ class FakeManager(DialogManager):
                 chat_type=self._event.recipient.chat_type,
                 chat_id=self._event.recipient.chat_id,
                 user=self._event.user,
-                user_id=self._event.user.user_id,
+                user_id=self._event.recipient.user_id,
             ),
         }
 

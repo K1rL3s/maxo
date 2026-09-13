@@ -191,18 +191,64 @@ async def test_start_new_stack_from_channel_post(
     async def handler(event: MessageCreated, dialog_manager: DialogManager) -> None:
         await dialog_manager.start(ChannelSG.post, mode=StartMode.NEW_STACK)
 
-    dp = Dispatcher(
-        storage=JsonMemoryStorage(),
-        key_builder=DefaultKeyBuilder(with_destiny=True),
+    client = await start_channel_client(
+        message_manager,
+        router,
+        Dialog(Window(Const("channel window"), state=ChannelSG.post)),
     )
-    dp.include_router(router)
-    dp.include_router(Dialog(Window(Const("channel window"), state=ChannelSG.post)))
-    setup_dialogs(dp, message_manager=message_manager)
-    client = BotClient(dp, user_id=1, chat_id=-100, chat_type=ChatType.CHANNEL)
-    await dp.feed_signal(BeforeStartup(), client.bot)
-    await dp.feed_signal(AfterStartup(), client.bot)
 
     await client.send_channel_post("post")
 
     await wait_for_messages(message_manager)
     assert message_manager.one_message().body.text == "channel window"
+
+
+class ChannelDefaultSG(StatesGroup):
+    first = State()
+    second = State()
+
+
+async def test_bg_switch_to_from_channel_post_reaches_default_stack(
+    message_manager: MockMessageManager,
+) -> None:
+    router = Router()
+
+    @router.message_created()
+    async def handler(event: MessageCreated, dialog_manager: DialogManager) -> None:
+        if event.message.body.text == "start":
+            await dialog_manager.start(ChannelDefaultSG.first)
+        else:
+            await dialog_manager.bg().switch_to(ChannelDefaultSG.second)
+
+    client = await start_channel_client(
+        message_manager,
+        router,
+        Dialog(
+            Window(Const("first"), state=ChannelDefaultSG.first),
+            Window(Const("second"), state=ChannelDefaultSG.second),
+        ),
+    )
+
+    await client.send_channel_post("start")
+    await client.send_channel_post("switch")
+
+    await wait_for_messages(message_manager, count=2)
+    assert message_manager.last_message().body.text == "second"
+
+
+async def start_channel_client(
+    message_manager: MockMessageManager,
+    router: Router,
+    dialog: Dialog,
+) -> BotClient:
+    dp = Dispatcher(
+        storage=JsonMemoryStorage(),
+        key_builder=DefaultKeyBuilder(with_destiny=True),
+    )
+    dp.include_router(router)
+    dp.include_router(dialog)
+    setup_dialogs(dp, message_manager=message_manager)
+    client = BotClient(dp, user_id=1, chat_id=-100, chat_type=ChatType.CHANNEL)
+    await dp.feed_signal(BeforeStartup(), client.bot)
+    await dp.feed_signal(AfterStartup(), client.bot)
+    return client

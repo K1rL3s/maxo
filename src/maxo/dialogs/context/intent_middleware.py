@@ -128,7 +128,7 @@ def event_context_from_aiogd(event: DialogUpdateEvent) -> EventContext:
     return EventContext(
         bot=event.bot,
         user=event.user,
-        user_id=event.user.user_id,
+        user_id=None if event.user is None else event.user.user_id,
         chat=None,
         chat_id=event.recipient.chat_id,
         chat_type=event.recipient.chat_type,
@@ -343,7 +343,7 @@ class IntentMiddlewareFactory:
             if isinstance(update, DialogFgEvent):
                 update.entered.set_exception(
                     StackAccessDeniedError(
-                        f"Stack is not allowed for user {update.user.id}",
+                        f"Stack is not allowed for user {event_context.user_id}",
                     ),
                 )
             return UNHANDLED
