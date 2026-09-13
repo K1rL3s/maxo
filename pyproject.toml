@@ -86,8 +86,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-magic_filter = ["magic_filter>=1.0.0,<2.0.0"]
-dishka = ["dishka>=1.0.0,<2.0.0"]
+magic_filter = ["magic_filter>=1.0.10,<2.0.0"]
+dishka = ["dishka>=1.3.0,<2.0.0"]
 redis = ["redis[hiredis]>=5.0.1,<8.0.0"]
 fastapi = [
     "fastapi>=0.128.0,<1.0.0; python_version <= '3.12'",
