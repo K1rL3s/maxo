@@ -77,7 +77,12 @@ def id_to_message_url(sequence_id: int, chat_id: int) -> str:
 
 
 def url_to_message_id(url: str) -> int:
-    """Обратное преобразование: из URL-safe base64 в числовой ID."""
+    """
+    Обратное преобразование: из URL-safe base64 в числовой ID.
+
+    Вызывает:
+        ValueError: Если URL не содержит корректный идентификатор сообщения.
+    """
     try:
         # Извлекаем последнюю часть пути URL (без query и fragment)
         path = urlsplit(url).path
