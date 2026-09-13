@@ -28,13 +28,14 @@ OR OTHER DEALINGS IN THE SOFTWARE.
 import dataclasses
 import textwrap
 from collections.abc import Generator, Iterable, Iterator
-from typing import Any, ClassVar, Self, TypeAlias
+from typing import Any, ClassVar, Self, TypeAlias, cast
 
 from maxo.enums import MarkupElementType
 from maxo.types.emphasized_markup import EmphasizedMarkup
 from maxo.types.heading_markup import HeadingMarkup
 from maxo.types.highlighted_markup import HighlightedMarkup
 from maxo.types.link_markup import LinkMarkup
+from maxo.types.markup_element import MarkupElement
 from maxo.types.markup_elements import MarkupElements
 from maxo.types.monospaced_markup import MonospacedMarkup
 from maxo.types.quote_markup import QuoteMarkup
@@ -140,7 +141,11 @@ class Text(Iterable[NodeType]):
         if self.type is None:
             raise ValueError("Node without type can't be rendered as entity")
 
-        return _MARKUP_MAP[self.type](
+        markup_class: type[MarkupElements] = _MARKUP_MAP.get(
+            self.type,
+            cast(type[MarkupElements], MarkupElement),
+        )
+        return markup_class(
             type=self.type,
             from_=offset,
             length=length,
