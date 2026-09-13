@@ -18,6 +18,8 @@ from maxo.fsm import State
 
 if TYPE_CHECKING:
     from maxo.dialogs.api.internal.widgets import Widget
+    from maxo.dialogs.api.protocols.dialog import DialogProtocol
+    from maxo.dialogs.context.storage import StorageProxy
 
 
 class UnsetId(Enum):
@@ -207,4 +209,19 @@ class DialogManager(BaseDialogManager, Protocol):
     @abstractmethod
     async def close_manager(self) -> None:
         """Release all resources and disable usage of many methods."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def dialog(self) -> "DialogProtocol":
+        """Получить текущий диалог."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def storage(self) -> "StorageProxy":
+        """Получить хранилище контекстов и стеков диалогов."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_event_simulated(self) -> bool:
+        """Проверить, что текущее событие сымитировано, а не пришло от MAX."""
         raise NotImplementedError

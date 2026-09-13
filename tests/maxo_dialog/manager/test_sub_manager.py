@@ -316,3 +316,32 @@ async def test_fg_context_manager(
 
     async with sub.fg() as manager:
         assert manager is sub
+
+
+async def test_dialog(mock_widget: MagicMock, mock_manager: MagicMock) -> None:
+    dialog = MagicMock()
+    mock_manager.dialog = Mock(return_value=dialog)
+
+    sub = SubManager(mock_widget, mock_manager, "widget_1", "item_1")
+
+    assert sub.dialog() is dialog
+
+
+async def test_storage(mock_widget: MagicMock, mock_manager: MagicMock) -> None:
+    storage = MagicMock()
+    mock_manager.storage = Mock(return_value=storage)
+
+    sub = SubManager(mock_widget, mock_manager, "widget_1", "item_1")
+
+    assert sub.storage() is storage
+
+
+async def test_is_event_simulated(
+    mock_widget: MagicMock,
+    mock_manager: MagicMock,
+) -> None:
+    mock_manager.is_event_simulated = Mock(return_value=True)
+
+    sub = SubManager(mock_widget, mock_manager, "widget_1", "item_1")
+
+    assert sub.is_event_simulated() is True
