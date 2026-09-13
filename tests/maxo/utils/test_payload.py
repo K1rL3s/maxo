@@ -22,8 +22,16 @@ def test_round_trip_with_custom_coder() -> None:
 
 
 @pytest.mark.parametrize(
+    ("payload", "expected"),
+    [("aGk=", "hi"), ("Pj4+", ">>>"), ("Pz8/", "???")],
+)
+def test_decode_padded_and_standard_alphabet(payload: str, expected: str) -> None:
+    assert decode_payload(payload) == expected
+
+
+@pytest.mark.parametrize(
     "payload",
-    ["!!!", "a", "_w", "aGk=", "a+/b"],
+    ["!!!", "a", "_w", "aGk==", "абвг"],
 )
 def test_decode_invalid_payload(payload: str) -> None:
     with pytest.raises(InvalidPayloadError) as exc_info:
