@@ -5,6 +5,7 @@ on_start колбэки, а Cancel во внутреннем диалоге ка
 управление к корневому диалогу.
 """
 
+import itertools
 from typing import Any
 
 import pytest
@@ -17,6 +18,7 @@ from maxo.dialogs import (
     Window,
     setup_dialogs,
 )
+from maxo.dialogs.api.entities import stack
 from maxo.dialogs.test_tools import BotClient, MockMessageManager
 from maxo.dialogs.test_tools.keyboard import InlineButtonTextLocator
 from maxo.dialogs.test_tools.memory_storage import JsonMemoryStorage
@@ -120,7 +122,6 @@ async def test_start(
     assert second_message.body.reply_markup is None
 
 
-@pytest.mark.flaky(reruns=2)
 async def test_cascade_cancel(
     dp: Dispatcher,
     message_manager: MockMessageManager,
@@ -151,3 +152,8 @@ async def test_cascade_cancel(
     assert second_message is not None
     assert second_message.body.text == "First"
     assert second_message.body.reply_markup is None
+
+
+@pytest.fixture(autouse=True)
+def sequential_ids(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(stack, "new_int_id", itertools.count(1).__next__)
