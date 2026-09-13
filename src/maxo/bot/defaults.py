@@ -18,13 +18,8 @@ class BotDefaults(MaxoType):
 
     text_format: Omittable[TextFormat | None] = None
     """Default text format for messages"""
-    disable_link_preview: Omittable[bool | None] = Omitted()
+    disable_link_preview: Omittable[bool] = Omitted()
     """Default value for disable_link_preview parameter"""
-
-    def __post_init__(self) -> None:
-        # API ожидает Omittable[bool]. None здесь для совместимости с maxo 0.5.0
-        if self.disable_link_preview is None:
-            self.disable_link_preview = Omitted()
 
 
 _MethodT = TypeVar("_MethodT")

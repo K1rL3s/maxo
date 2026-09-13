@@ -20,6 +20,8 @@ class ExceptionTypeFilter(
     __slots__ = ("_handler",)
 
     def __init__(self, *errors: type[_ExceptionT], use_subclass: bool = True) -> None:
+        if not errors:
+            raise ValueError("At least one exception type is required")
         if use_subclass:
             self._handler = lambda e: isinstance(e, errors)
         else:

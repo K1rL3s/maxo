@@ -1,4 +1,3 @@
-import warnings
 from collections.abc import Callable, Iterable, Mapping
 from typing import (
     Any,
@@ -6,7 +5,7 @@ from typing import (
 
 from jinja2 import BaseLoader, Environment
 
-from maxo import Bot, Dispatcher
+from maxo import Dispatcher
 from maxo.dialogs.api.protocols import DialogManager
 from maxo.dialogs.widgets.common import WhenCondition
 
@@ -28,11 +27,7 @@ class Jinja(Text):
         data: dict[Any, Any],
         manager: DialogManager,
     ) -> str:
-        if JINJA_ENV_FIELD in manager.middleware_data:
-            env: Environment = manager.middleware_data[JINJA_ENV_FIELD]
-        else:
-            bot = manager.middleware_data.get("bot")
-            env = getattr(bot, JINJA_ENV_FIELD, default_env)
+        env: Environment = manager.middleware_data.get(JINJA_ENV_FIELD, default_env)
         template = env.get_template(self.template_text)
 
         if env.is_async:
@@ -67,21 +62,13 @@ def _create_env(
 
 
 def setup_jinja(
-    dp: Bot | Dispatcher,
+    dp: Dispatcher,
     *args: Any,
     filters: Filters | None = None,
     **kwargs: Any,
 ) -> Environment:
     env = _create_env(*args, filters=filters, **kwargs)
-    if isinstance(dp, Bot):
-        warnings.warn(
-            "Passing `Bot` to setup_jinja is deprecated, use `Dispatcher`",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        setattr(dp, JINJA_ENV_FIELD, env)
-    else:
-        dp.workflow_data[JINJA_ENV_FIELD] = env
+    dp.workflow_data[JINJA_ENV_FIELD] = env
     return env
 
 

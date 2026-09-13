@@ -209,6 +209,7 @@ class ManagerImpl(DialogManager):
             await self.show(show_mode)
 
     async def answer_callback(self) -> None:
+        self.check_disabled()
         if not isinstance(self.event, MessageCallback):
             return None
         if self.is_event_simulated():
@@ -321,6 +322,7 @@ class ManagerImpl(DialogManager):
                 self._ctx[CONTEXT_KEY] = None
 
     async def next(self, show_mode: ShowMode | None = None) -> None:
+        self.check_disabled()
         context = self.current_context()
         states = self.dialog().states()
         current_index = states.index(context.state)
@@ -335,6 +337,7 @@ class ManagerImpl(DialogManager):
         await self.switch_to(new_state, show_mode)
 
     async def back(self, show_mode: ShowMode | None = None) -> None:
+        self.check_disabled()
         context = self.current_context()
         states = self.dialog().states()
         current_index = states.index(context.state)
@@ -379,6 +382,7 @@ class ManagerImpl(DialogManager):
             )
 
     async def show(self, show_mode: ShowMode | None = None) -> None:
+        self.check_disabled()
         try:
             stack = self.current_stack()
             bot = self._ctx["bot"]
@@ -501,6 +505,7 @@ class ManagerImpl(DialogManager):
         data: dict[Any, Any] | None = None,
         show_mode: ShowMode | None = None,
     ) -> None:
+        self.check_disabled()
         if data:
             self.current_context().dialog_data.update(data)
         await self.show(show_mode)

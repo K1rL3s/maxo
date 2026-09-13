@@ -206,9 +206,9 @@ class TestPayload:
             with_default: str = "hello"
 
         fields = dataclasses.fields(TestNullable)
-        assert _check_field_is_nullable(fields[0]) is False  # required
-        assert _check_field_is_nullable(fields[1]) is True  # optional
-        assert _check_field_is_nullable(fields[2]) is True  # with_default
+        assert _check_field_is_nullable(fields[0], float) is False  # required
+        assert _check_field_is_nullable(fields[1], int | None) is True  # optional
+        assert _check_field_is_nullable(fields[2], str) is True  # with_default
 
     def test_simple_roundtrip(self) -> None:
         original = SimplePayload(name="Alice", age=30)

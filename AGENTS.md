@@ -99,13 +99,13 @@ just butcher-test  # тесты самого генератора
 | `src/maxo/bot/`          | `Bot`, `MaxApiClient`, состояния бота, declarative Bot API methods на `unihttp`.                                                  |
 | `src/maxo/types/`        | Типы MAX Bot API. Многие файлы сгенерированы по документации API.                                                                 |
 | `src/maxo/enums/`        | Enum MAX Bot API. Многие файлы сгенерированы по документации API.                                                                 |
-| `src/maxo/routing/`      | `Dispatcher`, `Router`, observers, handlers, filters, middlewares, facades и signals; `updates/` - устаревший слой совместимости. |
+| `src/maxo/routing/`      | `Dispatcher`, `Router`, observers, handlers, filters, middlewares и signals.                                                      |
 | `src/maxo/fsm/`          | FSM: `State`, `StatesGroup`, `FSMContext`, storage, isolation, key builders.                                                      |
 | `src/maxo/dialogs/`      | Диалоги, портированные из `aiogram_dialog`: `Dialog`, `Window`, widgets, managers, preview, test tools.                           |
 | `src/maxo/transport/`    | Long polling и webhook engine/adapters/routing/security.                                                                          |
 | `src/maxo/errors/`       | Исключения публичного API и ошибки MAX Bot API.                                                                                   |
 | `src/maxo/integrations/` | Интеграции `dishka` и `magic_filter`.                                                                                             |
-| `src/maxo/utils/`        | Builders, upload helpers, formatting, deeplink/link helpers, facades.                                                             |
+| `src/maxo/utils/`        | Builders, upload helpers, formatting, deeplink/link helpers.                                                                      |
 | `docs/`                  | Sphinx-документация на русском языке.                                                                                             |
 | `examples/`              | Рабочие примеры использования публичного API.                                                                                     |
 | `tests/`                 | Pytest-тесты по подсистемам.                                                                                                      |
@@ -522,9 +522,7 @@ TAG_PROVIDERS = concat_provider(
 - `maxo.exceptions` и `maxo.filters` - постоянные алиасы `maxo.errors` и
   `maxo.routing.filters` для портирования ботов с `aiogram`. Они не
   предупреждают при импорте и не планируются к удалению. Не путай их с
-  переездами внутри пакета (`maxo.utils.long_polling` ->
-  `maxo.transport.long_polling`) - те кидают `DeprecationWarning` и будут
-  удалены.
+  переездами внутри пакета - те кидают `DeprecationWarning` и будут удалены.
 - Документация и примеры должны импортировать из публичных модулей, а не из
   `maxo._internal`.
 - При добавлении публичного символа обновляй ближайший `__init__.py` и
@@ -946,6 +944,12 @@ uv run sphinx-build -b html docs docs/_build/html
   dependency resolution `lowest-direct` и `highest`, затем
   `just test --cov-report=xml`. Матрицу версий гоняет сам GitHub Actions,
   поэтому `just test-all` (nox) в CI не используется.
+- Стратегию резолвинга в `test.yml` задает `UV_RESOLUTION` на уровне job, а не
+  флаг `uv sync --resolution`. Рецепты `just` зовут `uv run`, а тот без
+  переменной видит в `uv.lock` другой режим, перерезолвит зависимости до
+  `highest` и молча переустановит окружение: job `lowest-direct` тестировал бы
+  свежие версии. Локально минимальные версии проверяй так же:
+  `UV_RESOLUTION=lowest-direct just test`.
 - Python в `lint.yml` и `test.yml` ставит сам `setup-uv` через вход
   `python-version`. Отдельного `actions/setup-python` в workflow нет, и версия
   Python из этого входа попадает в ключ кэша.

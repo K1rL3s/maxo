@@ -21,7 +21,6 @@ from maxo.routing.signals.update import MaxoUpdate
 from maxo.routing.utils._resolving_inner_middlewares import resolve_middlewares
 from maxo.routing.utils.validate_router_graph import validate_router_graph
 from maxo.types.base import BaseUpdate
-from maxo.types.binding import bind_bot
 
 
 class Dispatcher(Router):
@@ -170,11 +169,6 @@ class Dispatcher(Router):
         if bot is not None:
             ctx["bot"] = bot
             ctx["bots"] = [bot]
-            # Единственное место, где апдейт и бот встречаются на всех путях:
-            # лонг-поллинг, вебхук, диалоги, ручной вызов из тестов.
-            # `MaxoUpdate` - обёртка роутинга, бота держит апдейт внутри неё,
-            # а по хинту (тайпвар) `bind_bot` туда не спустится.
-            bind_bot(update.update if isinstance(update, MaxoUpdate) else update, bot)
 
         return await self.trigger(ctx)
 

@@ -1,7 +1,7 @@
 import pytest
 
 from maxo import Router
-from maxo.errors import CycleRoutersError
+from maxo.errors import CycleRoutersError, RouterAlreadyIncludedError
 from maxo.errors.state import StateError
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.signals import BeforeStartup
@@ -111,3 +111,33 @@ async def test_observer_cannot_be_modified_after_startup() -> None:
 
     with pytest.raises(StateError, match="Can't add handler after startup"):
         dp.message_created.handler(handler)
+
+
+def test_include_sets_parent_router() -> None:
+    root = Router("root")
+    child = Router("child")
+    grandchild = Router("grandchild")
+
+    root.include(child)
+    child.include(grandchild)
+
+    assert root.parent_router is None
+    assert child.parent_router is root
+    assert grandchild.parent_router is child
+
+
+def test_include_rejects_router_with_another_parent() -> None:
+    dp = Dispatcher()
+    a = Router("a")
+    b = Router("b")
+    c = Router("c")
+    dp.include(a, b)
+    a.include(c)
+
+    with pytest.raises(RouterAlreadyIncludedError) as exc_info:
+        b.include(c)
+
+    assert exc_info.value.router is c
+    assert exc_info.value.parent_router is a
+    assert str(exc_info.value) == "<Router 'c'> is already included into <Router 'a'>"
+    assert list(b.children_routers) == []

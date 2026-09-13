@@ -10,9 +10,11 @@ from maxo.dialogs.api.entities import (
     EventContext,
     Stack,
 )
+from maxo.dialogs.api.entities.update_event import DialogFgEvent
 from maxo.dialogs.api.exceptions import (
     InvalidStackIdError,
     OutdatedIntent,
+    StackAccessDeniedError,
     UnknownIntent,
     UnknownState,
 )
@@ -337,6 +339,14 @@ class IntentMiddlewareFactory:
                 stack_id=update.stack_id,
                 ctx=ctx,
             )
+        if ctx.get(FORBIDDEN_STACK_KEY):
+            if isinstance(update, DialogFgEvent):
+                update.entered.set_exception(
+                    StackAccessDeniedError(
+                        f"Stack is not allowed for user {update.user.id}",
+                    ),
+                )
+            return UNHANDLED
         return await next(ctx)
 
     async def process_callback(

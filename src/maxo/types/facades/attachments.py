@@ -8,7 +8,7 @@ from unihttp.http import UploadFile
 
 from maxo import loggers
 from maxo.enums import UploadType
-from maxo.errors.api import RetvalReturnedServerException
+from maxo.errors.api import RetvalReturnedError
 from maxo.omit import is_defined
 from maxo.types.attachments import MediaAttachmentsRequests
 from maxo.types.audio_attachment_request import AudioAttachmentRequest
@@ -175,5 +175,5 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
                 upload_url=url,
                 file=UploadFile(file=await file.read(), filename=file.file_name),
             )
-        except RetvalReturnedServerException:
+        except RetvalReturnedError:
             return None
