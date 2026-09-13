@@ -26,6 +26,7 @@ OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import dataclasses
+import functools
 import types
 import typing
 from decimal import Decimal
@@ -123,9 +124,10 @@ class Payload(MaxoType, slots=False):
     @classmethod
     def _decode_value(cls, field: dataclasses.Field[Any], raw_value: str) -> Any:
         is_empty = raw_value == ""
+        field_type = _resolve_field_types(cls)[field.name]
 
         if is_empty:
-            if _check_field_is_nullable(field):
+            if _check_field_is_nullable(field, field_type):
                 if field.default is not dataclasses.MISSING:
                     return field.default
                 if field.default_factory is not dataclasses.MISSING:
@@ -133,7 +135,6 @@ class Payload(MaxoType, slots=False):
                 return None
             raise ValueError(f"Empty value for non-nullable field {field.name}")
 
-        field_type = field.type
         origin = get_origin(field_type)
         args = get_args(field_type)
 
@@ -245,19 +246,24 @@ class MessageCallbackFilter(BaseFilter[MessageCallback]):
         return result
 
 
-def _check_field_is_nullable(field: dataclasses.Field[Any]) -> bool:
+def _check_field_is_nullable(field: dataclasses.Field[Any], field_type: Any) -> bool:
     if (
         field.default is not dataclasses.MISSING
         or field.default_factory is not dataclasses.MISSING
     ):
         return True
 
-    origin = get_origin(field.type)
+    origin = get_origin(field_type)
     if origin in _UNION_TYPES:
-        args = get_args(field.type)
+        args = get_args(field_type)
         return type(None) in args
 
     return False
+
+
+@functools.cache
+def _resolve_field_types(cls: type[Payload]) -> dict[str, Any]:
+    return typing.get_type_hints(cls)
 
 
 # Подражание aiogram
