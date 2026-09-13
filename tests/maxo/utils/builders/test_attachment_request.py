@@ -2,6 +2,8 @@
 
 from decimal import Decimal
 
+import pytest
+
 from maxo.types.audio_attachment_request import AudioAttachmentRequest
 from maxo.types.callback_button import CallbackButton
 from maxo.types.contact_attachment_request import ContactAttachmentRequest
@@ -148,3 +150,9 @@ def test_attachment_request_builder_multiple_items() -> None:
     assert attachments[0].payload.url == "http://example.com/image.jpg"
     assert isinstance(attachments[1], VideoAttachmentRequest)
     assert attachments[1].payload.token == "video_token_123"
+
+
+def test_attachment_request_builder_add_share_rejects_positional() -> None:
+    builder = AttachmentRequestBuilder()
+    with pytest.raises(TypeError):
+        builder.add_share("https://example.com/share")  # type: ignore[call-overload]
