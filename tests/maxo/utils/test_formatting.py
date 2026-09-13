@@ -241,14 +241,15 @@ class TestNode:
             MarkupElementType.LINK: {"url": "https://example.com"},
             MarkupElementType.USER_MENTION: {"user_id": 42},
         }
-        node = NODE_TYPES[markup_type]("test", **params.get(markup_type, {}))
+        node_params = params.get(markup_type, {})
+        node = NODE_TYPES[markup_type]("test", **node_params)
 
         _, entities = node.render()
 
         assert len(entities) == 1
-        entity = entities[0]
-        assert type(entity) in get_args(MarkupElements)
-        assert entity.type == markup_type
+        markup_class = type(entities[0])
+        assert markup_class in get_args(MarkupElements)
+        assert markup_class(from_=0, length=4, **node_params).type == markup_type
 
 
 class TestUtils:
