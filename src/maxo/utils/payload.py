@@ -25,8 +25,13 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR TH
 OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+import re
 from base64 import urlsafe_b64decode, urlsafe_b64encode
 from collections.abc import Callable
+
+from maxo.errors import InvalidPayloadError
+
+_URLSAFE_B64_PATTERN = re.compile(r"[A-Za-z0-9_-]*")
 
 
 def encode_payload(
@@ -44,12 +49,27 @@ def decode_payload(
     payload: str,
     decoder: Callable[[bytes], bytes] | None = None,
 ) -> str:
-    original_payload = _decode_b64(payload)
+    """
+    Декодирует payload, закодированный через `encode_payload`.
 
-    if decoder is None:
-        return original_payload.decode()
+    Args:
+        payload: Base64url без паддинга.
+        decoder: Функция, обратная `encoder` из `encode_payload`. Её
+            исключения пробрасываются как есть.
 
-    return decoder(original_payload).decode()
+    Raises:
+        InvalidPayloadError: Если payload не является base64url без паддинга
+            или результат не декодируется из UTF-8.
+
+    """
+    payload_bytes = _decode_b64(payload)
+    if decoder is not None:
+        payload_bytes = decoder(payload_bytes)
+
+    try:
+        return payload_bytes.decode()
+    except UnicodeDecodeError as e:
+        raise InvalidPayloadError(payload) from e
 
 
 def _encode_b64(payload: bytes) -> str:
@@ -59,5 +79,6 @@ def _encode_b64(payload: bytes) -> str:
 
 
 def _decode_b64(payload: str) -> bytes:
-    payload += "=" * (4 - len(payload) % 4)
-    return urlsafe_b64decode(payload.encode())
+    if _URLSAFE_B64_PATTERN.fullmatch(payload) is None or len(payload) % 4 == 1:
+        raise InvalidPayloadError(payload)
+    return urlsafe_b64decode(payload + "=" * (-len(payload) % 4))
