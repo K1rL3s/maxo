@@ -517,18 +517,12 @@ class ManagerImpl(DialogManager):
         return cast(Widget, widget.managed(self))
 
     def _get_fake_user(self, user_id: int | None = None) -> User:
-        """Get User if we have info about him or FakeUser instead."""
-        # TODO: Сделать нормально, это нейрослоп
-        event = self.event.event if isinstance(self.event, ErrorEvent) else self.event
-        if isinstance(event, MessageCreated):
-            current_user = event.message.unsafe_sender
-        else:
-            current_user = event.user
-
-        if user_id is None or user_id == current_user.id:
+        event_context: EventContext = self.middleware_data[EVENT_CONTEXT_KEY]
+        current_user = event_context.user
+        if current_user is not None and user_id in (None, current_user.id):
             return current_user
         return FakeUser(
-            user_id=user_id,
+            user_id=user_id or 0,
             is_bot=False,
             first_name="",
             last_activity_time=datetime.now(UTC),
