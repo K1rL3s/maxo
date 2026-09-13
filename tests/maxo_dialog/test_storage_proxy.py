@@ -2,7 +2,7 @@ from typing import Any
 
 import pytest
 
-from maxo.dialogs.api.entities import AccessSettings, Stack
+from maxo.dialogs.api.entities import DEFAULT_STACK_ID, AccessSettings, Stack
 from maxo.dialogs.api.exceptions import UnknownIntent, UnknownState
 from maxo.dialogs.context.storage import StorageProxy
 from maxo.dialogs.test_tools.bot_client import FakeBot
@@ -208,3 +208,35 @@ def test_dump_access_settings_roundtrip() -> None:
     parsed = proxy._parse_access_settings(dumped)
     assert parsed is not None
     assert parsed.user_ids == [1]
+
+
+async def test_save_load_stack_keeps_access_settings() -> None:
+    proxy = make_proxy()
+    stack = Stack(_id="restricted", access_settings=AccessSettings(user_ids=[1]))
+    stack.push(SG.first, {})
+
+    await proxy.save_stack(stack)
+    loaded = await proxy.load_stack("restricted")
+
+    assert loaded.access_settings is not None
+    assert loaded.access_settings.user_ids == [1]
+
+
+async def test_load_stack_without_access_settings_uses_default() -> None:
+    proxy = make_proxy()
+    await proxy.storage.set_data(
+        key=proxy._stack_key(DEFAULT_STACK_ID),
+        data={
+            "_id": DEFAULT_STACK_ID,
+            "intents": ["a"],
+            "last_message_id": None,
+            "last_sequence_id": None,
+            "last_attachments": [],
+        },
+    )
+
+    loaded = await proxy.load_stack()
+
+    assert loaded.intents == ["a"]
+    assert loaded.access_settings is not None
+    assert loaded.access_settings.user_ids == [456]
