@@ -265,16 +265,15 @@ class ListGroupSG(StatesGroup):
     main = State()
 
 
-async def test_item_callback_manager_has_dialog() -> None:
-    dialogs: list[DialogProtocol] = []
+async def test_callback_manager_has_dialog_outside_and_inside_list_group() -> None:
+    calls: list[tuple[DialogProtocol, bool]] = []
 
     async def on_click(
         event: MessageCallback,
         button: Button,
         manager: DialogManager,
     ) -> None:
-        assert isinstance(manager, SubManager)
-        dialogs.append(manager.dialog())
+        calls.append((manager.dialog(), isinstance(manager, SubManager)))
 
     async def start(message: MessageCreated, dialog_manager: DialogManager) -> None:
         await dialog_manager.start(ListGroupSG.main, mode=StartMode.RESET_STACK)
@@ -282,6 +281,7 @@ async def test_item_callback_manager_has_dialog() -> None:
     dialog = Dialog(
         Window(
             Const("stub"),
+            Button(Const("Top"), id="top", on_click=on_click),
             ListGroup(
                 Button(Const("Item"), id="item", on_click=on_click),
                 id="list",
@@ -307,9 +307,7 @@ async def test_item_callback_manager_has_dialog() -> None:
     await dp.feed_signal(AfterStartup(), client.bot)
 
     await client.send("/start")
-    await client.click(
-        message_manager.one_message(),
-        InlineButtonTextLocator("Item"),
-    )
+    await client.click(message_manager.one_message(), InlineButtonTextLocator("Top"))
+    await client.click(message_manager.last_message(), InlineButtonTextLocator("Item"))
 
-    assert dialogs == [dialog]
+    assert calls == [(dialog, False), (dialog, True)]

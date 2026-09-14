@@ -325,10 +325,9 @@ async def test_forwards_manager_impl_members_through_nested_sub_managers(
     dialog = MagicMock()
     storage = MagicMock()
     mock_manager.disabled = True
-    mock_manager.check_disabled = Mock()
-    mock_manager.dialog = Mock(return_value=dialog)
-    mock_manager.storage = Mock(return_value=storage)
-    mock_manager.is_event_simulated = Mock(return_value=True)
+    mock_manager.dialog.return_value = dialog
+    mock_manager.storage.return_value = storage
+    mock_manager.is_event_simulated.return_value = True
 
     inner = SubManager(mock_widget, mock_manager, "widget_1", "item_1")
     sub = SubManager(mock_widget, inner, "widget_2", "item_2")
@@ -339,18 +338,3 @@ async def test_forwards_manager_impl_members_through_nested_sub_managers(
     assert sub.dialog() is dialog
     assert sub.storage() is storage
     assert sub.is_event_simulated() is True
-
-
-async def test_forwarding_requires_manager_impl_members(
-    mock_widget: MagicMock,
-    mock_manager: MagicMock,
-) -> None:
-    mock_manager.dialog = Mock()
-
-    sub = SubManager(mock_widget, mock_manager, "widget_1", "item_1")
-
-    with pytest.raises(
-        AttributeError,
-        match="'MagicMock' object does not provide dialog",
-    ):
-        sub.dialog()

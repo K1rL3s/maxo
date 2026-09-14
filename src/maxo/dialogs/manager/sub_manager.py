@@ -1,7 +1,7 @@
 import dataclasses
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any, Protocol, cast, runtime_checkable
+from typing import Any, cast
 
 from maxo.dialogs.api.entities import (
     AccessSettings,
@@ -20,20 +20,6 @@ from maxo.dialogs.api.protocols import (
 )
 from maxo.dialogs.context.storage import StorageProxy
 from maxo.fsm import State
-
-
-@runtime_checkable
-class _ParentManager(Protocol):
-    @property
-    def disabled(self) -> bool: ...
-
-    def check_disabled(self) -> None: ...
-
-    def dialog(self) -> DialogProtocol: ...
-
-    def storage(self) -> StorageProxy: ...
-
-    def is_event_simulated(self) -> bool: ...
 
 
 class SubManager(DialogManager):
@@ -182,24 +168,16 @@ class SubManager(DialogManager):
 
     @property
     def disabled(self) -> bool:
-        return self._parent_manager().disabled
+        return self.manager.disabled
 
     def check_disabled(self) -> None:
-        self._parent_manager().check_disabled()
+        self.manager.check_disabled()
 
     def dialog(self) -> DialogProtocol:
-        return self._parent_manager().dialog()
+        return self.manager.dialog()
 
     def storage(self) -> StorageProxy:
-        return self._parent_manager().storage()
+        return self.manager.storage()
 
     def is_event_simulated(self) -> bool:
-        return self._parent_manager().is_event_simulated()
-
-    def _parent_manager(self) -> _ParentManager:
-        if isinstance(self.manager, _ParentManager):
-            return self.manager
-        raise AttributeError(
-            f"{type(self.manager).__name__!r} object does not provide dialog, "
-            "storage, is_event_simulated, check_disabled and disabled",
-        )
+        return self.manager.is_event_simulated()

@@ -8,7 +8,6 @@ from maxo import Dispatcher
 from maxo.dialogs import Dialog, DialogManager, DialogProtocol, Window
 from maxo.dialogs.api.entities import MediaAttachment, MediaId, ShowMode
 from maxo.dialogs.api.exceptions import NoContextError
-from maxo.dialogs.manager.sub_manager import SubManager
 from maxo.dialogs.tools.preview import (
     FakeManager,
     RenderButton,
@@ -389,7 +388,6 @@ async def test_render_preview_list_group_row_gets_dialog() -> None:
     rows: list[tuple[DialogProtocol, bool, bool]] = []
 
     def when(data: dict[Any, Any], widget: object, manager: DialogManager) -> bool:
-        assert isinstance(manager, SubManager)
         manager.check_disabled()
         rows.append((manager.dialog(), manager.disabled, manager.is_event_simulated()))
         return True
