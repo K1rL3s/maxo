@@ -318,48 +318,39 @@ async def test_fg_context_manager(
         assert manager is sub
 
 
-async def test_forwards_manager_impl_members(
+async def test_forwards_manager_impl_members_through_nested_sub_managers(
     mock_widget: MagicMock,
     mock_manager: MagicMock,
 ) -> None:
     dialog = MagicMock()
     storage = MagicMock()
+    mock_manager.disabled = True
+    mock_manager.check_disabled = Mock()
     mock_manager.dialog = Mock(return_value=dialog)
     mock_manager.storage = Mock(return_value=storage)
     mock_manager.is_event_simulated = Mock(return_value=True)
-    mock_manager.disabled = False
 
-    sub = SubManager(mock_widget, mock_manager, "widget_1", "item_1")
+    inner = SubManager(mock_widget, mock_manager, "widget_1", "item_1")
+    sub = SubManager(mock_widget, inner, "widget_2", "item_2")
 
+    sub.check_disabled()
+    mock_manager.check_disabled.assert_called_once_with()
+    assert sub.disabled is True
     assert sub.dialog() is dialog
     assert sub.storage() is storage
     assert sub.is_event_simulated() is True
-    assert sub.disabled is False
 
 
-async def test_forwards_through_nested_sub_managers(
+async def test_forwarding_requires_manager_impl_members(
     mock_widget: MagicMock,
     mock_manager: MagicMock,
 ) -> None:
-    dialog = MagicMock()
-    mock_manager.dialog = Mock(return_value=dialog)
-
-    inner = SubManager(mock_widget, mock_manager, "widget_1", "item_1")
-    outer = SubManager(mock_widget, inner, "widget_2", "item_2")
-
-    assert outer.dialog() is dialog
-
-
-async def test_does_not_forward_private_members(
-    mock_widget: MagicMock,
-    mock_manager: MagicMock,
-) -> None:
-    mock_manager._current_context_unsafe = Mock()
+    mock_manager.dialog = Mock()
 
     sub = SubManager(mock_widget, mock_manager, "widget_1", "item_1")
 
     with pytest.raises(
         AttributeError,
-        match="'SubManager' object has no attribute '_current_context_unsafe'",
+        match="'MagicMock' object does not provide dialog",
     ):
-        sub._current_context_unsafe()
+        sub.dialog()

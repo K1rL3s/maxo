@@ -31,6 +31,7 @@ from maxo.dialogs.api.exceptions import NoContextError
 from maxo.dialogs.api.internal.widgets import Widget
 from maxo.dialogs.api.protocols.dialog import DialogProtocol
 from maxo.dialogs.api.protocols.manager import BaseDialogManager, DialogManager
+from maxo.dialogs.context.storage import StorageProxy
 from maxo.dialogs.dialog import Dialog
 from maxo.dialogs.manager.manager_middleware import MANAGER_KEY
 from maxo.dialogs.setup import collect_dialogs
@@ -274,6 +275,19 @@ class FakeManager(DialogManager):
     def dialog(self) -> DialogProtocol:
         assert self._dialog is not None  # noqa: S101
         return self._dialog
+
+    @property
+    def disabled(self) -> bool:
+        return False
+
+    def check_disabled(self) -> None:
+        pass
+
+    def storage(self) -> StorageProxy:
+        raise NotImplementedError("Preview has no dialog storage")
+
+    def is_event_simulated(self) -> bool:
+        return False
 
 
 def create_photo(media: MediaAttachment | None) -> str | None:

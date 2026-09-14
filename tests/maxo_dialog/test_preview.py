@@ -386,11 +386,12 @@ async def test_render_reply_keyboard() -> None:
 
 
 async def test_render_preview_list_group_row_gets_dialog() -> None:
-    dialogs: list[DialogProtocol] = []
+    rows: list[tuple[DialogProtocol, bool, bool]] = []
 
     def when(data: dict[Any, Any], widget: object, manager: DialogManager) -> bool:
         assert isinstance(manager, SubManager)
-        dialogs.append(manager.dialog())
+        manager.check_disabled()
+        rows.append((manager.dialog(), manager.disabled, manager.is_event_simulated()))
         return True
 
     dialog = Dialog(
@@ -411,4 +412,9 @@ async def test_render_preview_list_group_row_gets_dialog() -> None:
 
     await render_preview_content(dp)
 
-    assert dialogs == [dialog]
+    assert rows == [(dialog, False, False)]
+
+
+def test_fake_manager_has_no_storage() -> None:
+    with pytest.raises(NotImplementedError, match="Preview has no dialog storage"):
+        FakeManager().storage()
