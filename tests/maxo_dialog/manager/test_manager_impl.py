@@ -24,7 +24,7 @@ from maxo.dialogs.api.exceptions import (
     InvalidKeyboardType,
     NoContextError,
 )
-from maxo.dialogs.api.internal import CONTEXT_KEY, STACK_KEY, STORAGE_KEY
+from maxo.dialogs.api.internal import CONTEXT_KEY, STACK_KEY, STORAGE_KEY, FakeUser
 from maxo.dialogs.api.protocols import MessageNotModified
 from maxo.dialogs.manager.bg_manager import BgManager
 from maxo.dialogs.manager.manager import ManagerImpl
@@ -40,6 +40,7 @@ from maxo.types import (
     MessageBody,
     MessageButton,
     MessageCallback,
+    MessageCreated,
     Recipient,
     UpdateContext,
 )
@@ -464,15 +465,30 @@ class TestBackground:
 
         assert isinstance(user, BgManager)
 
-    def test_get_fake_user_unwraps_error_event(self) -> None:
-        inner = make_callback(with_message=False)
-        error_event: ErrorEvent[RuntimeError, MessageCallback] = ErrorEvent(
-            exception=RuntimeError("x"),
-            update=MaxoUpdate(update=inner),
-        )
-        manager = make_manager(event=error_event)
+    def test_get_fake_user_takes_user_from_event_context(self) -> None:
+        manager = make_manager(event=make_callback(with_message=False))
+        event_context: EventContext = manager.middleware_data[EVENT_CONTEXT_KEY]
 
-        assert manager._get_fake_user() is inner.callback.user
+        assert manager._get_fake_user() is event_context.user
+
+    def test_get_fake_user_for_event_without_user(self) -> None:
+        channel_post = MessageCreated(
+            timestamp=NOW,
+            message=Message(
+                timestamp=NOW,
+                recipient=Recipient(chat_type=ChatType.CHANNEL, chat_id=10),
+                body=MessageBody(mid="m", seq=1, text="post"),
+            ),
+        )
+        manager = make_manager(event=channel_post, chat_type=ChatType.CHANNEL)
+        event_context: EventContext = manager.middleware_data[EVENT_CONTEXT_KEY]
+        event_context.user = None
+        event_context.user_id = None
+
+        user = manager._get_fake_user(42)
+
+        assert isinstance(user, FakeUser)
+        assert user.id == 42
 
     def test_get_fake_chat_requires_chat_id_without_update_context(self) -> None:
         manager = make_manager()

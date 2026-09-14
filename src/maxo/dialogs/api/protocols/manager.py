@@ -86,7 +86,7 @@ class BgManagerFactory(Protocol):
     def bg(
         self,
         bot: Bot,
-        user_id: int,
+        user_id: int | None,
         chat_id: int,
         stack_id: str | None = None,
         load: bool = False,  # load chat and user
