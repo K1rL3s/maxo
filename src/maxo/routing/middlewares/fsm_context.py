@@ -34,8 +34,12 @@ class FSMContextMiddleware(BaseMiddleware[MaxoUpdate[Any]]):
     ) -> Any:
         ctx[FSM_STORAGE_KEY] = self._storage
 
+        bot = ctx.get("bot")
+        if bot is None:
+            return await next(ctx)
+
         storage_key = self.make_storage_key(
-            bot_id=ctx["bot"].info.user_id,
+            bot_id=bot.info.user_id,
             update_context=ctx[UPDATE_CONTEXT_KEY],
         )
         if storage_key is None:

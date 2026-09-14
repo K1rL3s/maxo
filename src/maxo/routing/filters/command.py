@@ -137,7 +137,7 @@ class Command(BaseFilter[MessageCreated]):
             return False
 
         try:
-            command = await self.parse_command(text=text, bot=ctx["bot"])
+            command = await self.parse_command(text=text, bot=ctx.get("bot"))
         except CommandException:
             return False
 
@@ -162,8 +162,10 @@ class Command(BaseFilter[MessageCreated]):
         if command.prefix not in self.prefix:
             raise CommandException("Invalid command prefix")
 
-    async def validate_mention(self, bot: Bot, command: CommandObject) -> None:
+    async def validate_mention(self, bot: Bot | None, command: CommandObject) -> None:
         if command.mention and not self.ignore_mention:
+            if bot is None:
+                raise CommandException("Mention can't be validated without bot")
             me = bot.info
             if me.username and command.mention.lower() != me.username.lower():
                 raise CommandException("Mention did not match")
@@ -183,7 +185,7 @@ class Command(BaseFilter[MessageCreated]):
                 return command
         raise CommandException("Command did not match pattern")
 
-    async def parse_command(self, text: str, bot: Bot) -> CommandObject:
+    async def parse_command(self, text: str, bot: Bot | None) -> CommandObject:
         command = self.extract_command(text)
         self.validate_prefix(command=command)
         await self.validate_mention(bot=bot, command=command)

@@ -76,6 +76,11 @@ class LongPolling:
         used_types: list[str] = list(
             types if is_defined(types) and types else collect_used_updates(dispatcher),
         )
+        if not used_types:
+            loggers.long_polling.warning(
+                "Не найдено ни одного обработчика обновлений, "
+                "Long Polling будет получать обновления всех типов",
+            )
 
         async with self._lock:
             dispatcher.workflow_data.update(bot=bot, **workflow_data)
@@ -123,7 +128,7 @@ class LongPolling:
                     timeout=timeout,
                     limit=limit,
                     marker=marker,
-                    types=used_types,
+                    types=used_types or Omitted(),
                     drop_pending_updates=drop_pending_updates,
                 )
 

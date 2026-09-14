@@ -190,6 +190,37 @@
         if update.message.unsafe_sender.user_id in admin_ids:
             await update.answer_text("Привет, админ!")
 
+Пропуск обработчика и исключения
+--------------------------------
+
+``raise SkipHandler`` из ``maxo.routing.sentinels`` в обработчике сигнала
+завершает только этот обработчик: остальные обработчики сигнала на этом и
+дочерних роутерах всё равно вызываются.
+
+Любое другое исключение из обработчика сигнала не попадает в обработчики
+``@router.error()``: :class:`~maxo.types.error_event.ErrorEvent` описывает
+ошибку при обработке обновления, а сигнал обновлением не является. Исключение
+прерывает обход обработчиков и доходит до вызывающего кода: ``run_polling`` и
+``start_polling`` завершаются с ним, а в вебхуках его получает веб-фреймворк
+из ``on_startup`` или ``on_shutdown``. Если бот должен запуститься несмотря на
+ошибку, перехватывайте её внутри самого обработчика.
+
+.. code-block:: python
+
+    import logging
+
+    from maxo import Bot, Dispatcher
+
+    dispatcher = Dispatcher()
+    ADMIN_USER_ID = 123456
+
+    @dispatcher.after_startup()
+    async def notify_admin(bot: Bot) -> None:
+        try:
+            await bot.send_message(user_id=ADMIN_USER_ID, text="Бот запущен!")
+        except Exception:
+            logging.exception("Не удалось уведомить администратора")
+
 Отличие от обработчиков обновлений
 -----------------------------------
 
@@ -212,3 +243,6 @@
    * - Доступ к ``bot``
      - Всегда
      - ``AfterStartup`` и ``BeforeShutdown`` - да; ``BeforeStartup`` и ``AfterShutdown`` - нет (бот ещё / уже не подключён)
+   * - Ошибки
+     - Уходят в ``@router.error()``
+     - Не уходят в ``@router.error()``, доходят до вызывающего кода

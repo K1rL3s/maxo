@@ -26,6 +26,20 @@ BgManagerFactory
         # Или просто обновление UI текущего диалога
         await bg_manager.update({"status": "completed"})
 
+В канале посты приходят без пользователя, и диалог живёт в стеке по умолчанию самого канала.
+Чтобы достучаться до него, передайте ``user_id=None``:
+
+.. code-block:: python
+
+    from maxo.enums import ChatType
+
+    bg_manager = bg_factory.bg(
+        bot=bot,
+        chat_id=channel_id,
+        user_id=None,
+        chat_type=ChatType.CHANNEL,
+    )
+
 .. note::
 
    При использовании ``BgManagerFactory`` убедитесь, что ``Dispatcher`` инициализирован с ``KeyBuilder(with_destiny=True)`` - это необходимо для корректной работы системы диалогов.

@@ -123,3 +123,10 @@ async def test_command_can_ignore_mention() -> None:
     )
 
     assert command.mention == "otherbot"
+
+
+async def test_command_without_bot_rejects_only_mention() -> None:
+    command_filter = Command("start")
+
+    assert await command_filter(make_message_update("/start"), Ctx({})) is True
+    assert await command_filter(make_message_update("/start@maxobot"), Ctx({})) is False

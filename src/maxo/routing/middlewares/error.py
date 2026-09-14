@@ -22,7 +22,7 @@ class ErrorMiddleware(BaseMiddleware[Any]):
             exception_event = ErrorEvent(
                 exception=exception,
                 update=update,
-            )
+            ).as_(ctx.get("bot"))
             new_ctx = Ctx(dict(ctx))
             new_ctx["update"] = exception_event
             result = await self._router.trigger(new_ctx)
