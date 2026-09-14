@@ -577,7 +577,10 @@ class ManagerImpl(DialogManager):
         )
 
         if stack_id is None:
-            if event_context == new_event_context:
+            if (
+                event_context.user_id == new_event_context.user_id
+                and event_context.chat_id == new_event_context.chat_id
+            ):
                 stack_id = self.current_stack().id
                 if self.has_context():
                     intent_id = self.current_context().id

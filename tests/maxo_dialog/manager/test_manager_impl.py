@@ -440,21 +440,28 @@ class TestLastMessage:
 
 
 class TestBackground:
-    def test_bg_resets_stack_because_event_context_never_matches(self) -> None:
-        # `bg()` кладёт в новый EventContext FakeChat с текущим временем,
-        # поэтому он не равен исходному и стек всегда сбрасывается
-        manager = make_manager()
+    def test_bg_keeps_current_stack_and_intent(self) -> None:
+        manager = make_manager(stack=Stack(_id="other"))
 
         child = manager.bg()
+
+        assert isinstance(child, BgManager)
+        assert child.stack_id == "other"
+        assert child.intent_id == "intent"
+
+    def test_bg_for_other_chat_resets_stack(self) -> None:
+        manager = make_manager(stack=Stack(_id="other"))
+
+        child = manager.bg(chat_id=99)
 
         assert isinstance(child, BgManager)
         assert child.stack_id == DEFAULT_STACK_ID
         assert child.intent_id is None
 
-    def test_bg_for_other_chat_resets_stack(self) -> None:
-        manager = make_manager()
+    def test_bg_for_other_user_resets_stack(self) -> None:
+        manager = make_manager(stack=Stack(_id="other"))
 
-        child = manager.bg(chat_id=99)
+        child = manager.bg(user_id=2)
 
         assert isinstance(child, BgManager)
         assert child.stack_id == DEFAULT_STACK_ID

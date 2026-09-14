@@ -106,15 +106,12 @@ class TestGetFakeUser:
 
 class TestBg:
     def test_keeps_stack_and_intent_for_same_context(self) -> None:
-        manager = make_manager(chat_id=None, user=fake_user())
-        # у исходного контекста user_id берётся из user, поэтому повторяем его
-        manager._event_context.user_id = None
-
-        child = manager.bg()
+        child = make_manager().bg()
 
         assert isinstance(child, BgManager)
         assert child.stack_id == "stack"
         assert child.intent_id == "intent"
+        assert child._event_context.chat_id == 1
 
     def test_resets_stack_for_other_context(self) -> None:
         child = make_manager().bg(user_id=99, chat_id=2)
