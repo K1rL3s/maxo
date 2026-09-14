@@ -186,7 +186,7 @@ class UpdateContextMiddleware(BaseMiddleware[MaxoUpdate[Any]]):
             user_id = update.user_id
         elif isinstance(update, DialogUpdateEvent):
             user = update.user
-            user_id = user.id
+            user_id = None if user is None else user.id
             chat_id = update.recipient.chat_id
             chat_type = update.recipient.chat_type
 

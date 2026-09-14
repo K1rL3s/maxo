@@ -11,8 +11,8 @@ from maxo.routing.interfaces import NextMiddleware
 from maxo.routing.middlewares.fsm_context import FSMContextMiddleware
 from maxo.routing.routers.simple import Router
 from maxo.routing.sentinels import UNHANDLED
-from maxo.routing.signals import BeforeStartup
-from maxo.types import Message, MessageBody, MessageEdited, Recipient, User
+from maxo.routing.signals import BeforeStartup, MaxoUpdate
+from maxo.types import ErrorEvent, Message, MessageBody, MessageEdited, Recipient, User
 from maxo.types.message_created import MessageCreated
 from tests.constants import NOW
 
@@ -361,6 +361,42 @@ async def test_inner_middlewares_nest_from_root_to_grandchild(ctx: Ctx) -> None:
         "child_inner_post",
         "dp_inner_post",
     ]
+
+
+async def failing_handler(_: Any) -> Any:
+    raise ValueError("boom")
+
+
+async def test_feed_update_without_bot_keeps_handler_exception(
+    update: MessageCreated,
+) -> None:
+    dp = Dispatcher()
+    dp.message_created.handler(failing_handler)
+
+    await dp.feed_signal(BeforeStartup())
+
+    with pytest.raises(ValueError, match="boom"):
+        await dp.feed_update(MaxoUpdate(update=update))
+
+
+async def test_feed_update_without_bot_triggers_error_handler(
+    update: MessageCreated,
+) -> None:
+    dp = Dispatcher()
+    dp.message_created.handler(failing_handler)
+    errors: list[ErrorEvent[Any, Any]] = []
+
+    async def error_handler(event: ErrorEvent[Any, Any]) -> str:
+        errors.append(event)
+        return "error handled"
+
+    dp.errors.handler(error_handler)
+
+    await dp.feed_signal(BeforeStartup())
+    result = await dp.feed_update(MaxoUpdate(update=update))
+
+    assert result == "error handled"
+    assert isinstance(errors[0].error, ValueError)
 
 
 async def test_shared_observer_inherits_parent_inner_middleware_once(ctx: Ctx) -> None:

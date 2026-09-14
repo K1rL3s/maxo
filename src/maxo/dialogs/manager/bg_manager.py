@@ -31,7 +31,7 @@ from maxo.types import Chat, ChatMembersList, Recipient, User
 class BgManager(BaseDialogManager):
     def __init__(
         self,
-        user: User,
+        user: User | None,
         chat_id: int | None,
         bot: Bot,
         dp: Dispatcher,
@@ -42,7 +42,7 @@ class BgManager(BaseDialogManager):
     ) -> None:
         self._event_context = EventContext(
             chat_id=chat_id,
-            user_id=user.id,
+            user_id=None if user is None else user.id,
             chat_type=chat_type,
             user=user,
             chat=None,
@@ -54,13 +54,12 @@ class BgManager(BaseDialogManager):
         self.stack_id = stack_id
         self.load = load
 
-    def _get_fake_user(self, user_id: int | None = None) -> User:
-        if self._event_context.user is not None and (
-            user_id is None or user_id == self._event_context.user.id
-        ):
-            return self._event_context.user
+    def _get_fake_user(self, user_id: int | None = None) -> User | None:
+        user = self._event_context.user
+        if user_id is None or (user is not None and user_id == user.id):
+            return user
         return FakeUser(
-            user_id=user_id or 0,
+            user_id=user_id,
             is_bot=False,
             first_name="",
             last_activity_time=datetime.now(UTC),
@@ -78,13 +77,16 @@ class BgManager(BaseDialogManager):
         new_event_context = EventContext(
             bot=self._event_context.bot,
             user=user,
-            chat_id=chat_id,
-            user_id=user_id,
+            chat_id=self._event_context.chat_id if chat_id is None else chat_id,
+            user_id=self._event_context.user_id if user_id is None else user_id,
             chat_type=self._event_context.chat_type,
             chat=None,
         )
         if stack_id is None:
-            if self._event_context == new_event_context:
+            if (
+                self._event_context.user_id == new_event_context.user_id
+                and self._event_context.chat_id == new_event_context.chat_id
+            ):
                 stack_id = self.stack_id
                 intent_id = self.intent_id
             else:
@@ -105,12 +107,10 @@ class BgManager(BaseDialogManager):
         )
 
     def _base_event_params(self) -> dict[str, Any]:
-        user = self._event_context.user
-        assert user is not None  # noqa: S101
         return {
-            "user": user,
+            "user": self._event_context.user,
             "recipient": Recipient(
-                user_id=user.id,
+                user_id=self._event_context.user_id,
                 chat_id=self._event_context.chat_id,
                 chat_type=self._event_context.chat_type or ChatType.CHAT,
             ),
@@ -129,11 +129,7 @@ class BgManager(BaseDialogManager):
 
         user = self._event_context.user
         user_id = self._event_context.user_id
-        # `BgManager.__init__` требует `user`, а `user_id` берёт из него.
-        assert user is not None  # noqa: S101
-        assert user_id is not None  # noqa: S101
-
-        if is_user_loaded(user):
+        if user is None or user_id is None or is_user_loaded(user):
             return
 
         chat_id = self._event_context.chat_id
@@ -259,18 +255,20 @@ class BgManagerFactoryImpl(BgManagerFactory):
     def bg(
         self,
         bot: Bot,
-        user_id: int,
+        user_id: int | None,
         chat_id: int,
         stack_id: str | None = None,
         load: bool = False,
         chat_type: ChatType = ChatType.CHAT,
     ) -> "BaseDialogManager":
-        user = FakeUser(
-            user_id=user_id,
-            is_bot=False,
-            first_name="",
-            last_activity_time=datetime.now(UTC),
-        )
+        user = None
+        if user_id is not None:
+            user = FakeUser(
+                user_id=user_id,
+                is_bot=False,
+                first_name="",
+                last_activity_time=datetime.now(UTC),
+            )
         if stack_id is None:
             stack_id = DEFAULT_STACK_ID
 

@@ -112,9 +112,16 @@ def test_attachment_request_builder_add_inline_keyboard() -> None:
     assert attachments[0].payload.buttons == buttons
 
 
-def test_attachment_request_builder_add_location() -> None:
+@pytest.mark.parametrize(
+    ("latitude", "longitude"),
+    [(12.34, 56.78), (Decimal("12.34"), Decimal("56.78"))],
+)
+def test_attachment_request_builder_add_location(
+    latitude: float | Decimal,
+    longitude: float | Decimal,
+) -> None:
     builder = AttachmentRequestBuilder()
-    builder.add_location(latitude=Decimal("12.34"), longitude=Decimal("56.78"))
+    builder.add_location(latitude=latitude, longitude=longitude)
     attachments = builder.build()
     assert len(attachments) == 1
     assert isinstance(attachments[0], LocationAttachmentRequest)
