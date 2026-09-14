@@ -12,7 +12,7 @@ from maxo.routing.middlewares.fsm_context import FSMContextMiddleware
 from maxo.routing.routers.simple import Router
 from maxo.routing.sentinels import UNHANDLED
 from maxo.routing.signals import BeforeStartup, MaxoUpdate
-from maxo.types import ErrorEvent, Message, MessageBody, Recipient, User
+from maxo.types import ErrorEvent, Message, MessageBody, MessageEdited, Recipient, User
 from maxo.types.message_created import MessageCreated
 from tests.constants import NOW
 
@@ -397,3 +397,30 @@ async def test_feed_update_without_bot_triggers_error_handler(
 
     assert result == "error handled"
     assert isinstance(errors[0].error, ValueError)
+
+
+async def test_shared_observer_inherits_parent_inner_middleware_once(ctx: Ctx) -> None:
+    dp = Dispatcher()
+    child = Router("child")
+    grandchild = Router("grandchild")
+    dp.include(child)
+    child.include(grandchild)
+    for router in (dp, child, grandchild):
+        router.observers[MessageEdited] = router.message_created
+
+    dp.message_created.middleware.inner(middleware_factory("dp_inner"))
+    child.message_created.middleware.inner(middleware_factory("child_inner"))
+    grandchild.message_created.handler(handler)
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert ctx["execution_order"] == [
+        "dp_inner_pre",
+        "child_inner_pre",
+        "handler",
+        "child_inner_post",
+        "dp_inner_post",
+    ]
