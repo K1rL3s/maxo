@@ -402,16 +402,25 @@ async def test_feed_update_without_bot_triggers_error_handler(
 async def test_shared_observer_inherits_parent_inner_middleware_once(ctx: Ctx) -> None:
     dp = Dispatcher()
     child = Router("child")
+    grandchild = Router("grandchild")
     dp.include(child)
-    dp.observers[MessageEdited] = dp.message_created
-    child.observers[MessageEdited] = child.message_created
+    child.include(grandchild)
+    for router in (dp, child, grandchild):
+        router.observers[MessageEdited] = router.message_created
 
     dp.message_created.middleware.inner(middleware_factory("dp_inner"))
-    child.message_created.handler(handler)
+    child.message_created.middleware.inner(middleware_factory("child_inner"))
+    grandchild.message_created.handler(handler)
 
     await dp.feed_signal(BeforeStartup())
     ctx["execution_order"] = []
     result = await dp.trigger(ctx)
 
     assert result == "OK"
-    assert ctx["execution_order"] == ["dp_inner_pre", "handler", "dp_inner_post"]
+    assert ctx["execution_order"] == [
+        "dp_inner_pre",
+        "child_inner_pre",
+        "handler",
+        "child_inner_post",
+        "dp_inner_post",
+    ]
