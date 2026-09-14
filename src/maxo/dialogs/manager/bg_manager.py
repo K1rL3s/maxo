@@ -2,6 +2,7 @@ import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from functools import partial
 from typing import Any
 
 from maxo import Bot, Dispatcher, loggers
@@ -19,6 +20,7 @@ from maxo.dialogs.api.entities import (
     StartMode,
 )
 from maxo.dialogs.api.entities.update_event import DialogFgEvent
+from maxo.dialogs.api.exceptions import DialogsError
 from maxo.dialogs.api.internal import FakeUser
 from maxo.dialogs.api.protocols import BaseDialogManager, BgManagerFactory
 from maxo.dialogs.manager.updater import Updater
@@ -232,20 +234,27 @@ class BgManager(BaseDialogManager):
         )
         bot = self._event_context.bot
         task = self._updater.notify_task(bot=bot, update=event)
+        # entered выставляет только хендлер fg, до которого событие может не дойти
+        task.add_done_callback(partial(_fail_entered, event.entered))
         try:
             manager = await event.entered
-        except BaseException:
+        except asyncio.CancelledError:
+            event.exited.cancel()
+            raise
+        except Exception:
             await task
             raise
         try:
             yield manager
         except Exception as e:
             event.exited.set_exception(e)
-            raise
-        else:
-            event.exited.set_result(None)
-        finally:
             await task
+            raise
+        except BaseException:
+            event.exited.cancel()
+            raise
+        event.exited.set_result(None)
+        await task
 
 
 class BgManagerFactoryImpl(BgManagerFactory):
@@ -281,4 +290,18 @@ class BgManagerFactoryImpl(BgManagerFactory):
             stack_id=stack_id,
             load=load,
             chat_type=chat_type,
+        )
+
+
+def _fail_entered(
+    entered: asyncio.Future[DialogManager],
+    task: asyncio.Task[Any],
+) -> None:
+    if entered.done():
+        return
+    if task.cancelled():
+        entered.cancel()
+    else:
+        entered.set_exception(
+            task.exception() or DialogsError("Dialog fg event was not handled"),
         )

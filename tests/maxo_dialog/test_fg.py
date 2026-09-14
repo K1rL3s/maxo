@@ -13,9 +13,10 @@ from maxo.dialogs import (
     setup_dialogs,
 )
 from maxo.dialogs.api.entities import AccessSettings
-from maxo.dialogs.api.exceptions import StackAccessDeniedError
+from maxo.dialogs.api.exceptions import StackAccessDeniedError, UnknownIntent
+from maxo.dialogs.api.internal import FakeUser
 from maxo.dialogs.api.protocols import BaseDialogManager
-from maxo.dialogs.manager.bg_manager import BgManagerFactoryImpl
+from maxo.dialogs.manager.bg_manager import BgManager, BgManagerFactoryImpl
 from maxo.dialogs.test_tools import BotClient, MockMessageManager
 from maxo.dialogs.test_tools.keyboard import InlineButtonTextLocator
 from maxo.dialogs.test_tools.memory_storage import JsonMemoryStorage
@@ -26,6 +27,7 @@ from maxo.fsm.state import State, StatesGroup
 from maxo.routing.filters import CommandStart
 from maxo.routing.signals import AfterStartup, BeforeStartup
 from maxo.types import ErrorEvent
+from tests.constants import NOW
 
 from .conftest import wait_for_messages
 
@@ -210,3 +212,32 @@ async def test_fg_raises_for_forbidden_stack(
     with pytest.raises(StackAccessDeniedError):
         async with asyncio.timeout(1), stranger.fg():
             pass
+
+
+async def test_fg_raises_for_unknown_intent(
+    dp: Dispatcher,
+    client: BotClient,
+    message_manager: MockMessageManager,
+) -> None:
+    await start_stack_for_first_user(dp, client, message_manager)
+    stale = BgManager(
+        user=FakeUser(user_id=1, is_bot=False, first_name="", last_activity_time=NOW),
+        chat_id=-1,
+        bot=client.bot,
+        dp=dp,
+        intent_id="missing",
+        stack_id=SHARED_STACK_ID,
+        load=False,
+        chat_type=ChatType.CHAT,
+    )
+
+    async def enter_fg() -> None:
+        async with stale.fg():
+            pass
+
+    task = asyncio.create_task(enter_fg())
+    await asyncio.wait([task], timeout=1)
+
+    assert task.done(), "fg() завис"
+    with pytest.raises(UnknownIntent):
+        task.result()
