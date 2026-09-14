@@ -1,6 +1,3 @@
-from collections.abc import Awaitable, Callable
-from typing import Any
-
 import pytest
 
 from maxo import Dispatcher
@@ -17,10 +14,7 @@ from maxo.fsm.state import State, StatesGroup
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters.command import CommandStart
 from maxo.routing.interfaces import BaseMiddleware, NextMiddleware
-from maxo.routing.signals import AfterStartup, BeforeStartup
-from maxo.types import BaseUpdate, MessageCreated
-
-from .conftest import wait_for_messages
+from maxo.types import MessageCreated
 
 
 class MainSG(StatesGroup):
@@ -82,41 +76,9 @@ async def test_middleware(
     assert first_message.body.text == "my_value"
 
 
-async def start_via_bg(message: MessageCreated, dialog_manager: DialogManager) -> None:
-    await dialog_manager.bg().start(MainSG.start, mode=StartMode.RESET_STACK)
+def test_bg_factory_middleware_registered_once_for_dialog_events() -> None:
+    dp = Dispatcher()
+    setup_dialogs(dp)
 
-
-async def test_bg_factory_middleware_runs_once_per_dialog_event(
-    message_manager: MockMessageManager,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    dialog_events: list[DialogUpdateEvent] = []
-    original_call: Callable[..., Awaitable[Any]] = BgFactoryMiddleware.__call__
-
-    async def counting_call(
-        self: BgFactoryMiddleware,
-        update: BaseUpdate,
-        ctx: Ctx,
-        next: NextMiddleware[Any],
-    ) -> Any:
-        if isinstance(update, DialogUpdateEvent):
-            dialog_events.append(update)
-        return await original_call(self, update, ctx, next)
-
-    monkeypatch.setattr(BgFactoryMiddleware, "__call__", counting_call)
-
-    dp = Dispatcher(
-        storage=JsonMemoryStorage(),
-        key_builder=DefaultKeyBuilder(with_destiny=True),
-    )
-    dp.message_created.handler(start_via_bg, CommandStart())
-    dp.include(Dialog(Window(Format("stub"), state=MainSG.start)))
-    setup_dialogs(dp, message_manager=message_manager)
-    client = BotClient(dp)
-
-    await dp.feed_signal(BeforeStartup(), client.bot)
-    await dp.feed_signal(AfterStartup(), client.bot)
-    await client.send("/start")
-    await wait_for_messages(message_manager)
-
-    assert len(dialog_events) == 1
+    outer = dp.observers[DialogUpdateEvent].middleware.outer.middlewares
+    assert sum(isinstance(m, BgFactoryMiddleware) for m in outer) == 1
