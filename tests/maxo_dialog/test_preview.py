@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from maxo import Dispatcher
-from maxo.dialogs import Dialog, DialogManager, DialogProtocol, Window
+from maxo.dialogs import Dialog, DialogManager, DialogProtocol, SubManager, Window
 from maxo.dialogs.api.entities import MediaAttachment, MediaId, ShowMode
 from maxo.dialogs.api.exceptions import NoContextError
 from maxo.dialogs.tools.preview import (
@@ -385,11 +385,18 @@ async def test_render_reply_keyboard() -> None:
 
 
 async def test_render_preview_list_group_row_gets_dialog() -> None:
-    rows: list[tuple[DialogProtocol, bool, bool]] = []
+    rows: list[tuple[DialogProtocol, bool, bool, bool]] = []
 
     def when(data: dict[Any, Any], widget: object, manager: DialogManager) -> bool:
         manager.check_disabled()
-        rows.append((manager.dialog(), manager.disabled, manager.is_event_simulated()))
+        rows.append(
+            (
+                manager.dialog(),
+                manager.disabled,
+                manager.is_event_simulated(),
+                isinstance(manager, SubManager),
+            ),
+        )
         return True
 
     dialog = Dialog(
@@ -410,7 +417,7 @@ async def test_render_preview_list_group_row_gets_dialog() -> None:
 
     await render_preview_content(dp)
 
-    assert rows == [(dialog, False, False)]
+    assert rows == [(dialog, False, False, True)]
 
 
 def test_fake_manager_has_no_storage() -> None:
