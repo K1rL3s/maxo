@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock
 
 import pytest
 
@@ -324,7 +324,7 @@ async def test_forwards_manager_impl_members_through_nested_sub_managers(
 ) -> None:
     dialog = MagicMock()
     storage = MagicMock()
-    mock_manager.disabled = True
+    type(mock_manager).disabled = PropertyMock(return_value=True)
     mock_manager.dialog.return_value = dialog
     mock_manager.storage.return_value = storage
     mock_manager.is_event_simulated.return_value = True
