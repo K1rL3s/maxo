@@ -13,6 +13,7 @@ from maxo.dialogs import (
     Dialog,
     DialogManager,
     StartMode,
+    SubManager,
     Window,
     setup_dialogs,
 )
@@ -56,8 +57,8 @@ async def on_item_click(
     __: Button,
     manager: DialogManager,
 ) -> None:
-    # В ListGroup manager приходит как SubManager с полем item_id
-    manager.dialog_data["selected_id"] = getattr(manager, "item_id", "")
+    if isinstance(manager, SubManager):
+        manager.dialog_data["selected_id"] = manager.item_id
     await manager.next()
 
 
