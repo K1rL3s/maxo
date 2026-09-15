@@ -64,6 +64,8 @@ from maxo.types import (
 
 
 class ManagerImpl(DialogManager):
+    disabled: bool = False
+
     def __init__(
         self,
         event: ChatEvent,
@@ -74,7 +76,6 @@ class ManagerImpl(DialogManager):
         ctx: Ctx,
         getter: DataGetter | None,
     ) -> None:
-        self.disabled = False
         self.message_manager = message_manager
         self.media_id_storage = media_id_storage
         self._event = event

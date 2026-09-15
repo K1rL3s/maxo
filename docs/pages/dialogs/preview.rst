@@ -56,6 +56,14 @@ HTML-превью отображает все окна диалога в бра�
 
     html = asyncio.run(render_preview_content(router, simulate_events=True))
 
+.. note::
+
+    Превью рендерит окна без бота и без хранилища диалогов. В ``when`` и
+    других колбэках рендера ``manager.dialog()`` возвращает текущий диалог,
+    ``manager.is_event_simulated()`` - ``False``, а ``manager.storage()``
+    бросает ``NotImplementedError``. Колбэк, который зовет ``storage()``,
+    уронит ``render_preview`` и ``render_preview_content``.
+
 Диаграмма переходов (PNG)
 =========================
 

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from maxo import Dispatcher
-from maxo.dialogs import Dialog, Window
+from maxo.dialogs import Dialog, DialogManager, DialogProtocol, SubManager, Window
 from maxo.dialogs.api.entities import MediaAttachment, MediaId, ShowMode
 from maxo.dialogs.api.exceptions import NoContextError
 from maxo.dialogs.tools.preview import (
@@ -21,7 +21,7 @@ from maxo.dialogs.tools.preview import (
 )
 from maxo.dialogs.utils import join_reply_callback
 from maxo.dialogs.widgets.input import TextInput
-from maxo.dialogs.widgets.kbd import Back, Button, Cancel, Next, Row
+from maxo.dialogs.widgets.kbd import Back, Button, Cancel, ListGroup, Next, Row
 from maxo.dialogs.widgets.media import StaticMedia
 from maxo.dialogs.widgets.text import Const
 from maxo.enums import AttachmentType
@@ -382,3 +382,44 @@ async def test_render_reply_keyboard() -> None:
     )
 
     assert keyboard[0][0].title == "Текст"
+
+
+async def test_render_preview_list_group_row_gets_dialog() -> None:
+    rows: list[tuple[DialogProtocol, bool, bool, bool]] = []
+
+    def when(data: dict[Any, Any], widget: object, manager: DialogManager) -> bool:
+        manager.check_disabled()
+        rows.append(
+            (
+                manager.dialog(),
+                manager.disabled,
+                manager.is_event_simulated(),
+                isinstance(manager, SubManager),
+            ),
+        )
+        return True
+
+    dialog = Dialog(
+        Window(
+            Const("Список"),
+            ListGroup(
+                Button(Const("Элемент"), id="item", when=when),
+                id="list",
+                items=["a"],
+                item_id_getter=lambda item: item,
+            ),
+            state=SG.first,
+        ),
+        Window(Const("Второе окно"), state=SG.second),
+    )
+    dp = Dispatcher()
+    dp.include(dialog)
+
+    await render_preview_content(dp)
+
+    assert rows == [(dialog, False, False, True)]
+
+
+def test_fake_manager_has_no_storage() -> None:
+    with pytest.raises(NotImplementedError, match="Preview has no dialog storage"):
+        FakeManager().storage()
