@@ -18,7 +18,6 @@ from maxo.dialogs.widgets.kbd.button import Button, Url
 from maxo.dialogs.widgets.text import Const, Format
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.state import State, StatesGroup
-from maxo.fsm.storages.memory import SimpleEventIsolation
 from maxo.routing.filters import CommandStart
 from maxo.routing.signals import AfterStartup, BeforeStartup
 from maxo.types import (
@@ -291,18 +290,15 @@ async def test_callback_manager_has_dialog_outside_and_inside_list_group() -> No
             state=ListGroupSG.main,
         ),
     )
-    key_builder = DefaultKeyBuilder(with_destiny=True)
-    event_isolation = SimpleEventIsolation(key_builder=key_builder)
     dp = Dispatcher(
         storage=JsonMemoryStorage(),
-        events_isolation=event_isolation,
-        key_builder=key_builder,
+        key_builder=DefaultKeyBuilder(with_destiny=True),
     )
     dp.include(dialog)
     dp.message_created.handler(start, CommandStart())
     client = BotClient(dp)
     message_manager = MockMessageManager()
-    setup_dialogs(dp, message_manager=message_manager, events_isolation=event_isolation)
+    setup_dialogs(dp, message_manager=message_manager)
     await dp.feed_signal(BeforeStartup(), client.bot)
     await dp.feed_signal(AfterStartup(), client.bot)
 
