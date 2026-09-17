@@ -103,7 +103,7 @@ Long Polling (длинный опрос) - простой способ полу�
     dispatcher.run_polling(bot, clear_subscriptions=True)
 
 Если хотя бы одну подписку удалить не удалось, запуск прерывается: наружу летит
-``ExceptionGroup`` с ``UnsubscribeError`` по каждому нетдачному URL. Так бот не
+``ExceptionGroup`` с ``UnsubscribeError`` по каждому неудачному URL. Так бот не
 начнет читать обновления, пока рядом живет чужой вебхук. Подписки разбираются
 до сигнала ``after_startup`` - при такой ошибке всё равно сработают парой
 ``before_shutdown`` и ``after_shutdown`` (см. «Остановка» ниже), хотя
