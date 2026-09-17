@@ -1,3 +1,5 @@
+import pytest
+
 from maxo import Ctx
 from maxo.fsm.state import State, StatesGroup, any_state
 from maxo.routing.filters.state import StateFilter
@@ -43,3 +45,8 @@ async def test_state_filter_returns_false_on_miss() -> None:
     state_filter = StateFilter(Form)
 
     assert await state_filter(None, Ctx({RAW_STATE_KEY: "Other:state"})) is False
+
+
+def test_state_filter_requires_states() -> None:
+    with pytest.raises(ValueError, match="At least one state is required"):
+        StateFilter()

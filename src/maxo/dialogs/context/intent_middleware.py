@@ -10,9 +10,11 @@ from maxo.dialogs.api.entities import (
     EventContext,
     Stack,
 )
+from maxo.dialogs.api.entities.update_event import DialogFgEvent
 from maxo.dialogs.api.exceptions import (
     InvalidStackIdError,
     OutdatedIntent,
+    StackAccessDeniedError,
     UnknownIntent,
     UnknownState,
 )
@@ -126,7 +128,7 @@ def event_context_from_aiogd(event: DialogUpdateEvent) -> EventContext:
     return EventContext(
         bot=event.bot,
         user=event.user,
-        user_id=event.user.user_id,
+        user_id=None if event.user is None else event.user.user_id,
         chat=None,
         chat_id=event.recipient.chat_id,
         chat_type=event.recipient.chat_type,
@@ -337,6 +339,14 @@ class IntentMiddlewareFactory:
                 stack_id=update.stack_id,
                 ctx=ctx,
             )
+        if ctx.get(FORBIDDEN_STACK_KEY):
+            if isinstance(update, DialogFgEvent):
+                update.entered.set_exception(
+                    StackAccessDeniedError(
+                        f"Stack is not allowed for user {event_context.user_id}",
+                    ),
+                )
+            return UNHANDLED
         return await next(ctx)
 
     async def process_callback(

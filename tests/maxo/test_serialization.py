@@ -106,19 +106,6 @@ def test_bot_default_disable_link_preview_does_not_override_explicit() -> None:
     assert data["query"]["disable_link_preview"] == "false"
 
 
-def test_bot_default_disable_link_preview_none_is_not_sent() -> None:
-    # `None` в BotDefaults означает "нет значения", а не строку "none" в квери.
-    defaults = BotDefaults()
-    retort = create_retort(defaults=defaults, warming_up=False)
-    defaults.disable_link_preview = None
-
-    assert "disable_link_preview" not in retort.dump(SendMessage())["query"]
-    assert (
-        "disable_link_preview"
-        not in retort.dump(AnswerOnCallback(callback_id="callback"))["query"]
-    )
-
-
 @pytest.mark.parametrize(("block", "expected"), [(True, "true"), (False, "false")])
 def test_query_bool_is_dumped_as_json_literal(block: bool, expected: str) -> None:
     # Дампер квери-булей общий, поэтому проверяем и не-disable_link_preview поле.

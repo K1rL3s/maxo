@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock
 
 import pytest
 
@@ -316,3 +316,25 @@ async def test_fg_context_manager(
 
     async with sub.fg() as manager:
         assert manager is sub
+
+
+async def test_forwards_manager_impl_members_through_nested_sub_managers(
+    mock_widget: MagicMock,
+    mock_manager: MagicMock,
+) -> None:
+    dialog = MagicMock()
+    storage = MagicMock()
+    type(mock_manager).disabled = PropertyMock(return_value=True)
+    mock_manager.dialog.return_value = dialog
+    mock_manager.storage.return_value = storage
+    mock_manager.is_event_simulated.return_value = True
+
+    inner = SubManager(mock_widget, mock_manager, "widget_1", "item_1")
+    sub = SubManager(mock_widget, inner, "widget_2", "item_2")
+
+    sub.check_disabled()
+    mock_manager.check_disabled.assert_called_once_with()
+    assert sub.disabled is True
+    assert sub.dialog() is dialog
+    assert sub.storage() is storage
+    assert sub.is_event_simulated() is True

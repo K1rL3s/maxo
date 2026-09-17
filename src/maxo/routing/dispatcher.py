@@ -169,9 +169,6 @@ class Dispatcher(Router):
         if bot is not None:
             ctx["bot"] = bot
             ctx["bots"] = [bot]
-            # Костыль для тестов (в них апдейты создаются без `.as_`)
-            # и неправильных вызовах `.feed_update`. Удачи отдебажить >:)
-            update.bot = bot
 
         return await self.trigger(ctx)
 
@@ -180,11 +177,6 @@ class Dispatcher(Router):
         ctx_copy["ctx"] = ctx_copy
         ctx_copy["update"] = update.update
         ctx_copy.pop(HANDLER_KEY, None)
-
-        if "bot" in ctx:
-            # Костыль для тестов (в них апдейты создаются без `.as_`)
-            # и неправильных вызовах `.feed_update`. Удачи отдебажить >:)
-            update.update.bot = update.bot = ctx["bot"]
 
         result = await self.trigger(ctx_copy)
         if result is UNHANDLED:

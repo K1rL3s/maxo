@@ -2,6 +2,8 @@
 
 from decimal import Decimal
 
+import pytest
+
 from maxo.types.audio_attachment_request import AudioAttachmentRequest
 from maxo.types.callback_button import CallbackButton
 from maxo.types.contact_attachment_request import ContactAttachmentRequest
@@ -110,9 +112,16 @@ def test_attachment_request_builder_add_inline_keyboard() -> None:
     assert attachments[0].payload.buttons == buttons
 
 
-def test_attachment_request_builder_add_location() -> None:
+@pytest.mark.parametrize(
+    ("latitude", "longitude"),
+    [(12.34, 56.78), (Decimal("12.34"), Decimal("56.78"))],
+)
+def test_attachment_request_builder_add_location(
+    latitude: float | Decimal,
+    longitude: float | Decimal,
+) -> None:
     builder = AttachmentRequestBuilder()
-    builder.add_location(latitude=Decimal("12.34"), longitude=Decimal("56.78"))
+    builder.add_location(latitude=latitude, longitude=longitude)
     attachments = builder.build()
     assert len(attachments) == 1
     assert isinstance(attachments[0], LocationAttachmentRequest)
@@ -148,3 +157,9 @@ def test_attachment_request_builder_multiple_items() -> None:
     assert attachments[0].payload.url == "http://example.com/image.jpg"
     assert isinstance(attachments[1], VideoAttachmentRequest)
     assert attachments[1].payload.token == "video_token_123"
+
+
+def test_attachment_request_builder_add_share_rejects_positional() -> None:
+    builder = AttachmentRequestBuilder()
+    with pytest.raises(TypeError):
+        builder.add_share("https://example.com/share")  # type: ignore[call-overload]

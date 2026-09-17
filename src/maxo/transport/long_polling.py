@@ -76,41 +76,21 @@ class LongPolling:
         used_types: list[str] = list(
             types if is_defined(types) and types else collect_used_updates(dispatcher),
         )
+        if not used_types:
+            loggers.long_polling.warning(
+                "Не найдено ни одного обработчика обновлений, "
+                "Long Polling будет получать обновления всех типов",
+            )
 
         async with self._lock:
             dispatcher.workflow_data.update(bot=bot, **workflow_data)
 
             await dispatcher.feed_signal(BeforeStartup(), bot)
 
-            # `try`/`finally` here (and around the whole `bot.context()` body
-            # below) instead of plain sequential awaits: a cancelled polling
-            # task - the normal way to stop an application that catches its own
-            # shutdown signal, per AGENTS.md - raises `CancelledError` out of the
-            # `TaskGroup` below, which `contextlib.suppress(KeyboardInterrupt)`
-            # does not catch. That unwinds straight out of this `async with`, and
-            # previously past both `feed_signal(BeforeShutdown, ...)` and
-            # `feed_signal(AfterShutdown)` below without ever running them - the
-            # exact same gap any other exception raised anywhere in this method
-            # had (a failed `clear_subscriptions()`, a broken `after_startup`
-            # handler, `_get_updates`, a handler fed a update). `finally` closes
-            # it for every early exit, not just cancellation.
-            #
-            # The two signals stay split across `bot.context()`'s boundary on
-            # purpose: `before_shutdown` still runs with the bot open (as it did
-            # before), `after_shutdown` after it's closed - matching
-            # `SimpleWebhookEngine`, which also passes its bot to `AfterShutdown`
-            # for the same reason: `feed_update` only sets `ctx["bots"]`/
-            # `update.bot` when a bot is given, so a handler reading either off
-            # the signal (rather than off a `bot`-named parameter, which
-            # `workflow_data` backfills either way) used to see `None` here,
-            # unlike everywhere else in this method.
-            #
-            # `shutdown_started` guards the one gap `try`/`finally` alone can't
-            # close: if `bot.context()` itself fails to open the bot (its own
-            # `bot.start()`), the inner `finally` below never runs at all, and
-            # `after_shutdown` firing on its own - with no matching
-            # `before_shutdown` - would break the pairing every shutdown
-            # handler is entitled to assume.
+            # `try`/`finally` guarantees `before_shutdown`/`after_shutdown` fire
+            # in pairs on every early exit, not just cancellation; `shutdown_started`
+            # guards the one gap `try`/`finally` alone can't close (`bot.context()`
+            # itself failing to open). Full rationale: PR #310.
             shutdown_started = False
             try:
                 async with bot.context(auto_close=auto_close_bot):
@@ -158,7 +138,7 @@ class LongPolling:
                             timeout=timeout,
                             limit=limit,
                             marker=marker,
-                            types=used_types,
+                            types=used_types or Omitted(),
                             drop_pending_updates=drop_pending_updates,
                         )
 
@@ -170,7 +150,20 @@ class LongPolling:
                                     )
                     finally:
                         shutdown_started = True
-                        await dispatcher.feed_signal(BeforeShutdown(), bot)
+                        # Logged and swallowed rather than left to propagate: a
+                        # failing handler here would otherwise replace whatever
+                        # exception is already unwinding through this `finally`
+                        # (e.g. the `CancelledError` from a `task.cancel()`
+                        # shutdown), so a caller catching that specific exception
+                        # would see the handler's error instead.
+                        try:
+                            await dispatcher.feed_signal(BeforeShutdown(), bot)
+                        except Exception as exception:  # noqa: BLE001
+                            loggers.dispatcher.exception(
+                                "before_shutdown handler failed - %s: %s",
+                                type(exception).__name__,
+                                exception,
+                            )
 
                         loggers.dispatcher.info(
                             "Polling stop for @%s bot id=%s",
@@ -179,7 +172,14 @@ class LongPolling:
                         )
             finally:
                 if shutdown_started:
-                    await dispatcher.feed_signal(AfterShutdown(), bot)
+                    try:
+                        await dispatcher.feed_signal(AfterShutdown(), bot)
+                    except Exception as exception:  # noqa: BLE001
+                        loggers.dispatcher.exception(
+                            "after_shutdown handler failed - %s: %s",
+                            type(exception).__name__,
+                            exception,
+                        )
 
     async def _get_updates(
         self,
@@ -241,7 +241,7 @@ class LongPolling:
                     backoff.counter,
                     bot_username,
                     bot_id,
-                )
+               #)
                 await backoff.sleep()
                 continue
 

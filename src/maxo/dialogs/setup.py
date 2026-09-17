@@ -192,7 +192,7 @@ def _register_middleware(
     dialog_updates_handler.middleware.inner(context_saver_middleware)
 
     bg_factory_middleware = BgFactoryMiddleware(bg_manager_factory)
-    for observer in router.observers.values():
+    for observer in dict.fromkeys(router.observers.values()):
         observer.middleware.outer(bg_factory_middleware)
 
 

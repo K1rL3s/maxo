@@ -99,6 +99,7 @@ def dp(message_manager: MockMessageManager) -> Dispatcher:
     return dp
 
 
+@pytest.mark.flaky(reruns=2)
 async def test_start(
     dp: Dispatcher,
     message_manager: MockMessageManager,

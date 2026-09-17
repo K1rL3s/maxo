@@ -9,6 +9,7 @@ from maxo.routing.filters.logic import combine_filters
 from maxo.routing.flags import resolve_handler_flags
 from maxo.routing.interfaces.filter import Filter
 from maxo.routing.interfaces.handler import Handler
+from maxo.routing.utils.is_async_callable import is_async_callable
 from maxo.types.base import BaseUpdate
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
@@ -48,10 +49,8 @@ class UpdateHandler(
         self._filter = combine_filters(*filters)
         self._handler_fn = handler_fn
         self._flags = resolve_handler_flags(handler_fn, filters, flags)
-        self._awaitable = inspect.isawaitable(
-            handler_fn,
-        ) or inspect.iscoroutinefunction(handler_fn)
-        spec = inspect.getfullargspec(handler_fn)
+        self._awaitable = is_async_callable(handler_fn)
+        spec = inspect.getfullargspec(inspect.unwrap(handler_fn))
         self._params = {*spec.args, *spec.kwonlyargs}
         self._varkw = spec.varkw is not None
 

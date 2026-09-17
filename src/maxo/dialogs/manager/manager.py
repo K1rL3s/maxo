@@ -64,6 +64,8 @@ from maxo.types import (
 
 
 class ManagerImpl(DialogManager):
+    disabled: bool = False
+
     def __init__(
         self,
         event: ChatEvent,
@@ -74,7 +76,6 @@ class ManagerImpl(DialogManager):
         ctx: Ctx,
         getter: DataGetter | None,
     ) -> None:
-        self.disabled = False
         self.message_manager = message_manager
         self.media_id_storage = media_id_storage
         self._event = event
@@ -209,6 +210,7 @@ class ManagerImpl(DialogManager):
             await self.show(show_mode)
 
     async def answer_callback(self) -> None:
+        self.check_disabled()
         if not isinstance(self.event, MessageCallback):
             return None
         if self.is_event_simulated():
@@ -321,6 +323,7 @@ class ManagerImpl(DialogManager):
                 self._ctx[CONTEXT_KEY] = None
 
     async def next(self, show_mode: ShowMode | None = None) -> None:
+        self.check_disabled()
         context = self.current_context()
         states = self.dialog().states()
         current_index = states.index(context.state)
@@ -335,6 +338,7 @@ class ManagerImpl(DialogManager):
         await self.switch_to(new_state, show_mode)
 
     async def back(self, show_mode: ShowMode | None = None) -> None:
+        self.check_disabled()
         context = self.current_context()
         states = self.dialog().states()
         current_index = states.index(context.state)
@@ -379,6 +383,7 @@ class ManagerImpl(DialogManager):
             )
 
     async def show(self, show_mode: ShowMode | None = None) -> None:
+        self.check_disabled()
         try:
             stack = self.current_stack()
             bot = self._ctx["bot"]
@@ -501,6 +506,7 @@ class ManagerImpl(DialogManager):
         data: dict[Any, Any] | None = None,
         show_mode: ShowMode | None = None,
     ) -> None:
+        self.check_disabled()
         if data:
             self.current_context().dialog_data.update(data)
         await self.show(show_mode)
@@ -511,17 +517,11 @@ class ManagerImpl(DialogManager):
             return None
         return cast(Widget, widget.managed(self))
 
-    def _get_fake_user(self, user_id: int | None = None) -> User:
-        """Get User if we have info about him or FakeUser instead."""
-        # TODO: Сделать нормально, это нейрослоп
-        event = self.event.event if isinstance(self.event, ErrorEvent) else self.event
-        if isinstance(event, MessageCreated):
-            current_user = event.message.unsafe_sender
-        else:
-            current_user = event.user
-
-        if user_id is None or user_id == current_user.id:
-            return current_user
+    def _get_fake_user(self, user_id: int | None = None) -> User | None:
+        event_context: EventContext = self.middleware_data[EVENT_CONTEXT_KEY]
+        user = event_context.user
+        if user_id is None or (user is not None and user_id == user.id):
+            return user
         return FakeUser(
             user_id=user_id,
             is_bot=False,
@@ -571,14 +571,17 @@ class ManagerImpl(DialogManager):
         new_event_context = EventContext(
             bot=event_context.bot,
             user=user,
-            user_id=user.id,
+            user_id=None if user is None else user.id,
             chat=chat,
             chat_type=chat.type,
             chat_id=chat.id,
         )
 
         if stack_id is None:
-            if event_context == new_event_context:
+            if (
+                event_context.user_id == new_event_context.user_id
+                and event_context.chat_id == new_event_context.chat_id
+            ):
                 stack_id = self.current_stack().id
                 if self.has_context():
                     intent_id = self.current_context().id

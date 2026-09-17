@@ -27,7 +27,7 @@ from maxo.enums import (
     MarkupElementType,
     UpdateType,
 )
-from maxo.omit import Omitted, is_defined, is_omitted
+from maxo.omit import Omitted, is_omitted
 from maxo.types import (
     Attachments,
     AttachmentsRequests,
@@ -184,7 +184,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
         if (
             isinstance(method, TypesWithLinkPreview)
             and is_omitted(method.disable_link_preview)
-            and is_defined(disable_link_preview)
+            and not is_omitted(disable_link_preview)
         ):
             method = dataclasses.replace(
                 method,

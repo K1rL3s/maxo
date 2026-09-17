@@ -11,8 +11,8 @@ from maxo.routing.interfaces import NextMiddleware
 from maxo.routing.middlewares.fsm_context import FSMContextMiddleware
 from maxo.routing.routers.simple import Router
 from maxo.routing.sentinels import UNHANDLED
-from maxo.routing.signals import BeforeStartup
-from maxo.types import Message, MessageBody, Recipient, User
+from maxo.routing.signals import BeforeStartup, MaxoUpdate
+from maxo.types import ErrorEvent, Message, MessageBody, MessageEdited, Recipient, User
 from maxo.types.message_created import MessageCreated
 from tests.constants import NOW
 
@@ -308,3 +308,119 @@ async def test_fsm_enabled_by_default() -> None:
         isinstance(m, FSMContextMiddleware)
         for m in dp.update.middleware.outer.middlewares
     )
+
+
+async def test_parent_inner_middleware_wraps_child_inner_middleware(ctx: Ctx) -> None:
+    dp = Dispatcher()
+    child = Router("child")
+    dp.include(child)
+
+    dp.message_created.middleware.inner(middleware_factory("dp_inner"))
+    child.message_created.middleware.inner(middleware_factory("child_inner"))
+    child.message_created.handler(handler)
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert ctx["execution_order"] == [
+        "dp_inner_pre",
+        "child_inner_pre",
+        "handler",
+        "child_inner_post",
+        "dp_inner_post",
+    ]
+
+
+async def test_inner_middlewares_nest_from_root_to_grandchild(ctx: Ctx) -> None:
+    dp = Dispatcher()
+    child = Router("child")
+    grandchild = Router("grandchild")
+    dp.include(child)
+    child.include(grandchild)
+
+    dp.message_created.middleware.inner(middleware_factory("dp_inner"))
+    child.message_created.middleware.inner(middleware_factory("child_inner"))
+    grandchild.message_created.middleware.inner(
+        middleware_factory("grandchild_inner"),
+    )
+    grandchild.message_created.handler(handler)
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert ctx["execution_order"] == [
+        "dp_inner_pre",
+        "child_inner_pre",
+        "grandchild_inner_pre",
+        "handler",
+        "grandchild_inner_post",
+        "child_inner_post",
+        "dp_inner_post",
+    ]
+
+
+async def failing_handler(_: Any) -> Any:
+    raise ValueError("boom")
+
+
+async def test_feed_update_without_bot_keeps_handler_exception(
+    update: MessageCreated,
+) -> None:
+    dp = Dispatcher()
+    dp.message_created.handler(failing_handler)
+
+    await dp.feed_signal(BeforeStartup())
+
+    with pytest.raises(ValueError, match="boom"):
+        await dp.feed_update(MaxoUpdate(update=update))
+
+
+async def test_feed_update_without_bot_triggers_error_handler(
+    update: MessageCreated,
+) -> None:
+    dp = Dispatcher()
+    dp.message_created.handler(failing_handler)
+    errors: list[ErrorEvent[Any, Any]] = []
+
+    async def error_handler(event: ErrorEvent[Any, Any]) -> str:
+        errors.append(event)
+        return "error handled"
+
+    dp.errors.handler(error_handler)
+
+    await dp.feed_signal(BeforeStartup())
+    result = await dp.feed_update(MaxoUpdate(update=update))
+
+    assert result == "error handled"
+    assert isinstance(errors[0].error, ValueError)
+
+
+async def test_shared_observer_inherits_parent_inner_middleware_once(ctx: Ctx) -> None:
+    dp = Dispatcher()
+    child = Router("child")
+    grandchild = Router("grandchild")
+    dp.include(child)
+    child.include(grandchild)
+    for router in (dp, child, grandchild):
+        router.observers[MessageEdited] = router.message_created
+
+    dp.message_created.middleware.inner(middleware_factory("dp_inner"))
+    child.message_created.middleware.inner(middleware_factory("child_inner"))
+    grandchild.message_created.handler(handler)
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert ctx["execution_order"] == [
+        "dp_inner_pre",
+        "child_inner_pre",
+        "handler",
+        "child_inner_post",
+        "dp_inner_post",
+    ]

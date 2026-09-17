@@ -61,7 +61,14 @@ class MaxBotBadGatewayError(MaxBotServerError): ...
 class MaxBotServiceUnavailableError(MaxBotServerError): ...
 
 
-class RetvalReturnedServerException(MaxoError): ...
+class RetvalReturnedError(MaxoError):
+    """Сервер загрузки ответил `<retval>1</retval>` вместо токена."""
+
+    def __str__(self) -> str:
+        return (
+            "Сервер загрузки вернул <retval>1</retval> вместо токена, "
+            "используйте token из ответа POST /uploads"
+        )
 
 
 _ERRORS_BY_STATUS: dict[int, type[MaxBotApiError]] = {

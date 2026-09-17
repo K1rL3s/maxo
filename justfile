@@ -12,10 +12,13 @@ alias tests := test
 alias tests-all := test-all
 
 # Все линтеры, кроме mypy
-lint: ruff codespell slots bandit
+lint: ruff black codespell slots bandit
 
 ruff:
     uv run ruff check --fix .
+
+black:
+    uv run black .
 
 codespell:
     uv run codespell src examples
@@ -36,6 +39,13 @@ mypy:
 
 test *args:
     uv run pytest tests/ --cov=src --cov-report=term {{ args }}
+
+build:
+    uv build
+
+check-dist: build
+    uv run twine check --strict dist/*
+    uv run --no-project python check_dist.py dist
 
 docs *args:
     uv run sphinx-build -b html docs docs/_build/html {{ args }}

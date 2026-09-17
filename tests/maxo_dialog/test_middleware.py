@@ -3,6 +3,8 @@ import pytest
 from maxo import Dispatcher
 from maxo.bot.bot import Bot
 from maxo.dialogs import Dialog, DialogManager, StartMode, Window, setup_dialogs
+from maxo.dialogs.api.entities import DialogUpdateEvent
+from maxo.dialogs.manager.manager_middleware import BgFactoryMiddleware
 from maxo.dialogs.test_tools import MockMessageManager
 from maxo.dialogs.test_tools.bot_client import BotClient, FakeBot
 from maxo.dialogs.test_tools.memory_storage import JsonMemoryStorage
@@ -72,3 +74,11 @@ async def test_middleware(
     await client.send("/start")
     first_message = message_manager.one_message()
     assert first_message.body.text == "my_value"
+
+
+def test_bg_factory_middleware_registered_once_for_dialog_events() -> None:
+    dp = Dispatcher()
+    setup_dialogs(dp)
+
+    outer = dp.observers[DialogUpdateEvent].middleware.outer.middlewares
+    assert sum(isinstance(m, BgFactoryMiddleware) for m in outer) == 1

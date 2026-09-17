@@ -41,27 +41,6 @@ def make_manager() -> MagicMock:
     return manager
 
 
-class TestDeprecatedLinkPreview:
-    def test_conflicts_with_link_preview_widget(self) -> None:
-        with pytest.raises(ValueError, match="Cannot use LinkPreview widget"):
-            Window(
-                Const("t"),
-                LinkPreview(url=Const("http://e.com")),
-                state=SG.first,
-                disable_web_page_preview=True,
-            )
-
-    def test_warns_and_builds_link_preview(self) -> None:
-        with pytest.warns(DeprecationWarning, match="disable_web_page_preview"):
-            window = Window(
-                Const("t"),
-                state=SG.first,
-                disable_web_page_preview=True,
-            )
-
-        assert window.link_preview is not None
-
-
 class TestRender:
     async def test_render_media_without_media(self) -> None:
         window = Window(Const("t"), state=SG.first)

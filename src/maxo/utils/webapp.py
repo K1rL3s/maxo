@@ -31,10 +31,12 @@ import hashlib
 import hmac
 import json
 from collections.abc import Callable
+from dataclasses import fields
 from operator import itemgetter
 from typing import Any
 from urllib.parse import parse_qsl
 
+from maxo.errors.webapp import InvalidWebAppInitDataError
 from maxo.types import MaxoType
 
 
@@ -65,7 +67,7 @@ class WebAppInitData(MaxoType):
 def check_webapp_signature(token: str, init_data: str) -> bool:
     try:
         parsed_data = dict(parse_qsl(init_data, strict_parsing=True))
-    except ValueError:  # pragma: no cover
+    except ValueError:
         # Init data is not a valid query string
         return False
     if "hash" not in parsed_data:
@@ -83,10 +85,13 @@ def check_webapp_signature(token: str, init_data: str) -> bool:
     )
     calculated_hash = hmac.new(
         key=secret_key.digest(),
-        msg=data_check_string.encode(),
+        msg=data_check_string.encode(errors="surrogatepass"),
         digestmod=hashlib.sha256,
     ).hexdigest()
-    return hmac.compare_digest(calculated_hash, hash_)
+    return hmac.compare_digest(
+        calculated_hash.encode(),
+        hash_.encode(errors="surrogatepass"),
+    )
 
 
 def parse_webapp_init_data(
@@ -94,18 +99,17 @@ def parse_webapp_init_data(
     *,
     loads: Callable[..., Any] = json.loads,
 ) -> WebAppInitData:
-    result: dict[str, Any] = {}
-    for key, value in parse_qsl(init_data):
-        if (value.startswith("[") and value.endswith("]")) or (
-            value.startswith("{") and value.endswith("}")
-        ):
-            value = loads(value)
-        result[key] = value
-
-    chat: dict[str, Any] = result.pop("chat", {})
-    user: dict[str, Any] = result.pop("user", {})
-
-    return WebAppInitData(**result, chat=WebAppChat(**chat), user=WebAppUser(**user))
+    result = dict(parse_qsl(init_data))
+    try:
+        chat_data = _loads(loads, result.pop("chat"))
+        user_data = _loads(loads, result.pop("user"))
+        return WebAppInitData(
+            **_known_fields(WebAppInitData, result),
+            chat=WebAppChat(**_known_fields(WebAppChat, chat_data)),
+            user=WebAppUser(**_known_fields(WebAppUser, user_data)),
+        )
+    except (AttributeError, KeyError, TypeError) as e:
+        raise InvalidWebAppInitDataError(f"Invalid init data: {e!r}") from e
 
 
 def safe_parse_webapp_init_data(
@@ -116,4 +120,16 @@ def safe_parse_webapp_init_data(
 ) -> WebAppInitData:
     if check_webapp_signature(token, init_data):
         return parse_webapp_init_data(init_data, loads=loads)
-    raise ValueError("Invalid init data signature")
+    raise InvalidWebAppInitDataError("Invalid init data signature")
+
+
+def _known_fields(model: type[MaxoType], data: dict[str, Any]) -> dict[str, Any]:
+    names = {field.name for field in fields(model)}
+    return {key: value for key, value in data.items() if key in names}
+
+
+def _loads(loads: Callable[..., Any], value: str) -> Any:
+    try:
+        return loads(value)
+    except Exception as e:
+        raise InvalidWebAppInitDataError(f"Invalid init data: {e!r}") from e

@@ -67,6 +67,10 @@ def mock_feed_max_update() -> AsyncMock:
 def mock_dispatcher(mock_feed_max_update: AsyncMock) -> Dispatcher:
     dispatcher = Dispatcher()
     dispatcher.feed_max_update = mock_feed_max_update  # type: ignore[method-assign]
+
+    @dispatcher.message_created()
+    async def _handler(update: Any) -> None: ...
+
     return dispatcher
 
 
@@ -710,3 +714,22 @@ def test_run_polling_runs_start_polling(mock_bot: Bot) -> None:
     assert start.await_args.kwargs["timeout"] == 7
     assert start.await_args.kwargs["auto_close_bot"] is False
     assert start.await_args.kwargs["clear_subscriptions"] is True
+
+
+async def test_start_omits_types_when_there_are_no_update_handlers(
+    mock_bot: Bot,
+    mock_get_subscriptions: AsyncMock,
+) -> None:
+    long_polling = LongPolling(dispatcher=Dispatcher())
+
+    with (
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates) as spy,
+        patch("maxo.transport.long_polling.loggers.long_polling") as logger,
+    ):
+        await long_polling.start(mock_bot, auto_close_bot=False)
+
+    assert spy.call_args.kwargs["types"] == Omitted()
+    logger.warning.assert_called_once_with(
+        "Не найдено ни одного обработчика обновлений, "
+        "Long Polling будет получать обновления всех типов",
+    )

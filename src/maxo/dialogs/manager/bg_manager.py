@@ -2,6 +2,7 @@ import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from functools import partial
 from typing import Any
 
 from maxo import Bot, Dispatcher, loggers
@@ -19,6 +20,7 @@ from maxo.dialogs.api.entities import (
     StartMode,
 )
 from maxo.dialogs.api.entities.update_event import DialogFgEvent
+from maxo.dialogs.api.exceptions import DialogsError
 from maxo.dialogs.api.internal import FakeUser
 from maxo.dialogs.api.protocols import BaseDialogManager, BgManagerFactory
 from maxo.dialogs.manager.updater import Updater
@@ -31,7 +33,7 @@ from maxo.types import Chat, ChatMembersList, Recipient, User
 class BgManager(BaseDialogManager):
     def __init__(
         self,
-        user: User,
+        user: User | None,
         chat_id: int | None,
         bot: Bot,
         dp: Dispatcher,
@@ -42,7 +44,7 @@ class BgManager(BaseDialogManager):
     ) -> None:
         self._event_context = EventContext(
             chat_id=chat_id,
-            user_id=user.id,
+            user_id=None if user is None else user.id,
             chat_type=chat_type,
             user=user,
             chat=None,
@@ -54,13 +56,12 @@ class BgManager(BaseDialogManager):
         self.stack_id = stack_id
         self.load = load
 
-    def _get_fake_user(self, user_id: int | None = None) -> User:
-        if self._event_context.user is not None and (
-            user_id is None or user_id == self._event_context.user.id
-        ):
-            return self._event_context.user
+    def _get_fake_user(self, user_id: int | None = None) -> User | None:
+        user = self._event_context.user
+        if user_id is None or (user is not None and user_id == user.id):
+            return user
         return FakeUser(
-            user_id=user_id or 0,
+            user_id=user_id,
             is_bot=False,
             first_name="",
             last_activity_time=datetime.now(UTC),
@@ -78,13 +79,16 @@ class BgManager(BaseDialogManager):
         new_event_context = EventContext(
             bot=self._event_context.bot,
             user=user,
-            chat_id=chat_id,
-            user_id=user_id,
+            chat_id=self._event_context.chat_id if chat_id is None else chat_id,
+            user_id=self._event_context.user_id if user_id is None else user_id,
             chat_type=self._event_context.chat_type,
             chat=None,
         )
         if stack_id is None:
-            if self._event_context == new_event_context:
+            if (
+                self._event_context.user_id == new_event_context.user_id
+                and self._event_context.chat_id == new_event_context.chat_id
+            ):
                 stack_id = self.stack_id
                 intent_id = self.intent_id
             else:
@@ -105,12 +109,10 @@ class BgManager(BaseDialogManager):
         )
 
     def _base_event_params(self) -> dict[str, Any]:
-        user = self._event_context.user
-        assert user is not None  # noqa: S101
         return {
-            "user": user,
+            "user": self._event_context.user,
             "recipient": Recipient(
-                user_id=user.id,
+                user_id=self._event_context.user_id,
                 chat_id=self._event_context.chat_id,
                 chat_type=self._event_context.chat_type or ChatType.CHAT,
             ),
@@ -129,11 +131,7 @@ class BgManager(BaseDialogManager):
 
         user = self._event_context.user
         user_id = self._event_context.user_id
-        # `BgManager.__init__` требует `user`, а `user_id` берёт из него.
-        assert user is not None  # noqa: S101
-        assert user_id is not None  # noqa: S101
-
-        if is_user_loaded(user):
+        if user is None or user_id is None or is_user_loaded(user):
             return
 
         chat_id = self._event_context.chat_id
@@ -236,16 +234,27 @@ class BgManager(BaseDialogManager):
         )
         bot = self._event_context.bot
         task = self._updater.notify_task(bot=bot, update=event)
+        # entered выставляет только хендлер fg, до которого событие может не дойти
+        task.add_done_callback(partial(_fail_entered, event.entered))
         try:
             manager = await event.entered
+        except asyncio.CancelledError:
+            event.exited.cancel()
+            raise
+        except Exception:
+            await task
+            raise
+        try:
             yield manager
         except Exception as e:
             event.exited.set_exception(e)
-            raise
-        else:
-            event.exited.set_result(None)
-        finally:
             await task
+            raise
+        except BaseException:
+            event.exited.cancel()
+            raise
+        event.exited.set_result(None)
+        await task
 
 
 class BgManagerFactoryImpl(BgManagerFactory):
@@ -255,18 +264,20 @@ class BgManagerFactoryImpl(BgManagerFactory):
     def bg(
         self,
         bot: Bot,
-        user_id: int,
+        user_id: int | None,
         chat_id: int,
         stack_id: str | None = None,
         load: bool = False,
         chat_type: ChatType = ChatType.CHAT,
     ) -> "BaseDialogManager":
-        user = FakeUser(
-            user_id=user_id,
-            is_bot=False,
-            first_name="",
-            last_activity_time=datetime.now(UTC),
-        )
+        user = None
+        if user_id is not None:
+            user = FakeUser(
+                user_id=user_id,
+                is_bot=False,
+                first_name="",
+                last_activity_time=datetime.now(UTC),
+            )
         if stack_id is None:
             stack_id = DEFAULT_STACK_ID
 
@@ -279,4 +290,18 @@ class BgManagerFactoryImpl(BgManagerFactory):
             stack_id=stack_id,
             load=load,
             chat_type=chat_type,
+        )
+
+
+def _fail_entered(
+    entered: asyncio.Future[DialogManager],
+    task: asyncio.Task[Any],
+) -> None:
+    if entered.done():
+        return
+    if task.cancelled():
+        entered.cancel()
+    else:
+        entered.set_exception(
+            task.exception() or DialogsError("Dialog fg event was not handled"),
         )

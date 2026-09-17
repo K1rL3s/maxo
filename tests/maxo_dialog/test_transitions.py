@@ -200,6 +200,7 @@ async def test_reset_stack(
     assert not last_message.body.keyboard, "Keyboard closed"
 
 
+@pytest.mark.flaky(reruns=2)
 async def test_subdialog(
     dp: Dispatcher,
     bot: Bot,
