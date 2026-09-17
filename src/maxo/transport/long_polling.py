@@ -241,7 +241,7 @@ class LongPolling:
                     backoff.counter,
                     bot_username,
                     bot_id,
-               #)
+                )
                 await backoff.sleep()
                 continue
 
