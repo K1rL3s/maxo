@@ -367,14 +367,8 @@ async def test_start_clears_subscriptions_before_after_startup(
     long_polling: LongPolling,
     mock_bot: Bot,
 ) -> None:
-    # Падение очистки не должно оставлять приложение со сработавшими
-    # startup-хуками и несработавшими shutdown - `after_startup` не должен
-    # сработать (очистка ещё не завершилась), но `before_shutdown`/
-    # `after_shutdown` обязаны сработать оба, в паре, раз бот уже открыт
-    # (`before_startup` уже сработал). Раньше выход из `clear_subscriptions()`
-    # пропускал `before_shutdown` целиком, но всё равно бы дошёл до
-    # `after_shutdown` - нарушая пару, которую вправе ожидать любой
-    # shutdown-хендлер.
+    # See PR #310: shutdown signals must still fire in pairs even when
+    # `clear_subscriptions()` fails before `after_startup` ever runs.
     fired: list[str] = []
 
     @mock_dispatcher.before_startup()
@@ -415,10 +409,8 @@ async def test_start_clears_subscriptions_before_after_startup(
 async def test_start_skips_shutdown_signals_when_bot_never_started(
     mock_dispatcher: Dispatcher,
 ) -> None:
-    # Если сам `bot.context()` не смог открыть бота (его `bot.start()` упал),
-    # тело `async with` (и его `finally` с `before_shutdown`) не выполняется
-    # вообще. `after_shutdown` не должен сработать в одиночку без пары -
-    # `shutdown_started` в `LongPolling.start()` как раз это и гарантирует.
+    # See PR #310: `after_shutdown` must never fire alone when `bot.context()`
+    # itself fails to open.
     fired: list[str] = []
 
     @mock_dispatcher.before_startup()
@@ -441,7 +433,10 @@ async def test_start_skips_shutdown_signals_when_bot_never_started(
         patch.object(Bot, "get_my_info", new=AsyncMock(side_effect=error)),
         pytest.raises(RuntimeError, match="network is unreachable"),
     ):
-        await long_polling.start(fresh_bot, auto_close_bot=False)
+        # `fresh_bot` is a real `Bot`, not the `mock_bot` fixture used
+        # elsewhere in this file - `auto_close_bot=True` (the default) so its
+        # aiohttp session gets closed even though startup never completed.
+        await long_polling.start(fresh_bot)
 
     assert fired == ["before_startup"]
 
@@ -452,18 +447,10 @@ async def test_start_feeds_bot_to_after_shutdown(
     mock_bot: Bot,
     mock_get_subscriptions: AsyncMock,
 ) -> None:
-    # `feed_signal(AfterShutdown())` was called with no `bot` at all, unlike
-    # every other signal here (including this same method's own
-    # `BeforeShutdown`) and unlike `SimpleWebhookEngine`'s `AfterShutdown`,
-    # which does pass its bot. `feed_update` backfills `ctx["bot"]` from
-    # `workflow_data` regardless, so a handler parameter named `bot` still
-    # resolved either way - but `bot` not being passed also means
-    # `feed_update` skips `ctx["bots"] = [bot]` and `update.bot = bot`, so a
-    # handler reading the signal object's own `.bot` (as opposed to a `bot`
-    # parameter) saw `None` instead of the real bot. Asserting on the actual
-    # call to `feed_signal`, rather than on what a handler receives, is what
-    # catches that - a handler-side assertion can't tell "backfilled from
-    # workflow_data" apart from "passed explicitly".
+    # See PR #310: `AfterShutdown` must be fed the real `bot`, like every
+    # other signal here - asserted on the `feed_signal` call itself, not on
+    # what a handler receives, since `workflow_data` backfills a `bot`
+    # parameter either way and would hide a missing explicit `bot`.
     real_feed_signal = mock_dispatcher.feed_signal
 
     with (
@@ -496,13 +483,8 @@ async def test_start_fires_shutdown_signals_when_polling_task_is_cancelled(
     mock_bot: Bot,
     mock_get_subscriptions: AsyncMock,
 ) -> None:
-    # `task.cancel()` on the task running `start()` is the standard way to stop
-    # an application that catches its own shutdown signal (SIGTERM), per
-    # AGENTS.md. That raises `CancelledError` out of the `TaskGroup`, which
-    # `contextlib.suppress(KeyboardInterrupt)` does not catch - previously this
-    # unwound straight out of `start()` and skipped both `before_shutdown` and
-    # `after_shutdown` entirely, so nothing ever got to close the DB, flush
-    # metrics or remove the webhook subscription on a cancelled shutdown.
+    # See PR #310: `task.cancel()` (SIGTERM's normal path, per AGENTS.md)
+    # must still fire both shutdown signals.
     order: list[str] = []
 
     @mock_dispatcher.before_shutdown()
@@ -530,6 +512,77 @@ async def test_start_fires_shutdown_signals_when_polling_task_is_cancelled(
             await task
 
     assert order == ["before_shutdown", "after_shutdown"]
+
+
+async def test_cancelled_error_survives_a_failing_before_shutdown_handler(
+    mock_dispatcher: Dispatcher,
+    long_polling: LongPolling,
+    mock_bot: Bot,
+    mock_get_subscriptions: AsyncMock,
+) -> None:
+    # See PR #310: a `before_shutdown` handler that raises must not replace
+    # the `CancelledError` a caller doing `task.cancel()` is waiting for -
+    # it should be logged and swallowed instead.
+    before_shutdown_ran = False
+
+    @mock_dispatcher.before_shutdown()
+    async def _before_shutdown() -> None:
+        nonlocal before_shutdown_ran
+        before_shutdown_ran = True
+        raise AttributeError("boom")
+
+    async def hanging_updates(**_kwargs: Any) -> AsyncIterator[Any]:
+        await asyncio.sleep(60)
+        nothing: tuple[Any, ...] = ()
+        for update in nothing:
+            yield update
+
+    with patch.object(long_polling, "_get_updates", side_effect=hanging_updates):
+        task = asyncio.create_task(
+            long_polling.start(mock_bot, auto_close_bot=False),
+        )
+        await asyncio.sleep(0.1)
+        task.cancel()
+
+        with pytest.raises(CancelledError):
+            await task
+
+    assert before_shutdown_ran
+
+
+async def test_exception_group_survives_a_failing_after_shutdown_handler(
+    mock_dispatcher: Dispatcher,
+    long_polling: LongPolling,
+    mock_bot: Bot,
+) -> None:
+    # See PR #310: an `after_shutdown` handler that raises must not replace
+    # the `ExceptionGroup` a failed `clear_subscriptions()` already raised.
+    after_shutdown_ran = False
+
+    @mock_dispatcher.after_shutdown()
+    async def _after_shutdown() -> None:
+        nonlocal after_shutdown_ran
+        after_shutdown_ran = True
+        raise AttributeError("boom")
+
+    failure = ExceptionGroup(
+        "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0443\u0434\u0430\u043b\u0438\u0442\u044c WebHook-\u043f\u043e\u0434\u043f\u0438\u0441\u043a\u0438",
+        [UnsubscribeError(url="https://example.com/webhook", error=ValueError("boom"))],
+    )
+
+    with (
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates),
+        patch.object(Bot, "clear_subscriptions", new=AsyncMock(side_effect=failure)),
+        pytest.raises(ExceptionGroup) as excinfo,
+    ):
+        await long_polling.start(
+            mock_bot,
+            auto_close_bot=False,
+            clear_subscriptions=True,
+        )
+
+    assert after_shutdown_ran
+    assert excinfo.value is failure
 
 
 async def test_start_warns_about_subscriptions_when_not_cleared(
