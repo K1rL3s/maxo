@@ -6,13 +6,13 @@
 
 ## Документация
 
-- [Начало работы](https://maxo.readthedocs.io/ru/latest/pages/getting-started.html): Установка через uv/poetry/pip, требования, быстрый старт - эхо-бот, команды, клавиатуры, вебхук.
+- [Начало работы](https://maxo.readthedocs.io/ru/latest/pages/getting-started.html): Установка через uv/poetry/pip, дополнительные зависимости, быстрый старт - эхо-бот, команды, клавиатуры.
 - [Обработка событий - обзор](https://maxo.readthedocs.io/ru/latest/pages/event-handling/index.html): Архитектура цепочки обработки апдейтов в maxo.
 - [Роутеры](https://maxo.readthedocs.io/ru/latest/pages/event-handling/routers.html): Структура бота через `Dispatcher` и `Router`, вложенность, масштабирование.
 - [Фильтры](https://maxo.readthedocs.io/ru/latest/pages/event-handling/filters.html): Встроенные фильтры (`Command`, `CommandStart`), кастомные фильтры, комбинирование, интеграция с `magic_filter`.
 - [Мидлвари](https://maxo.readthedocs.io/ru/latest/pages/event-handling/middlewares.html): Outer/Inner middleware, поток выполнения, типичные сценарии.
 - [Хендлеры](https://maxo.readthedocs.io/ru/latest/pages/event-handling/handlers.html): Сигнатуры функций-обработчиков, контекст `Ctx`, внедрение зависимостей.
-- [Флаги](https://maxo.readthedocs.io/ru/latest/pages/event-handling/flags.html): Флаги хендлеров: установка через декораторы и чтение в middleware.
+- [Флаги](https://maxo.readthedocs.io/ru/latest/pages/event-handling/flags.html): Метаданные хендлеров: установка декоратором, при регистрации и фильтрами, чтение из мидлварей.
 - [FSM](https://maxo.readthedocs.io/ru/latest/pages/event-handling/fsm.html): Машина состояний, `StatesGroup`, `MemoryStorage`, `RedisStorage`.
 - [Фасады](https://maxo.readthedocs.io/ru/latest/pages/event-handling/facades.html): Объекты-обёртки над API для упрощённой работы с апдейтами.
 - [Ошибки](https://maxo.readthedocs.io/ru/latest/pages/event-handling/errors.html): Перехват исключений и обработка ошибок.
@@ -35,7 +35,7 @@
 
 ## Утилиты
 
-- [Link Utility](https://maxo.readthedocs.io/ru/latest/pages/utils/link.html): Сборка ссылок на пользователей, чаты и сообщения.
+- [Link Utility](https://maxo.readthedocs.io/ru/latest/pages/utils/link.html): Сборка ссылок `max://` и `https://max.ru`, перевод ID сообщения в ссылку и обратно.
 - [Авто-ответ на колбэк](https://maxo.readthedocs.io/ru/latest/pages/utils/callback_answer.html): `CallbackAnswerMiddleware` отвечает на `MessageCallback` после нажатия инлайн-кнопки.
 - [Действия бота в чате](https://maxo.readthedocs.io/ru/latest/pages/utils/chat_action.html): `ChatActionSender` и `ChatActionMiddleware` для повторной отправки действий в чате.
 
