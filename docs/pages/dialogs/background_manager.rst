@@ -79,8 +79,8 @@ BgManagerFactory
 
         bg_factory: BgManagerFactory = dialog_manager.middleware_data["dialog_bg_factory"]
         bot: Bot = dialog_manager.middleware_data["bot"]
-        chat_id = dialog_manager.event.chat_id
-        user_id = dialog_manager.event.user_id
+        chat_id = callback.chat_id
+        user_id = callback.user.user_id
 
         async def tick() -> None:
             bg = bg_factory.bg(bot=bot, chat_id=chat_id, user_id=user_id)

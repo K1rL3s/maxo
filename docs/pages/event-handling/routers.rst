@@ -37,16 +37,18 @@
 .. code-block:: python
 
     from maxo import Router
+    from maxo.routing.filters import Command
+    from maxo.types import MessageCreated
 
     admin_router = Router(name="admin")
     shop_router = Router(name="shop")
 
     # Регистрация обработчиков в роутерах
-    @admin_router.message_created(...)
-    async def admin_handler(...): ...
+    @admin_router.message_created(Command("ban"))
+    async def admin_handler(update: MessageCreated) -> None: ...
 
-    @shop_router.message_created(...)
-    async def shop_handler(...): ...
+    @shop_router.message_created(Command("buy"))
+    async def shop_handler(update: MessageCreated) -> None: ...
 
     # Подключение роутеров к диспетчеру
     dispatcher.include(admin_router)

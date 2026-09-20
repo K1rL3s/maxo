@@ -20,6 +20,7 @@ from maxo.routing.filters.logic import (
 )
 from maxo.routing.filters.payload import CallbackData, Payload
 from maxo.routing.filters.state import StateFilter
+from maxo.routing.filters.sync import SyncFilter
 
 __all__ = (
     "AlwaysFalseFilter",
@@ -37,6 +38,7 @@ __all__ = (
     "OrFilter",
     "Payload",
     "StateFilter",
+    "SyncFilter",
     "and_f",
     "invert_f",
     "or_f",

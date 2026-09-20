@@ -3,6 +3,202 @@
 История релизов автоматически собирается из [GitHub Releases](https://github.com/K1rL3s/maxo/releases) при каждой сборке документации.
 
 
+## [0.9.0](https://github.com/K1rL3s/maxo/releases/tag/v0.9.0) - 2026-09-15
+
+### What's Changed
+- Обновление по сваггеру на 26.08.2026 by @K1rL3s in https://github.com/K1rL3s/maxo/pull/177
+- feat: add `Bot.clear_subscriptions` by @K1rL3s in https://github.com/K1rL3s/maxo/pull/180
+- Refactor routing and facades, clean up imports and middleware by @m-xim in https://github.com/K1rL3s/maxo/pull/308
+- fix: выполнять хендлеры-классы с `async def __call__` by @K1rL3s in https://github.com/K1rL3s/maxo/pull/311
+- ci: проверка и публикация дистрибутива, лицензии в пакете, black в линтерах by @K1rL3s in https://github.com/K1rL3s/maxo/pull/312
+- fix: validate url_to_message_id input instead of guessing by @waybill-worker in https://github.com/K1rL3s/maxo/pull/309
+- refactor!: удалить maxo.utils.auth_widget by @K1rL3s in https://github.com/K1rL3s/maxo/pull/314
+- fix!: сохранять access_settings стека в storage by @K1rL3s in https://github.com/K1rL3s/maxo/pull/315
+- fix!: StateFilter и ExceptionTypeFilter бросают ValueError без аргументов by @K1rL3s in https://github.com/K1rL3s/maxo/pull/316
+- refactor!: удалить параметр disable_web_page_preview у Window by @K1rL3s in https://github.com/K1rL3s/maxo/pull/319
+- refactor!: удалить модуль maxo.utils.long_polling by @K1rL3s in https://github.com/K1rL3s/maxo/pull/322
+- refactor!: setup_jinja принимает только Dispatcher by @K1rL3s in https://github.com/K1rL3s/maxo/pull/320
+- fix!: inner-мидлвари родительского роутера выполняются раньше дочерних by @K1rL3s in https://github.com/K1rL3s/maxo/pull/321
+- refactor!: убрать совместимость BotDefaults(disable_link_preview=None) by @K1rL3s in https://github.com/K1rL3s/maxo/pull/325
+- docs: убрать из AGENTS.md упоминание удалённого routing/updates by @K1rL3s in https://github.com/K1rL3s/maxo/pull/326
+- fix: останавливать ChatMembersIterator, если в ответе нет marker by @K1rL3s in https://github.com/K1rL3s/maxo/pull/323
+- fix!: запретить подключать роутер к нескольким родителям by @K1rL3s in https://github.com/K1rL3s/maxo/pull/328
+- fix: разрешать строковые аннотации полей в Payload.unpack by @K1rL3s in https://github.com/K1rL3s/maxo/pull/317
+- test, docs: стабилизируй test_nested_transitions, поправь пример превью и AGENTS.md by @K1rL3s in https://github.com/K1rL3s/maxo/pull/329
+- refactor!: переименовал RetvalReturnedServerException в RetvalReturnedError by @K1rL3s in https://github.com/K1rL3s/maxo/pull/330
+- fix!: add_share принимает url и token только по имени by @K1rL3s in https://github.com/K1rL3s/maxo/pull/331
+- fix: добавил check_disabled в next, back, update, show, answer_callback by @K1rL3s in https://github.com/K1rL3s/maxo/pull/332
+- chore: поднял pytest и httpx2 до версий без уязвимостей by @K1rL3s in https://github.com/K1rL3s/maxo/pull/333
+- fix!: InvalidWebAppInitDataError вместо TypeError при разборе init data by @K1rL3s in https://github.com/K1rL3s/maxo/pull/327
+- refactor!: feed_update больше не привязывает бота к апдейту by @K1rL3s in https://github.com/K1rL3s/maxo/pull/334
+- fix: maxo-dialog-preview запускается без extra preview и понимает --help by @K1rL3s in https://github.com/K1rL3s/maxo/pull/324
+- build!: исправил границы зависимостей и lowest-direct в CI by @K1rL3s in https://github.com/K1rL3s/maxo/pull/337
+- fix!: decode_payload отклоняет невалидный base64 своей ошибкой by @K1rL3s in https://github.com/K1rL3s/maxo/pull/335
+- fix: пропустил события фонового менеджера для недоступного стека by @K1rL3s in https://github.com/K1rL3s/maxo/pull/336
+- fix: научил Calendar переключать год с 29 февраля by @K1rL3s in https://github.com/K1rL3s/maxo/pull/338
+- fix: add_location принимает координаты float и Decimal by @K1rL3s in https://github.com/K1rL3s/maxo/pull/339
+- fix!: feed_update без бота перестал падать с KeyError by @K1rL3s in https://github.com/K1rL3s/maxo/pull/343
+- fix: добавил quote, heading и highlighted в разметку render() by @K1rL3s in https://github.com/K1rL3s/maxo/pull/342
+- fix!: научил bg() работать из поста в канале без пользователя by @K1rL3s in https://github.com/K1rL3s/maxo/pull/345
+- fix!: bg() сохранил текущий стек для того же чата и пользователя by @K1rL3s in https://github.com/K1rL3s/maxo/pull/346
+- fix: SignalObserver пропускает хендлер по SkipHandler by @K1rL3s in https://github.com/K1rL3s/maxo/pull/341
+- fix: обходил общий observer под несколькими ключами один раз by @K1rL3s in https://github.com/K1rL3s/maxo/pull/344
+- fix: перестал отправлять пустой types в get_updates без обработчиков by @K1rL3s in https://github.com/K1rL3s/maxo/pull/340
+- fix: BgManager.fg() перестал зависать без хендлера fg и при отмене by @K1rL3s in https://github.com/K1rL3s/maxo/pull/348
+- fix!: расширил протокол DialogManager методами ManagerImpl by @K1rL3s in https://github.com/K1rL3s/maxo/pull/318
+
+
+### Нейро release notes
+
+Главное в релизе: удалены фасады-обёртки и устаревшие шимы, битый ввод в `decode_payload` и init data мини-приложений теперь даёт собственные исключения, у роутинга поменялись порядок inner-мидлварей и правило подключения роутеров, `feed_update` больше не привязывает бота к апдейту, а `bg()` в диалогах работает из постов в канале и не теряет текущий стек
+
+#### Критические изменения
+
+- **Удалены фасады-обёртки и аргумент `facade` в хендлерах.** Пакеты `maxo.routing.facades` (все `*Facade` и `BaseUpdateFacade`), `FacadeMiddleware` и `FACADE_KEY` удалены, ключа `ctx["facade"]` больше нет. Методы вызываются на самом апдейте:
+
+  ```python
+  # было
+  async def handler(update: MessageCreated, facade: MessageCreatedFacade) -> None:
+      await facade.answer_text("Привет")
+
+  # стало
+  async def handler(update: MessageCreated) -> None:
+      await update.answer_text("Привет")
+  ```
+
+  Вместе с ними ушли пути импорта `maxo.routing.mixins`, `maxo.routing.updates` и `maxo.utils.facades`, теперь это `ImportError`. Миксины переехали в модули `maxo.types.facades.*`, импортируйте из конкретного файла, например `from maxo.types.facades.attachments import MediaInput`. Апдейты импортируйте из `maxo.types`. `maxo.types.BotMixin` переименован в `BaseMethodsFacade` и доступен только как `from maxo.types.facades.base import BaseMethodsFacade`. У `ErrorEvent` больше нет методов подписок (`get_subscriptions`, `subscribe` и т.д.), вызывайте их через `event.bot`
+  Closes #120, #272
+  by @m-xim in https://github.com/K1rL3s/maxo/pull/308
+- **Удалён модуль `maxo.utils.long_polling`.** Импортируйте `LongPolling` из `maxo.transport.long_polling` или запускайте поллинг через `Dispatcher.run_polling` / `Dispatcher.start_polling`
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/322
+- **У `Window` удалён параметр `disable_web_page_preview`.** Передача параметра теперь падает с `TypeError`. Вместо него добавьте в окно виджет `LinkPreview(is_disabled=True)` из `maxo.dialogs.widgets.link_preview`:
+
+  ```python
+  Window(Const("Текст"), LinkPreview(is_disabled=True), state=MySG.first)
+  ```
+
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/319
+- **`setup_jinja` принимает только `Dispatcher`.** Форма `setup_jinja(bot)` удалена, пишите `setup_jinja(dp)`. Виджет `Jinja` больше не ищет окружение на объекте бота: если его нет в `middleware_data`, используется окружение по умолчанию
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/320
+- **`BotDefaults(disable_link_preview=None)` больше не поддерживается.** Поле стало `Omittable[bool]`. Чтобы не задавать значение по умолчанию, просто не передавайте аргумент. Переданный `None` не проходит mypy, а в рантайме уходит в запрос как `disable_link_preview=false`
+  Closes #239
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/325
+- **Удалён `maxo.utils.auth_widget`.** Модуль проверял подпись по протоколу Telegram Login Widget, которого в MAX нет, и на настоящих данных всегда возвращал `False`. Данные мини-приложений проверяйте через `maxo.utils.webapp.check_webapp_signature` и `safe_parse_webapp_init_data`
+  Closes #183
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/314
+- **`RetvalReturnedServerException` переименован в `RetvalReturnedError`.** Алиаса со старым именем нет, обновите импорты из `maxo.errors` / `maxo.exceptions`
+  Closes #282
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/330
+- **`parse_webapp_init_data` бросает `InvalidWebAppInitDataError` вместо `TypeError` и `json.JSONDecodeError`.** Неизвестные поля в init data, `user` и `chat` теперь игнорируются, JSON разбирается только в `user` и `chat`: значения в скобках в других полях, например `start_param`, остаются строками. Исключение наследует `ValueError`, так что `except ValueError` вокруг `safe_parse_webapp_init_data` продолжает работать
+  Closes #242
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/327
+- **`decode_payload` отклоняет невалидный base64 через `InvalidPayloadError`.** Раньше мусорные символы молча выкидывались, и `DeeplinkFilter(deep_link_encoded=True)` пропускал payload `"!!!"` как пустую строку. Вместо `binascii.Error` и `UnicodeDecodeError` теперь приходит `InvalidPayloadError` (наследует `ValueError`), а строки с лишним паддингом вроде `"aGk=="` больше не декодируются. Ошибки своего `decoder` пробрасываются как есть
+  Closes #299
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/335
+- **`StateFilter()` и `ExceptionTypeFilter()` без аргументов бросают `ValueError` при создании.** Раньше такой фильтр никогда не срабатывал, и хендлер молча пропадал
+  Closes #288
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/316
+- **`AttachmentRequestBuilder.add_share` принимает `url` и `token` только по имени.** `add_share("https://...")` теперь падает с `TypeError`, пишите `add_share(url="https://...")`
+  Closes #307
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/331
+- **Inner-мидлвари родительского роутера выполняются раньше дочерних**, как в aiogram. Порядок для `dp -> child`:
+
+  ```text
+  было:  child_inner_pre, dp_inner_pre, handler, dp_inner_post, child_inner_post
+  стало: dp_inner_pre, child_inner_pre, handler, child_inner_post, dp_inner_post
+  ```
+
+  Если дочерняя inner-мидлварь готовила данные для родительской, перенесите эту логику
+  Closes #203
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/321
+- **Роутер можно подключить только к одному родителю.** Повторный `include` того же роутера, в том числе в другой `Dispatcher`, бросает `RouterAlreadyIncludedError` из `maxo.errors`. У роутера появилось свойство `parent_router`, сторонним реализациям протокола `BaseRouter` нужно добавить его вместе с сеттером
+  Closes #232
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/328
+- **`Dispatcher.feed_update` больше не привязывает бота к апдейту.** Long polling, webhook и `BotClient` из test tools уже отдают привязанные апдейты. Если вы собираете апдейт руками, привяжите бота сами, иначе методы на апдейте упадут с `AttributeIsEmptyError`:
+
+  ```python
+  await dp.feed_update(update.as_(bot), bot)
+  ```
+
+  `.as_` привязывает только сам объект, вложенные `Message` и `Callback` остаются без бота
+  Closes #294
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/334
+- **`feed_update` без бота перестал падать с `KeyError: 'bot'`.** Ошибка хендлера теперь доходит до `dp.errors` или наружу как есть. Без бота `FSMContext` не создаётся, а `Command` не совпадает с командой, где указано упоминание (`/start@name`), если не включён `ignore_mention`. `Command.parse_command` и `validate_mention` принимают `bot: Bot | None`, подклассам с переопределением нужно расширить сигнатуру для mypy. Диалоги без бота по-прежнему не работают
+  Closes #202
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/343
+- **`access_settings` стека диалогов сохраняются в storage.** Раньше после перечитывания стек, открытый с `AccessSettings(user_ids=[1])`, становился доступен любому участнику чата. Стеки, сохранённые прошлой версией, грузятся без миграции со значением по умолчанию
+  Closes #196
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/315
+- **Протокол `DialogManager` расширен членами `disabled`, `check_disabled()`, `dialog()`, `storage()` и `is_event_simulated()`.** `manager.dialog()` теперь работает и в колбэках внутри `ListGroup`. Сторонним реализациям `DialogManager` нужно добавить эти пять членов, иначе создание экземпляра упадёт с `TypeError`
+  Closes #197
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/318
+- **`bg()` работает из поста в канале без пользователя.** `DialogUpdateEvent.user` и параметр `user` у `BgManager` стали `User | None`, `BgManagerFactory.bg` принимает `user_id: int | None`. Рантайм существующих вызовов не меняется, но код, читающий `event.user.id`, нужно проверить на `None`, а свою реализацию `BgManagerFactory` привести к новой сигнатуре
+  Closes #216
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/345
+- **`bg()` без `user_id` и `chat_id` продолжает текущий стек.** Раньше он всегда уходил в стек по умолчанию, и `bg().update()` из диалога, открытого с `StartMode.NEW_STACK`, не перерисовывал окно. Если нужен прежний сброс, передайте `stack_id=DEFAULT_STACK_ID` (из `maxo.dialogs`)
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/346
+- **Подняты нижние границы extras: `magic_filter>=1.0.10`, `dishka>=1.3.0`.** Более старые версии и так не работали с maxo. Заодно `fastapi>=0.128.0,<1.0.0` на всех версиях Python, разрешены `cachetools` 7 и `redis` 8
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/337
+
+#### Новое
+
+- **`Bot.clear_subscriptions`** удаляет WebHook-подписки параллельно, кроме переданных в `active_urls` (строка или набор строк), и возвращает `ClearSubscriptionsResult` со списками `removed` и `kept`. Ошибки удаления собираются в `ExceptionGroup` из `UnsubscribeError`. `start_polling`, `run_polling` и `LongPolling` получили флаг `clear_subscriptions=True`, а без него поллинг предупреждает в логе об активных подписках
+  Closes #178
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/180
+- **`disable_link_preview` в ответе на колбэк** по сваггеру на 26.08.2026: параметр есть у `AnswerOnCallback` и `callback_answer`, значение из `BotDefaults` применяется и к нему
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/177
+
+#### Исправления
+
+- Хендлеры-классы с `async def __call__` снова выполняются, в том числе в `on_click` / `on_success` диалогов: раньше тело не запускалось, а апдейт считался обработанным. Хендлеры под `functools.wraps`-декоратором больше не падают с `TypeError` на лишних ключах из `ctx`
+  Closes #182
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/311
+- `bool` в квери уходит как `true` / `false`. `User.last_activity_time` стал `Omittable[datetime]`, потому что API его не всегда присылает, для гарантированного доступа есть `unsafe_last_activity_time`
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/177
+- `Payload.unpack` понимает строковые аннотации и `from __future__ import annotations`: `flag=False` больше не распаковывается в `"0"`
+  Closes #195
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/317
+- `ChatMembersIterator` больше не зацикливается, если в ответе нет `marker`
+  Closes #207
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/323
+- `maxo-dialog-preview` запускается без extra `preview` и понимает `--help`, неверные аргументы дают понятную ошибку
+  Closes #186
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/324
+- Фоновый менеджер: события для стека, закрытого для пользователя, пропускаются без `TypeError`, а `async with bg.fg()` поднимает `StackAccessDeniedError`. `fg()` больше не зависает, если событие не дошло до хендлера (например, `UnknownIntent` после закрытия диалога) или вызывающий код отменён
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/336, https://github.com/K1rL3s/maxo/pull/348
+- `next`, `back`, `update`, `show` и `answer_callback` на закрытом менеджере бросают `IncorrectBackgroundError`
+  Closes #260
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/332
+- `BgFactoryMiddleware` выполняется один раз на dialog-событие, а не четыре
+  Closes #231
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/344
+- `Calendar` переключает год с 29 февраля без `ValueError`
+  Closes #214
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/338
+- `SkipHandler` в хендлерах `before_startup` / `after_startup` / `before_shutdown` / `after_shutdown` пропускает хендлер, а не роняет запуск
+  Closes #292
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/341
+- Long polling без обработчиков не отправляет пустой `types=` и пишет предупреждение
+  Closes #226
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/340
+- `Text.render()` возвращает `QuoteMarkup`, `HeadingMarkup` и `HighlightedMarkup` вместо базового `MarkupElement`
+  Closes #243
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/342
+- `add_location` принимает `float` без ошибки mypy
+  Closes #306
+  by @K1rL3s in https://github.com/K1rL3s/maxo/pull/339
+- `url_to_message_id` игнорирует query и fragment, а на некорректной ссылке бросает `ValueError` вместо случайного числа
+  Closes #302
+  by @waybill-worker in https://github.com/K1rL3s/maxo/pull/309
+
+
+### New Contributors
+* @waybill-worker made their first contribution in https://github.com/K1rL3s/maxo/pull/309
+
+
+**Full Changelog**: https://github.com/K1rL3s/maxo/compare/v0.8.3...v0.9.0
+
+
 ## [0.8.3](https://github.com/K1rL3s/maxo/releases/tag/v0.8.3) - 2026-08-26
 
 ### What's Changed

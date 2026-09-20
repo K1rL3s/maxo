@@ -17,12 +17,26 @@
 Встроенные фильтры
 ------------------
 
-**maxo** поставляется с набором готовых фильтров:
+**maxo** поставляется с набором готовых фильтров в ``maxo.routing.filters``
+(постоянный алиас для портирования с ``aiogram`` - ``maxo.filters``):
 
-- ``Command`` - проверяет команду (например, ``/start`` или ``/help``).
+- ``Command`` - проверяет команду (например, ``/start`` или ``/help``) и кладёт
+  разобранную команду в ``ctx["command"]`` как ``CommandObject``.
+- ``CommandStart`` - то же самое, но сразу для ``/start``.
 - ``StateFilter`` - фильтрует по текущему состоянию FSM (например, ``StateFilter(MyStates.waiting_name)``).
-- ``MagicFilter`` - инструмент для создания условий на лету (см. ниже).
+- ``Payload`` (алиас ``CallbackData``) - типизированный payload инлайн-кнопки (см. ниже).
+- ``DeeplinkFilter`` - диплинк в ``BotStarted``; значение попадает в ``ctx`` под
+  ключами ``deeplink``, ``payload`` и ``args``.
+- ``ExceptionTypeFilter`` и ``ExceptionMessageFilter`` - для обработчиков ошибок,
+  см. :doc:`errors`.
 - ``SyncFilter`` - оборачивает синхронную функцию-предикат, чтобы её можно было использовать как фильтр (см. ниже).
+- ``AlwaysTrueFilter`` и ``AlwaysFalseFilter`` - заглушки, удобные в тестах.
+- ``AndFilter``, ``OrFilter``, ``InvertFilter`` и функции ``and_f``, ``or_f``,
+  ``invert_f`` - то же, что операторы ``&``, ``|`` и ``~``.
+- ``BaseFilter`` - база для своих фильтров (см. ниже).
+
+``MagicFilter`` лежит отдельно, в ``maxo.integrations.magic_filter``, потому что
+требует дополнительной зависимости ``maxo[magic_filter]``.
 
 Комбинирование (Логические операции)
 ------------------------------------
@@ -123,6 +137,62 @@ Magic Filter
 
         # Для нескольких допустимых значений короче использовать in_
         F.text.in_({"hello", "hi"})
+
+Payload (типизированный callback)
+---------------------------------
+
+``Payload`` описывает данные инлайн-кнопки как датакласс: ``pack()`` собирает их
+в строку payload, а фильтр ``Payload.filter()`` разбирает строку обратно и кладёт
+готовый объект в ``ctx["payload"]``. Для привычек из ``aiogram`` есть алиас
+``CallbackData``.
+
+.. code-block:: python
+
+    from maxo.routing.filters import Payload
+    from maxo.types import MessageCallback, MessageCreated
+    from maxo.utils.builders import KeyboardBuilder
+
+    class ItemPayload(Payload, prefix="item"):
+        item_id: int
+        action: str
+
+    @dispatcher.message_created()
+    async def show_item(update: MessageCreated) -> None:
+        keyboard = (
+            KeyboardBuilder()
+            .add_callback(
+                text="Купить",
+                payload=ItemPayload(item_id=1, action="buy").pack(),
+            )
+            .build()
+        )
+        await update.answer_text("Товар", keyboard=keyboard)
+
+    @dispatcher.message_callback(ItemPayload.filter())
+    async def on_item(update: MessageCallback, payload: ItemPayload) -> None:
+        await update.callback_answer(f"{payload.action}: {payload.item_id}")
+
+``prefix`` обязателен и не должен содержать разделитель (по умолчанию ``":"``,
+меняется параметром ``sep``). Поля упаковываются в том же порядке, в каком
+объявлены; поддерживаются ``int``, ``str``, ``float``, ``bool``, ``Decimal``,
+``Fraction``, ``UUID``, ``Enum`` и их nullable-варианты. Собранный payload
+ограничен 1024 байтами - при превышении ``pack()`` кидает ``ValueError``.
+
+В ``filter()`` можно передать дополнительный фильтр, который получит уже
+разобранный payload из ``ctx``:
+
+.. code-block:: python
+
+    from magic_filter import F
+
+    from maxo.integrations.magic_filter import MagicData
+
+    # MagicData смотрит в ctx, где уже лежит разобранный payload
+    @dispatcher.message_callback(
+        ItemPayload.filter(MagicData(F.payload.action == "buy")),
+    )
+    async def on_buy(update: MessageCallback, payload: ItemPayload) -> None:
+        ...
 
 SyncFilter (синхронные предикаты)
 ---------------------------------
