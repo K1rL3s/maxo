@@ -6,12 +6,13 @@
 
 ## Документация
 
-- [Начало работы](https://maxo.readthedocs.io/ru/latest/pages/getting-started.html): Установка через uv/poetry/pip, требования, быстрый старт - эхо-бот, команды, клавиатуры, вебхук.
+- [Начало работы](https://maxo.readthedocs.io/ru/latest/pages/getting-started.html): Установка через uv/poetry/pip, дополнительные зависимости, быстрый старт - эхо-бот, команды, клавиатуры.
 - [Обработка событий - обзор](https://maxo.readthedocs.io/ru/latest/pages/event-handling/index.html): Архитектура цепочки обработки апдейтов в maxo.
 - [Роутеры](https://maxo.readthedocs.io/ru/latest/pages/event-handling/routers.html): Структура бота через `Dispatcher` и `Router`, вложенность, масштабирование.
 - [Фильтры](https://maxo.readthedocs.io/ru/latest/pages/event-handling/filters.html): Встроенные фильтры (`Command`, `CommandStart`), кастомные фильтры, комбинирование, интеграция с `magic_filter`.
 - [Мидлвари](https://maxo.readthedocs.io/ru/latest/pages/event-handling/middlewares.html): Outer/Inner middleware, поток выполнения, типичные сценарии.
 - [Хендлеры](https://maxo.readthedocs.io/ru/latest/pages/event-handling/handlers.html): Сигнатуры функций-обработчиков, контекст `Ctx`, внедрение зависимостей.
+- [Флаги](https://maxo.readthedocs.io/ru/latest/pages/event-handling/flags.html): Метаданные хендлеров: установка декоратором, при регистрации и фильтрами, чтение из мидлварей.
 - [FSM](https://maxo.readthedocs.io/ru/latest/pages/event-handling/fsm.html): Машина состояний, `StatesGroup`, `MemoryStorage`, `RedisStorage`.
 - [Фасады](https://maxo.readthedocs.io/ru/latest/pages/event-handling/facades.html): Объекты-обёртки над API для упрощённой работы с апдейтами.
 - [Ошибки](https://maxo.readthedocs.io/ru/latest/pages/event-handling/errors.html): Перехват исключений и обработка ошибок.
@@ -32,12 +33,24 @@
 - [Тестирование диалогов](https://maxo.readthedocs.io/ru/latest/pages/dialogs/testing.html): Тесты в памяти через `BotClient` и `MockMessageManager` без реального API.
 - [Превью диалогов](https://maxo.readthedocs.io/ru/latest/pages/dialogs/preview.html): HTML-превью окон и PNG-диаграмма переходов.
 
+## Утилиты
+
+- [Link Utility](https://maxo.readthedocs.io/ru/latest/pages/utils/link.html): Сборка ссылок `max://` и `https://max.ru`, перевод ID сообщения в ссылку и обратно.
+- [Авто-ответ на колбэк](https://maxo.readthedocs.io/ru/latest/pages/utils/callback_answer.html): `CallbackAnswerMiddleware` отвечает на `MessageCallback` после нажатия инлайн-кнопки.
+- [Действия бота в чате](https://maxo.readthedocs.io/ru/latest/pages/utils/chat_action.html): `ChatActionSender` и `ChatActionMiddleware` для повторной отправки действий в чате.
+
 ## API Reference
 
 - [Bot API](https://maxo.readthedocs.io/ru/latest/pages/botapi/index.html): Полная API-справка по типам, методам, апдейтам и енумам, сгенерированная из официальной документации MAX.
+- [Bot](https://maxo.readthedocs.io/ru/latest/pages/botapi/bot.html): Класс `Bot`: запросы к API и параметры сессии.
+- [Types](https://maxo.readthedocs.io/ru/latest/pages/botapi/types.html): Модели данных API (сообщения, пользователи, чаты и др.).
+- [Methods](https://maxo.readthedocs.io/ru/latest/pages/botapi/methods.html): Методы платформы: отправка текста и медиа, клавиатуры.
 - [Omitted](https://maxo.readthedocs.io/ru/latest/pages/botapi/omitted.html): Различие «не передано» и `None` через sentinel `Omitted` и guard-функции.
+- [Enums](https://maxo.readthedocs.io/ru/latest/pages/botapi/enums.html): Перечисления и константы для типизации параметров и событий.
+- [Updates](https://maxo.readthedocs.io/ru/latest/pages/botapi/updates.html): Модели апдейтов (`MessageCreated`, `MessageCallback` и др.).
 - [Форматирование текста](https://maxo.readthedocs.io/ru/latest/pages/botapi/text_formatting.html): HTML/Markdown и программное построение текста через `maxo.utils.formatting`.
 - [Полезные заметки](https://maxo.readthedocs.io/ru/latest/pages/useful_notes.html): Особенности поведения MAX Bot API.
+- [Changelog](https://maxo.readthedocs.io/ru/latest/pages/changelog.html): История релизов, собираемая из GitHub Releases.
 
 ## Optional
 
