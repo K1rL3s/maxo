@@ -344,10 +344,18 @@ TimeSelect
     class MySG(StatesGroup):
         time_selection = State()
 
-    async def on_time_selected(event, widget, manager: DialogManager, selected_time: time):
-        # Здесь можно обработать выбранное время
-        await event.callback_answer(f"Вы выбрали время: {selected_time.strftime('%H:%M')}")
-        manager.dialog_data["selected_time"] = selected_time
+    # Имена аргументов важны: OnValueChanged - Protocol, а не просто Callable
+    async def on_time_selected(
+        event,
+        counter,
+        dialog_manager: DialogManager,
+        value: time | None,
+    ) -> None:
+        # value равен None, пока выбраны не оба значения - час и минута
+        if value is None:
+            return
+        await event.callback_answer(f"Вы выбрали время: {value.strftime('%H:%M')}")
+        dialog_manager.dialog_data["selected_time"] = value
 
     dialog = Dialog(
         Window(
@@ -369,9 +377,9 @@ TimeSelect
 *   **minute_header** (:py:class:`~maxo.dialogs.widgets.text.TextWidget`, optional): Текст заголовка для выбора минут. По умолчанию "Minute".
 *   **button_text** (:py:class:`~maxo.dialogs.widgets.text.TextWidget`, optional): Формат текста для кнопок часов/минут, которые не выбраны. По умолчанию "{value}".
 *   **button_selected_text** (:py:class:`~maxo.dialogs.widgets.text.TextWidget`, optional): Формат текста для выбранных кнопок часов/минут. По умолчанию "[{value}]".
-*   **on_hour_click** (:py:class:`~maxo.dialogs.widgets.kbd.time.OnClick`, optional): Обработчик нажатия на кнопку часа.
-*   **on_minute_click** (:py:class:`~maxo.dialogs.widgets.kbd.time.OnClick`, optional): Обработчик нажатия на кнопку минуты.
-*   **on_value_changed** (:py:class:`~maxo.dialogs.widgets.kbd.time.OnValueChanged`, optional): Обработчик изменения выбранного времени. Принимает аргументы ``event``, ``widget``, ``manager``, ``value: datetime.time``.
+*   **on_hour_click** (:py:class:`~maxo.dialogs.widgets.kbd.time.OnClick`, optional): Обработчик нажатия на кнопку часа. Принимает ``event``, ``counter``, ``dialog_manager``, ``value: int``.
+*   **on_minute_click** (:py:class:`~maxo.dialogs.widgets.kbd.time.OnClick`, optional): Обработчик нажатия на кнопку минуты. Сигнатура та же, что у ``on_hour_click``.
+*   **on_value_changed** (:py:class:`~maxo.dialogs.widgets.kbd.time.OnValueChanged`, optional): Обработчик изменения выбранного времени. Принимает ``event``, ``counter``, ``dialog_manager``, ``value: datetime.time | None``. Значение равно ``None``, пока выбран только час или только минута. Оба типа - ``Protocol``, поэтому для прохождения ``mypy`` имена аргументов должны совпадать.
 *   **hour_width** (:py:class:`int`, optional): Количество кнопок часов в одной строке. По умолчанию 6.
 *   **minute_precision** (:py:class:`int`, optional): Шаг для минут (например, 5 для 0, 5, 10... минут). По умолчанию 5.
 *   **minute_width** (:py:class:`int`, optional): Количество кнопок минут в одной строке. По умолчанию 6.
@@ -409,16 +417,43 @@ TimeSelect
 DynamicMedia / StaticMedia
 --------------------------
 
-Окно может содержать медиа (фото, видео, документ). Вы можете возвращать URL или ID файла.
+Окно может содержать медиа (фото, видео, файл). ``StaticMedia`` задаёт медиа прямо
+в окне, ``DynamicMedia`` берёт его из данных геттера по ключу.
+
+Медиа описывается объектом ``MediaAttachment``: файл с диска (``path``), ссылка
+(``url``) или уже загруженное медиа (``media_id``).
 
 .. code-block:: python
 
-    from maxo.dialogs.widgets.media import DynamicMedia
+    from maxo.dialogs import Window
+    from maxo.dialogs.api.entities import MediaAttachment
+    from maxo.dialogs.widgets.media import DynamicMedia, StaticMedia
+    from maxo.dialogs.widgets.text import Const
+    from maxo.enums import AttachmentType
 
-    async def media_getter(dialog_manager, **kwargs):
-        return {"photo_url": "https://example.com/photo.jpg"}
+    async def media_getter(**kwargs):
+        # DynamicMedia ждёт список MediaAttachment, а не голый URL
+        return {
+            "photo": [
+                MediaAttachment(
+                    AttachmentType.IMAGE,
+                    url="https://example.com/photo.jpg",
+                ),
+            ],
+        }
 
-    # Предполагается использование в Window с getter=media_getter
+    Window(
+        DynamicMedia("photo"),  # "photo" - ключ из данных геттера
+        Const("Фото из геттера"),
+        state=SG.main,
+        getter=media_getter,
+    )
+
+    Window(
+        StaticMedia(path="files/watermelon.jpg"),
+        Const("Фото, зашитое в окно"),
+        state=SG.static,
+    )
 
 MessageInput
 ------------

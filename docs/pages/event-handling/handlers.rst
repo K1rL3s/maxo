@@ -75,7 +75,10 @@ Dependency Injection (DI)
     async def handler(update: MessageCreated, user: User, ctx: Ctx):
         # Аргумент user будет автоматически передан из фильтра
         bot: Bot = ctx["bot"]
-        await bot.send_message(user.user_id, f"Hello, {user.first_name}!")
+        await bot.send_message(
+            user_id=user.user_id,
+            text=f"Hello, {user.first_name}!",
+        )
 
 Возвращаемые значения
 ---------------------

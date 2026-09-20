@@ -28,7 +28,6 @@ from maxo.fsm import State, StatesGroup
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.storages.memory import MemoryStorage, SimpleEventIsolation
 from maxo.routing.filters import CommandStart
-from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageCallback, MessageCreated
 
 FILES = Path(__file__).parent / "files"
@@ -152,7 +151,7 @@ async def main() -> None:
     dp.include(router, media_dialog)
     setup_dialogs(dp)
 
-    await LongPolling(dp).start(bot)
+    await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
