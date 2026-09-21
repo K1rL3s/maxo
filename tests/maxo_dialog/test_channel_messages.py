@@ -22,7 +22,13 @@ from maxo.routing.middlewares.update_context import (
     UPDATE_CONTEXT_KEY,
 )
 from maxo.routing.signals import AfterStartup, BeforeStartup
-from maxo.types import Message, MessageBody, MessageCreated, Recipient
+from maxo.types import (
+    BotAdminPermissionsChanged,
+    Message,
+    MessageBody,
+    MessageCreated,
+    Recipient,
+)
 from maxo.types.update_context import UpdateContext
 
 from .conftest import wait_for_messages
@@ -296,11 +302,18 @@ async def test_bg_factory_without_user_reaches_channel_default_stack(
 
 @pytest.mark.parametrize(("user_id", "expected"), [(2, True), (5, False)])
 async def test_access_validator_falls_back_to_update_context_user_id(
-    event_message_created: MessageCreated,
     user_id: int,
     expected: bool,
 ) -> None:
     validator = DefaultAccessValidator()
+    event = BotAdminPermissionsChanged(
+        chat_id=-50,
+        user_id=user_id,
+        bot_id=100,
+        is_channel=False,
+        is_admin=True,
+        timestamp=datetime.now(UTC),
+    )
     stack = Stack(
         _id="default",
         access_settings=AccessSettings(user_ids=[1, 2, 3]),
@@ -315,7 +328,7 @@ async def test_access_validator_falls_back_to_update_context_user_id(
     allowed = await validator.is_allowed(
         stack=stack,
         context=None,
-        event=event_message_created,
+        event=event,
         ctx=ctx,
     )
 

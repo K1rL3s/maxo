@@ -549,9 +549,8 @@ class IntentErrorMiddleware(BaseMiddleware[ErrorEvent[Any, Any]]):
             return False
         if UPDATE_CONTEXT_KEY not in ctx:
             return False
-        if EVENT_FROM_USER_KEY not in ctx:  # noqa: SIM103
-            return False
-        return True
+        # Апдейт может нести только user_id, без объекта пользователя
+        return EVENT_FROM_USER_KEY in ctx or ctx[UPDATE_CONTEXT_KEY].user_id is not None
 
     async def _fix_broken_stack(
         self,

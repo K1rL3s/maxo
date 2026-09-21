@@ -520,6 +520,9 @@ class ManagerImpl(DialogManager):
     def _get_fake_user(self, user_id: int | None = None) -> User | None:
         event_context: EventContext = self.middleware_data[EVENT_CONTEXT_KEY]
         user = event_context.user
+        if user_id is None:
+            # Апдейт может нести только user_id, без объекта пользователя
+            user_id = event_context.user_id
         if user_id is None or (user is not None and user_id == user.id):
             return user
         return FakeUser(

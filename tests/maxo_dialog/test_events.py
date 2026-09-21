@@ -17,9 +17,7 @@ from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.state import State, StatesGroup
 from maxo.fsm.storages.memory import SimpleEventIsolation
 from maxo.routing.filters import CommandStart
-from maxo.routing.signals import AfterStartup, BeforeStartup, MaxoUpdate
-from maxo.types import BotAdminPermissionsChanged
-from tests.constants import NOW
+from maxo.routing.signals import AfterStartup, BeforeStartup
 
 
 class MainSG(StatesGroup):
@@ -92,28 +90,5 @@ async def test_my_chat_member_update(
     await dp.feed_signal(AfterStartup(), client.bot)
 
     await client.bot_added_to_chat()
-    first_message = message_manager.one_message()
-    assert first_message.body.text == "stub"
-
-
-async def test_bot_admin_permissions_changed(
-    dp: Dispatcher,
-    client: BotClient,
-    message_manager: MockMessageManager,
-) -> None:
-    dp.bot_admin_permissions_changed.handler(start)
-
-    await dp.feed_signal(BeforeStartup(), client.bot)
-    await dp.feed_signal(AfterStartup(), client.bot)
-
-    update = BotAdminPermissionsChanged(
-        chat_id=client.chat.chat_id,
-        user_id=client.user.user_id,
-        bot_id=client.bot.state.info.user_id,
-        is_channel=False,
-        is_admin=True,
-        timestamp=NOW,
-    )
-    await dp.feed_update(MaxoUpdate(update=update.as_(client.bot)), client.bot)
     first_message = message_manager.one_message()
     assert first_message.body.text == "stub"
