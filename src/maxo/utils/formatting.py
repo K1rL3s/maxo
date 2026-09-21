@@ -243,7 +243,11 @@ class Text(Iterable[NodeType]):
         position = 0
 
         for node in self._body:
-            node_size = sizeof(node) if isinstance(node, str) else len(node)
+            if isinstance(node, Text):
+                node_size = len(node)
+            else:
+                node = str(node)
+                node_size = sizeof(node)
             current_position = position
             position += node_size
             if position < start:
