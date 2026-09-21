@@ -585,6 +585,143 @@ async def test_exception_group_survives_a_failing_after_shutdown_handler(
     assert excinfo.value is failure
 
 
+async def test_feed_shutdown_signal_defers_a_repeated_cancellation(
+    mock_dispatcher: Dispatcher,
+    mock_bot: Bot,
+) -> None:
+    # See PR #310 review: a cancellation arriving while `_feed_shutdown_signal`
+    # is already awaiting a handler must not cut that handler off mid-flight.
+    # It should be deferred (reported back via the return value) until the
+    # handler finishes on its own.
+    handler_finished = False
+    release_handler = asyncio.Event()
+
+    @mock_dispatcher.before_shutdown()
+    async def _before_shutdown() -> None:
+        nonlocal handler_finished
+        await release_handler.wait()
+        handler_finished = True
+
+    async def call_it() -> bool:
+        return await LongPolling._feed_shutdown_signal(
+            mock_dispatcher,
+            BeforeShutdown(),
+            mock_bot,
+            signal_name="before_shutdown",
+        )
+
+    outer_task = asyncio.create_task(call_it())
+    await asyncio.sleep(0)  # let it schedule the handler and reach the shield
+    outer_task.cancel()
+    await asyncio.sleep(0)
+
+    assert not handler_finished
+    assert not outer_task.done()
+
+    release_handler.set()
+    deferred_cancellation = await outer_task
+
+    assert deferred_cancellation is True
+    assert handler_finished
+
+
+async def test_before_shutdown_handler_survives_a_repeated_cancellation(
+    mock_dispatcher: Dispatcher,
+    long_polling: LongPolling,
+    mock_bot: Bot,
+    mock_get_subscriptions: AsyncMock,
+) -> None:
+    # See PR #310 review: end-to-end version of the test above through
+    # `start()` - a second `task.cancel()` landing while `before_shutdown`
+    # is running must not truncate it, and the task must still end up
+    # cancelled once both shutdown signals have finished.
+    handler_finished = False
+    handler_started = asyncio.Event()
+    release_handler = asyncio.Event()
+
+    @mock_dispatcher.before_shutdown()
+    async def _before_shutdown() -> None:
+        nonlocal handler_finished
+        handler_started.set()
+        await release_handler.wait()
+        handler_finished = True
+
+    order: list[str] = []
+
+    @mock_dispatcher.after_shutdown()
+    async def _after_shutdown() -> None:
+        order.append("after_shutdown")
+
+    async def hanging_updates(**_kwargs: Any) -> AsyncIterator[Any]:
+        await asyncio.sleep(60)
+        nothing: tuple[Any, ...] = ()
+        for update in nothing:
+            yield update
+
+    with patch.object(long_polling, "_get_updates", side_effect=hanging_updates):
+        task = asyncio.create_task(
+            long_polling.start(mock_bot, auto_close_bot=False),
+        )
+        await asyncio.sleep(0)
+        task.cancel()  # first cancel: triggers the shutdown path
+
+        await handler_started.wait()
+        task.cancel()  # second cancel: lands while the handler is running
+        await asyncio.sleep(0)
+
+        assert not handler_finished
+        assert not task.done()
+
+        release_handler.set()
+
+        with pytest.raises(CancelledError):
+            await task
+
+    assert order == ["after_shutdown"]
+    assert handler_finished
+
+
+async def test_start_raises_cancelled_error_when_only_shutdown_signal_is_cancelled(
+    mock_dispatcher: Dispatcher,
+    long_polling: LongPolling,
+    mock_bot: Bot,
+    mock_get_subscriptions: AsyncMock,
+) -> None:
+    # See PR #310 review: a cancellation that arrives only while a shutdown
+    # signal is being dispatched - nothing else already unwinding, e.g.
+    # polling ended on its own - must still surface as `CancelledError` from
+    # `start()` rather than vanish silently (no original cancellation is left
+    # to carry that outcome out on its own here, unlike the tests above).
+    handler_finished = False
+    handler_started = asyncio.Event()
+    release_handler = asyncio.Event()
+
+    @mock_dispatcher.before_shutdown()
+    async def _before_shutdown() -> None:
+        nonlocal handler_finished
+        handler_started.set()
+        await release_handler.wait()
+        handler_finished = True
+
+    with patch.object(long_polling, "_get_updates", side_effect=empty_updates):
+        task = asyncio.create_task(
+            long_polling.start(mock_bot, auto_close_bot=False),
+        )
+        await handler_started.wait()
+        task.cancel()  # the only cancellation: lands while before_shutdown runs
+        await asyncio.sleep(0)
+
+        assert not handler_finished
+        assert not task.done()
+
+        release_handler.set()
+
+        with pytest.raises(CancelledError):
+            await task
+
+    assert handler_finished
+
+
 async def test_start_warns_about_subscriptions_when_not_cleared(
     long_polling: LongPolling,
     mock_bot: Bot,
