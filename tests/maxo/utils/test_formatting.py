@@ -524,3 +524,56 @@ class TestGetItemUnicode:
         """
         assert Bold(Italic("x"), "y").as_html() == "<b><i>x</i>y</b>"
         assert Bold(Italic("foo"), "bar").as_html() == "<b><i>foo</i>bar</b>"
+
+
+class TestGetItemNonTextNode:
+    """
+    Tests for `__getitem__` with non-str, non-Text nodes (e.g. `int`, `float`).
+
+    Bug: `Text.__init__` accepts `*body: NodeType` (`NodeType = Any`), and
+    `render()` explicitly converts any non-Text node via `str(node)`, so
+    `Text(123, "abc")` is a legal construction. But `__getitem__` computed
+    `node_size` as `len(node)` for anything that was not a plain `str`,
+    which raised `TypeError` for `int` (and any other non-Text, non-str
+    node) instead of falling back to `str(node)` like `render()` does.
+    """
+
+    def test_getitem_int_node_slice_across_boundary(self) -> None:
+        """
+        `Text(123, "abc")[0:2]` used to raise `TypeError: object of type
+        'int' has no len()` while computing `node_size` for the int node.
+        """
+        node = Text(123, "abc")
+        sliced = node[0:2]
+        text, _ = sliced.render()
+        assert text == "12"
+
+    def test_getitem_int_node_slice_tail(self) -> None:
+        """The slice may also land entirely inside the stringified node."""
+        node = Text(123, "abc")
+        sliced = node[1:3]
+        text, _ = sliced.render()
+        assert text == "23"
+
+    def test_getitem_int_node_slice_after(self) -> None:
+        """A slice starting after the int node returns only the str node."""
+        node = Text(123, "abc")
+        sliced = node[3:6]
+        text, _ = sliced.render()
+        assert text == "abc"
+
+    def test_getitem_float_node(self) -> None:
+        """Any `NodeType` value must be handled, not just `int`."""
+        node = Text(1.5, "x")
+        sliced = node[0:3]
+        text, _ = sliced.render()
+        assert text == "1.5"
+
+    def test_getitem_full_slice_keeps_original_node(self) -> None:
+        """
+        The full-slice fast path (`node[:]`) returns the body untouched, so
+        a non-Text node is not pre-stringified there.
+        """
+        node = Text(123, "abc")
+        sliced = node[:]
+        assert sliced._body == (123, "abc")
