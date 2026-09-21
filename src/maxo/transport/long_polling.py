@@ -34,6 +34,52 @@ class LongPolling:
         self._backoff_config = backoff_config
         self._lock = asyncio.Lock()
 
+    @staticmethod
+    async def _feed_shutdown_signal(
+        dispatcher: Dispatcher,
+        signal: BeforeShutdown | AfterShutdown,
+        bot: Bot,
+        *,
+        signal_name: str,
+    ) -> bool:
+        """
+        Run one shutdown signal shielded from a repeated cancellation.
+
+        This always runs from a `finally` that is itself already unwinding
+        because of a `task.cancel()` - a *second* `task.cancel()` arriving
+        while we await the signal's handlers here would otherwise interrupt
+        them mid-flight (e.g. mid-`await db.close()`), breaking whatever
+        cleanup they were doing. `asyncio.shield` keeps the handlers running
+        to completion regardless; we only note that a cancellation is still
+        owed and hand that back to the caller, who re-raises it once both
+        shutdown signals have finished, so the task still ends up cancelled.
+
+        A handler exception is logged and swallowed rather than left to
+        propagate, for the same reason: it would otherwise replace whatever
+        exception is already unwinding through the caller's `finally`.
+        """
+        task = asyncio.ensure_future(dispatcher.feed_signal(signal, bot))
+        deferred_cancellation = False
+        while True:
+            try:
+                await asyncio.shield(task)
+            except asyncio.CancelledError:
+                deferred_cancellation = True
+                if task.done():
+                    break
+                continue
+            except Exception as exception:  # noqa: BLE001
+                loggers.dispatcher.exception(
+                    "%s handler failed - %s: %s",
+                    signal_name,
+                    type(exception).__name__,
+                    exception,
+                )
+                break
+            else:
+                break
+        return deferred_cancellation
+
     def run(
         self,
         bot: Bot,
@@ -92,6 +138,12 @@ class LongPolling:
             # guards the one gap `try`/`finally` alone can't close (`bot.context()`
             # itself failing to open). Full rationale: PR #310.
             shutdown_started = False
+            # Set by `_feed_shutdown_signal` when a shutdown signal's own await
+            # gets cancelled again while we're already shutting down; deferred
+            # rather than let it interrupt the signal's handlers mid-flight
+            # (see `_feed_shutdown_signal`). Re-raised below once both signals
+            # have run, so the task still ends up cancelled.
+            deferred_cancellation = False
             try:
                 async with bot.context(auto_close=auto_close_bot):
                     try:
@@ -150,20 +202,12 @@ class LongPolling:
                                     )
                     finally:
                         shutdown_started = True
-                        # Logged and swallowed rather than left to propagate: a
-                        # failing handler here would otherwise replace whatever
-                        # exception is already unwinding through this `finally`
-                        # (e.g. the `CancelledError` from a `task.cancel()`
-                        # shutdown), so a caller catching that specific exception
-                        # would see the handler's error instead.
-                        try:
-                            await dispatcher.feed_signal(BeforeShutdown(), bot)
-                        except Exception as exception:  # noqa: BLE001
-                            loggers.dispatcher.exception(
-                                "before_shutdown handler failed - %s: %s",
-                                type(exception).__name__,
-                                exception,
-                            )
+                        deferred_cancellation |= await self._feed_shutdown_signal(
+                            dispatcher,
+                            BeforeShutdown(),
+                            bot,
+                            signal_name="before_shutdown",
+                        )
 
                         loggers.dispatcher.info(
                             "Polling stop for @%s bot id=%s",
@@ -172,14 +216,23 @@ class LongPolling:
                         )
             finally:
                 if shutdown_started:
-                    try:
-                        await dispatcher.feed_signal(AfterShutdown(), bot)
-                    except Exception as exception:  # noqa: BLE001
-                        loggers.dispatcher.exception(
-                            "after_shutdown handler failed - %s: %s",
-                            type(exception).__name__,
-                            exception,
-                        )
+                    deferred_cancellation |= await self._feed_shutdown_signal(
+                        dispatcher,
+                        AfterShutdown(),
+                        bot,
+                        signal_name="after_shutdown",
+                    )
+
+            if deferred_cancellation:
+                # Only reached when nothing else is already propagating (an
+                # in-flight exception - including the original `CancelledError`
+                # from the first `task.cancel()` - resumes on its own once both
+                # `finally` blocks above finish, without ever reaching this
+                # line). This covers the case a cancellation was requested
+                # *only* during shutdown-signal handling, with no exception
+                # already unwinding to carry the "this task was cancelled"
+                # outcome out on its own.
+                raise asyncio.CancelledError
 
     async def _get_updates(
         self,
