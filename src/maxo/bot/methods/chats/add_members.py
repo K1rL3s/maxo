@@ -7,6 +7,10 @@ class AddMembers(MaxoMethod[ModifyMembersResult]):
     """
     Добавление участников в групповой чат
 
+    > ! **С 9 сентября 2026** работа метода `POST /chats/{chatId}/members` будет ограничена, а **с 30 сентября 2026** он будет удалён
+
+     С 30 сентября API MAX не предоставляет готовой возможности для добавления участников в групповой чат. Однако мы постоянно работаем над расширением функциональности API - следите за обновлениями документации
+
     Добавляет участников в групповой чат
 
      Бот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата с соответствующим правом `add_remove_members`. Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах - в описании [`POST /chats/{chatId}/members/admins`](https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора)

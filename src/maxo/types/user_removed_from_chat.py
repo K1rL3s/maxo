@@ -12,7 +12,7 @@ class UserRemovedFromChat(MaxUpdate, ChatMethodsFacade):
 
     Args:
         admin_id: Администратор, который удалил пользователя из чата. Может быть `null`, если пользователь покинул чат сам
-        chat_id: ID чата, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)
+        chat_id: ID чата, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         is_channel: Указывает, что пользователь удалён из канала, а не из чата
         type:
         user: Пользователь, удалённый из чата
@@ -21,7 +21,7 @@ class UserRemovedFromChat(MaxUpdate, ChatMethodsFacade):
     type = UpdateType.USER_REMOVED
 
     chat_id: int
-    """ID чата, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)"""
+    """ID чата, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
     is_channel: bool
     """Указывает, что пользователь удалён из канала, а не из чата"""
     user: User

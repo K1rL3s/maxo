@@ -9,7 +9,7 @@ from maxo.types.user import User
 class CommentLinkedMessage(LinkedMessage):
     """
     Args:
-        chat_id: Чат или канал, в котором сообщение было изначально опубликовано. Только для пересланных сообщений с `type = forward`. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)
+        chat_id: Чат или канал, в котором сообщение было изначально опубликовано. Только для пересланных сообщений с `type = forward`. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         message:
         sender: Пользователь или бот, отправивший комментарий
         type: Тип связанного сообщения:
@@ -29,7 +29,7 @@ class CommentLinkedMessage(LinkedMessage):
     """
 
     chat_id: Omittable[int] = Omitted()
-    """Чат или канал, в котором сообщение было изначально опубликовано. Только для пересланных сообщений с `type = forward`. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)"""
+    """Чат или канал, в котором сообщение было изначально опубликовано. Только для пересланных сообщений с `type = forward`. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
     sender: Omittable[User] = Omitted()
     """Пользователь или бот, отправивший комментарий"""
 

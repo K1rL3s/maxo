@@ -11,7 +11,7 @@ class DialogUnmuted(MaxUpdate, ChatMethodsFacade):
     Вы получите это событие, как только пользователь включит уведомления о новых сообщениях в диалоге с ботом
 
     Args:
-        chat_id: ID чата, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)
+        chat_id: ID чата, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         type:
         user: Пользователь, который включил уведомления
         user_locale: Текущий язык пользователя в формате IETF BCP 47
@@ -20,7 +20,7 @@ class DialogUnmuted(MaxUpdate, ChatMethodsFacade):
     type = UpdateType.DIALOG_UNMUTED
 
     chat_id: int
-    """ID чата, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)"""
+    """ID чата, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
     user: User
     """Пользователь, который включил уведомления"""
 

@@ -28,7 +28,7 @@ class MessageBody(MaxoType):
     Args:
         attachments: Вложения сообщения. Могут быть одним из типов `attachment`, описанных в схеме ниже
             Если поле пустое или равно `null`, изменений не произойдет. Если массив пуст, все вложения будут удалены
-        markup: Разметка текста сообщения. Подробнее - в разделе [Форматирование](https://dev.max.ru/docs-api#Форматирование%20текста%20в%20сообщениях)
+        markup: Разметка текста сообщения. Подробнее - в разделе [Форматирование](https://dev.max.ru/docs-api/use-cases/sending-messages/text-formatting)
         mid: Уникальный ID сообщения
         seq: ID расположения сообщения в чате по порядку
         text: Текст сообщения
@@ -48,7 +48,7 @@ class MessageBody(MaxoType):
     """Текст сообщения"""
 
     markup: Omittable[list[MarkupElements] | None] = Omitted()
-    """Разметка текста сообщения. Подробнее - в разделе [Форматирование](https://dev.max.ru/docs-api#Форматирование%20текста%20в%20сообщениях)"""
+    """Разметка текста сообщения. Подробнее - в разделе [Форматирование](https://dev.max.ru/docs-api/use-cases/sending-messages/text-formatting)"""
 
     @property
     def id(self) -> str:

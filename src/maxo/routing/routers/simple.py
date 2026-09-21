@@ -19,6 +19,7 @@ from maxo.routing.signals.startup import AfterStartup, BeforeStartup
 from maxo.routing.utils.get_default_name import get_router_default_name
 from maxo.types import (
     BotAddedToChat,
+    BotAdminPermissionsChanged,
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
@@ -43,6 +44,9 @@ from maxo.types.error_event import ErrorEvent
 class Router(BaseRouter):
     def __init__(self, name: str | None = None) -> None:
         self.bot_added_to_chat = UpdateObserver[BotAddedToChat]()
+        self.bot_admin_permissions_changed = UpdateObserver[
+            BotAdminPermissionsChanged
+        ]()
         self.bot_removed_from_chat = UpdateObserver[BotRemovedFromChat]()
         self.bot_started = UpdateObserver[BotStarted]()
         self.bot_stopped = UpdateObserver[BotStopped]()
@@ -81,6 +85,7 @@ class Router(BaseRouter):
 
         self._observers: dict[Any, Observer[Any, Any, Any]] = {
             BotAddedToChat: self.bot_added_to_chat,
+            BotAdminPermissionsChanged: self.bot_admin_permissions_changed,
             BotRemovedFromChat: self.bot_removed_from_chat,
             BotStarted: self.bot_started,
             BotStopped: self.bot_stopped,

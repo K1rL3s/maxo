@@ -213,6 +213,9 @@
    * - ``@router.bot_removed_from_chat``
      - :class:`~maxo.types.bot_removed_from_chat.BotRemovedFromChat`
      - Бот удален из группового чата.
+   * - ``@router.bot_admin_permissions_changed``
+     - :class:`~maxo.types.bot_admin_permissions_changed.BotAdminPermissionsChanged`
+     - Изменены права бота-администратора в групповом чате или канале.
    * - ``@router.chat_title_changed``
      - :class:`~maxo.types.chat_title_changed.ChatTitleChanged`
      - Название группового чата изменено.

@@ -8,7 +8,7 @@ from maxo.types.uploaded_info import UploadedInfo
 
 class VideoAttachmentRequest(AttachmentRequest):
     """
-    Данные для прикрепления видео к сообщению. Вместе с видео можно прикрепить изображения (`type: image`) и одно вложение с кнопками (`type: inline_keyboard`). Общее количество вложений не должно превышать общее ограничение - 12. Подробнее - [в примерах](https://dev.max.ru/docs-api#Примеры%20с%20видео,%20изображением,%20файлом)
+    Данные для прикрепления видео к сообщению. Вместе с видео можно прикрепить изображения (`type: image`) и одно вложение с кнопками (`type: inline_keyboard`). Общее количество вложений не должно превышать общее ограничение - 12. Подробнее - [в примерах](https://dev.max.ru/docs-api/use-cases/sending-messages/media#Как%20отправить%20аудио)
 
     Args:
         payload:

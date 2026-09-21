@@ -6,6 +6,7 @@ import os
 from maxo import Bot, Dispatcher
 from maxo.types import (
     BotAddedToChat,
+    BotAdminPermissionsChanged,
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
@@ -99,6 +100,20 @@ async def bot_removed_from_chat_handler(bot_removed: BotRemovedFromChat) -> None
         "Бот был удален из чата (ID: %s) пользователем (ID: %s)",
         bot_removed.chat_id,
         bot_removed.user.user_id,
+    )
+
+
+@dp.bot_admin_permissions_changed()
+async def bot_admin_permissions_changed_handler(
+    changed: BotAdminPermissionsChanged,
+) -> None:
+    logger.info(
+        "Пользователь (ID: %s) изменил права бота в чате (ID: %s): "
+        "администратор - %s, права - %s",
+        changed.user_id,
+        changed.chat_id,
+        changed.is_admin,
+        changed.permissions,
     )
 
 

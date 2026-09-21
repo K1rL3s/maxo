@@ -10,7 +10,7 @@ class MessageRemoved(MaxUpdate, ChatMethodsFacade):
     Вы получите это событие, как только сообщение будет удалено
 
     Args:
-        chat_id: ID чата, где сообщение было удалено. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)
+        chat_id: ID чата, где сообщение было удалено. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         message_id: ID удалённого сообщения
         post_id: Идентификатор поста в канале, к которому оставлен комментарий
         type:
@@ -20,7 +20,7 @@ class MessageRemoved(MaxUpdate, ChatMethodsFacade):
     type = UpdateType.MESSAGE_REMOVED
 
     chat_id: int
-    """ID чата, где сообщение было удалено. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)"""
+    """ID чата, где сообщение было удалено. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
     message_id: str
     """ID удалённого сообщения"""
     user_id: int

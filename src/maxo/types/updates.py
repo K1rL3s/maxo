@@ -1,6 +1,7 @@
 from typing import TypeAlias
 
 from maxo.types.bot_added_to_chat import BotAddedToChat
+from maxo.types.bot_admin_permissions_changed import BotAdminPermissionsChanged
 from maxo.types.bot_removed_from_chat import BotRemovedFromChat
 from maxo.types.bot_started import BotStarted
 from maxo.types.bot_stopped import BotStopped
@@ -21,6 +22,7 @@ from maxo.types.user_removed_from_chat import UserRemovedFromChat
 
 Updates: TypeAlias = (
     BotAddedToChat
+    | BotAdminPermissionsChanged
     | BotRemovedFromChat
     | BotStarted
     | BotStopped

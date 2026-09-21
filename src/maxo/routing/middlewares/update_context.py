@@ -8,6 +8,7 @@ from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
 from maxo.routing.signals.update import MaxoUpdate
 from maxo.types import User
 from maxo.types.bot_added_to_chat import BotAddedToChat
+from maxo.types.bot_admin_permissions_changed import BotAdminPermissionsChanged
 from maxo.types.bot_removed_from_chat import BotRemovedFromChat
 from maxo.types.bot_started import BotStarted
 from maxo.types.bot_stopped import BotStopped
@@ -184,6 +185,10 @@ class UpdateContextMiddleware(BaseMiddleware[MaxoUpdate[Any]]):
         elif isinstance(update, MessageRemoved):
             chat_id = update.chat_id
             user_id = update.user_id
+        elif isinstance(update, BotAdminPermissionsChanged):
+            chat_id = update.chat_id
+            user_id = update.user_id
+            chat_type = ChatType.CHANNEL if update.is_channel else ChatType.CHAT
         elif isinstance(update, DialogUpdateEvent):
             user = update.user
             user_id = None if user is None else user.id

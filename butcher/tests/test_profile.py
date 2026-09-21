@@ -417,3 +417,30 @@ def test_model_field_override_uses_explicit_inherited_field(tmp_path: Path) -> N
     assert fields["text"].omittable
     assert fields["text"].comment == "type: ignore[assignment]"
     assert fields["text"].unsafe
+
+
+def test_field_without_description_takes_inline_alias_description(
+    tmp_path: Path,
+) -> None:
+    spec = copy.deepcopy(SPEC)
+    spec["components"]["schemas"]["bigint"]["description"] = "Описание алиаса"
+    bigint = {"$ref": "#/components/schemas/bigint"}
+    spec["components"]["schemas"]["Message"]["properties"]["big"] = bigint
+    spec["components"]["schemas"]["Message"]["properties"]["nullable_big"] = {
+        "allOf": [bigint],
+        "nullable": True,
+    }
+    operation = spec["paths"]["/messages"]["post"]
+    operation["parameters"].append({"name": "to", "in": "query", "schema": bigint})
+    body = operation["requestBody"]["content"]["application/json"]["schema"]
+    body["properties"]["big"] = bigint
+
+    document = _build_document(tmp_path, spec)
+    fields = {f.name: f for f in _model(document, "Message").fields}
+    params = {f.name: f for f in _method(document, "SendMessage").fields}
+
+    assert fields["big"].description == "Описание алиаса"
+    assert fields["nullable_big"].description == "Описание алиаса"
+    assert params["to"].description == "Описание алиаса"
+    assert params["big"].description == "Описание алиаса"
+    assert params["from_"].description == "Время, начиная с которого нужны сообщения"

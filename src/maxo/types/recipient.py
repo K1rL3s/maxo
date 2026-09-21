@@ -9,7 +9,7 @@ class Recipient(MaxoType):
     Новый получатель сообщения. Может быть пользователем, чатом или каналом
 
     Args:
-        chat_id: ID чата или канала. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)
+        chat_id: ID чата или канала - в зависимости от ограничений метода и от того, с чем вы работаете. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         chat_type: Тип чата:
              - `chat` - групповой чат
              - `channel` - канал или комментарий к посту (для вызовов методов группы `/comments`)
@@ -27,7 +27,7 @@ class Recipient(MaxoType):
     """
 
     chat_id: int | None = None
-    """ID чата или канала. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)"""
+    """ID чата или канала - в зависимости от ограничений метода и от того, с чем вы работаете. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
     post_id: str | None = None
     """Идентификатор поста в канале, к которому оставлен комментарий"""
     user_id: int | None = None

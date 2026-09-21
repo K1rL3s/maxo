@@ -16,7 +16,7 @@ from maxo.bot.methods import (
     SendMessage,
 )
 from maxo.bot.methods.base import MaxoMethod
-from maxo.enums import TextFormat
+from maxo.enums import ChatAdminPermission, TextFormat
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_omitted
 from maxo.serialization import (
@@ -26,6 +26,7 @@ from maxo.serialization import (
     create_retort_with_bot,
 )
 from maxo.types import (
+    BotAdminPermissionsChanged,
     CommentCreated,
     CommentEdited,
     CommentMessage,
@@ -342,3 +343,34 @@ def test_retort_loads_comment_updates_from_raw_json() -> None:
     assert isinstance(result.updates[1], CommentEdited)
     assert isinstance(result.updates[1].message, CommentMessage)
     assert isinstance(result.updates[2], CommentRemoved)
+
+
+def test_retort_loads_bot_admin_permissions_changed() -> None:
+    retort = create_retort(warming_up=False)
+    data = {
+        "marker": 1,
+        "updates": [
+            {
+                "update_type": "bot_admin_permissions_changed",
+                "timestamp": 1234567890,
+                "chat_id": 1,
+                "user_id": 2,
+                "bot_id": 3,
+                "is_channel": True,
+                "is_admin": True,
+                "permissions": ["add_admins", "can_call"],
+            },
+        ],
+    }
+
+    update = retort.load(data, UpdateList).updates[0]
+
+    assert isinstance(update, BotAdminPermissionsChanged)
+    assert update.chat_id == 1
+    assert update.user_id == 2
+    assert update.bot_id == 3
+    assert update.permissions == [
+        ChatAdminPermission.ADD_ADMINS,
+        ChatAdminPermission.CAN_CALL,
+    ]
+    assert retort.dump(update)["update_type"] == "bot_admin_permissions_changed"

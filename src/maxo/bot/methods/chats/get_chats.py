@@ -16,7 +16,7 @@ class GetChats(MaxoMethod[ChatList]):
 
     1. **Cоздайте подписку** через [POST /subscriptions](https://dev.max.ru/docs-api/methods/POST/subscriptions) и укажите нужные типы событий в параметре `update_types[]`, например, `bot_added` или `bot_started`. Список поддерживаемых типов событий - в объекте [Update](https://dev.max.ru/docs-api/objects/Update)
 
-    2. **Получите `chat_id` в событии** - о том, как это сделать, см. в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)
+    2. **Получите `chat_id` в событии** - о том, как это сделать, см. в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
 
     3. **Сохраните `chat_id`**:
 
@@ -32,7 +32,7 @@ class GetChats(MaxoMethod[ChatList]):
        - [POST `/chats/{chat_id}/actions`](https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/actions) - отправить действия бота в групповой чат
        - и любые другие методы, принимающие `chat_id` как параметр
 
-     > Использование [Long Polling](https://dev.max.ru/docs-api#Long%C2%A0Polling) для получения списка чатов и каналов для бота не предусмотрено
+     > Использование [Long Polling](https://dev.max.ru/docs-api/use-cases/event-notifications#Long%C2%A0Polling) для получения списка чатов и каналов для бота не предусмотрено
 
     Возвращает список групповых чатов и каналов, в которые добавлен бот, информацию о каждом чате и маркер для перехода к следующей странице списка
 

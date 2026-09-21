@@ -69,6 +69,11 @@ Updates
    :undoc-members:
    :show-inheritance:
 
+.. autoclass:: maxo.types.BotAdminPermissionsChanged
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. autoclass:: maxo.types.UserAddedToChat
    :members:
    :undoc-members:
