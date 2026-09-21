@@ -14,9 +14,10 @@ from maxo.enums import (
     TextFormat,
 )
 from maxo.errors import AttributeIsEmptyError
-from maxo.omit import is_defined
+from maxo.omit import Omittable, Omitted, is_defined
 from maxo.types import (
     AudioAttachment,
+    BotAdminPermissionsChanged,
     BotCommand,
     BotInfo,
     BotStopped,
@@ -1511,3 +1512,25 @@ def test_comment_accessors() -> None:
             timestamp=NOW,
             user_id=20,
         ).unsafe_post_id
+
+
+def test_bot_admin_permissions_changed_unsafe_permissions() -> None:
+    def make(
+        permissions: Omittable[list[ChatAdminPermission] | None] = Omitted(),
+    ) -> BotAdminPermissionsChanged:
+        return BotAdminPermissionsChanged(
+            bot_id=1,
+            chat_id=10,
+            is_admin=True,
+            is_channel=False,
+            user_id=20,
+            timestamp=NOW,
+            permissions=permissions,
+        )
+
+    permissions = [ChatAdminPermission.READ_ALL_MESSAGES]
+    assert make(permissions=permissions).unsafe_permissions == permissions
+
+    for missing in (make(), make(permissions=None)):
+        with pytest.raises(AttributeIsEmptyError):
+            _ = missing.unsafe_permissions
