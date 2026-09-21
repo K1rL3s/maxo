@@ -8,7 +8,7 @@ class ContactAttachmentPayload(MaxoType):
     """
     Args:
         hash: Хеш информации о пользователе в формате VCF. Используется для проверки того, что пользователь поделился номером телефона, привязанным к его аккаунту в МАКС
-             Подробнее - [в разделе «Типы кнопок»](https://dev.max.ru/docs-api#Типы%20кнопок)
+             Подробнее - [в разделе «Типы кнопок»](https://dev.max.ru/docs-api/use-cases/sending-messages/keyboard#Типы%20кнопок)
         max_info: Информация о пользователе
         vcf_info: Информация о пользователе в формате VCF
     """
@@ -16,7 +16,7 @@ class ContactAttachmentPayload(MaxoType):
     hash: Omittable[str | None] = Omitted()
     """
     Хеш информации о пользователе в формате VCF. Используется для проверки того, что пользователь поделился номером телефона, привязанным к его аккаунту в МАКС
-     Подробнее - [в разделе «Типы кнопок»](https://dev.max.ru/docs-api#Типы%20кнопок)
+     Подробнее - [в разделе «Типы кнопок»](https://dev.max.ru/docs-api/use-cases/sending-messages/keyboard#Типы%20кнопок)
     """
     max_info: Omittable[User | None] = Omitted()
     """Информация о пользователе"""

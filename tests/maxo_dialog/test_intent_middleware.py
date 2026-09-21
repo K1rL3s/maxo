@@ -28,6 +28,7 @@ from maxo.dialogs.context.intent_middleware import (
     IntentErrorMiddleware,
     IntentMiddlewareFactory,
     event_context_from_aiogd,
+    event_context_from_bot_admin_permissions_changed,
     event_context_from_bot_started,
     event_context_from_callback,
     event_context_from_error,
@@ -47,6 +48,7 @@ from maxo.routing.middlewares.update_context import (
 from maxo.routing.sentinels import UNHANDLED
 from maxo.types import (
     BotAddedToChat,
+    BotAdminPermissionsChanged,
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
@@ -166,6 +168,17 @@ def make_bot_removed() -> BotRemovedFromChat:
     )
 
 
+def make_bot_admin_permissions_changed() -> BotAdminPermissionsChanged:
+    return BotAdminPermissionsChanged(
+        timestamp=NOW,
+        chat_id=10,
+        user_id=1,
+        bot_id=2,
+        is_channel=False,
+        is_admin=True,
+    )
+
+
 CHAT_EVENT_HANDLERS = [
     ("process_bot_started", make_bot_started),
     ("process_bot_stopped", make_bot_stopped),
@@ -173,6 +186,7 @@ CHAT_EVENT_HANDLERS = [
     ("process_user_removed_from_chat", make_user_removed),
     ("process_bot_added_to_chat", make_bot_added),
     ("process_bot_removed_from_chat", make_bot_removed),
+    ("process_bot_admin_permissions_changed", make_bot_admin_permissions_changed),
 ]
 
 
@@ -248,6 +262,36 @@ class TestEventContextBuilders:
         assert context.user_id == 1
         assert context.user is event.callback.user
 
+    def test_from_bot_admin_permissions_changed_in_channel(self) -> None:
+        event = BotAdminPermissionsChanged(
+            timestamp=NOW,
+            chat_id=10,
+            user_id=3,
+            bot_id=2,
+            is_channel=True,
+            is_admin=False,
+        )
+        ctx = make_ctx()
+        del ctx[EVENT_FROM_USER_KEY]
+
+        context = event_context_from_bot_admin_permissions_changed(event, ctx)  # type: ignore[arg-type]
+
+        assert context.chat_id == 10
+        assert context.chat_type is ChatType.CHANNEL
+        assert context.user_id == 3
+        assert context.user is None
+
+    def test_from_bot_admin_permissions_changed_takes_enriched_user(self) -> None:
+        ctx = make_ctx()
+
+        context = event_context_from_bot_admin_permissions_changed(
+            make_bot_admin_permissions_changed(),
+            ctx,  # type: ignore[arg-type]
+        )
+
+        assert context.chat_type is ChatType.CHAT
+        assert context.user is ctx[EVENT_FROM_USER_KEY]
+
 
 class TestEventContextFromError:
     @pytest.mark.parametrize(
@@ -263,6 +307,7 @@ class TestEventContextFromError:
             make_user_removed,
             make_bot_added,
             make_bot_removed,
+            make_bot_admin_permissions_changed,
         ],
         ids=lambda f: f.__name__,
     )
@@ -471,6 +516,7 @@ class TestIntentErrorMiddleware:
         event = MagicMock()
         event.update.update = make_message_created()
         ctx = make_ctx()
+        ctx[UPDATE_CONTEXT_KEY] = UpdateContext(chat_id=10, type=ChatType.CHANNEL)
         del ctx[EVENT_FROM_USER_KEY]
 
         assert self.make()._is_error_supported(event, ctx) is False  # type: ignore[arg-type]
@@ -532,6 +578,14 @@ class TestIntentErrorMiddleware:
         await self.make()._load_stack(proxy, RuntimeError("boom"))
 
         proxy.load_stack.assert_awaited_once_with()
+
+    def test_supported_with_user_id_only(self) -> None:
+        event = MagicMock()
+        event.update.update = make_bot_admin_permissions_changed()
+        ctx = make_ctx()
+        del ctx[EVENT_FROM_USER_KEY]
+
+        assert self.make()._is_error_supported(event, ctx) is True  # type: ignore[arg-type]
 
 
 class TestErrorPaths:

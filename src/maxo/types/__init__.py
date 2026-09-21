@@ -11,6 +11,7 @@ from .audio_attachment import AudioAttachment
 from .audio_attachment_request import AudioAttachmentRequest
 from .base import BaseMaxoType, BaseUpdate, MaxUpdate, MaxoType
 from .bot_added_to_chat import BotAddedToChat
+from .bot_admin_permissions_changed import BotAdminPermissionsChanged
 from .bot_command import BotCommand
 from .bot_commands_info import BotCommandsInfo
 from .bot_info import BotInfo
@@ -136,6 +137,7 @@ __all__ = (
     "BaseMaxoType",
     "BaseUpdate",
     "BotAddedToChat",
+    "BotAdminPermissionsChanged",
     "BotCommand",
     "BotCommandsInfo",
     "BotInfo",

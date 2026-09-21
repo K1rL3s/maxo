@@ -100,6 +100,14 @@
 `getComments`, `sendComment` и `editComment`. В `max-swagger.json` они
 исправлены, чтобы генерация сразу давала корректные docstring.
 
+Параметр `disable_link_preview` у `sendComment` из официальной спеки убран, но
+в `max-swagger.json` оставлен, чтобы не ломать публичный `SendComment`.
+
+Предупреждение об удалении `addMembers` официальная спека держит в
+нестандартном ключе операции `disable-notification`, который генератор не
+читает. В `max-swagger.json` его текст перенесён в начало `description` в
+формате `> !`, как у `GET /chats`, чтобы он попал в docstring `AddMembers`.
+
 ## Реестры и compat-слои, о которых легко не узнать
 
 Генерация их не трогает, но по ним расходится ручная регистрация новых

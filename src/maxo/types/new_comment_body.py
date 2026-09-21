@@ -10,7 +10,7 @@ class NewCommentBody(MaxoType):
     Объект используется при отправке нового комментария к посту в канале [`POST messages/-messageId-/comments`](https://dev.max.ru/docs-api/methods/POST/messages/-messageId-/comments) или редактировании старого [`PUT messages/-messageId-/comments`](https://dev.max.ru/docs-api/methods/PUT/messages/-messageId-/comments). В отличие от обычных сообщений в чатах и постов в каналах (объект [`NewMessageBody`](https://dev.max.ru/docs-api/objects/NewMessageBody)), в комментариях не поддерживаются вложения `attachments` и пересылка сообщения (тип `forward`)
 
     Args:
-        format: Разметка текста комментария. Для комментариев не поддерживается упоминание других пользователей и гиперссылки. Подробнее - в разделе [Форматирование](https://dev.max.ru/docs-api#Форматирование%20текста%20в%20сообщениях)
+        format: Разметка текста комментария. Для комментариев не поддерживается упоминание других пользователей и гиперссылки. Подробнее - в разделе [Форматирование](https://dev.max.ru/docs-api/use-cases/sending-messages/text-formatting)
         link: Ссылка на комментарий
         text: Текст комментария
     """
@@ -21,7 +21,7 @@ class NewCommentBody(MaxoType):
     """Текст комментария"""
 
     format: Omittable[TextFormat | None] = Omitted()
-    """Разметка текста комментария. Для комментариев не поддерживается упоминание других пользователей и гиперссылки. Подробнее - в разделе [Форматирование](https://dev.max.ru/docs-api#Форматирование%20текста%20в%20сообщениях)"""
+    """Разметка текста комментария. Для комментариев не поддерживается упоминание других пользователей и гиперссылки. Подробнее - в разделе [Форматирование](https://dev.max.ru/docs-api/use-cases/sending-messages/text-formatting)"""
 
     @property
     def unsafe_format(self) -> TextFormat:

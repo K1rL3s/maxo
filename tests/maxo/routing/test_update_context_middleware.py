@@ -13,6 +13,7 @@ from maxo.routing.middlewares.update_context import (
 from maxo.routing.signals import MaxoUpdate
 from maxo.types import (
     BotAddedToChat,
+    BotAdminPermissionsChanged,
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
@@ -306,6 +307,34 @@ async def run_middleware(
             ),
             27,
             18,
+            ChatType.CHANNEL,
+            False,
+        ),
+        (
+            BotAdminPermissionsChanged(
+                chat_id=28,
+                user_id=19,
+                bot_id=100,
+                is_channel=False,
+                is_admin=True,
+                timestamp=NOW,
+            ),
+            28,
+            19,
+            ChatType.CHAT,
+            False,
+        ),
+        (
+            BotAdminPermissionsChanged(
+                chat_id=29,
+                user_id=20,
+                bot_id=100,
+                is_channel=True,
+                is_admin=False,
+                timestamp=NOW,
+            ),
+            29,
+            20,
             ChatType.CHANNEL,
             False,
         ),

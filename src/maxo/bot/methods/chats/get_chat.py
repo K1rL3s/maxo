@@ -16,7 +16,7 @@ class GetChat(MaxoMethod[Chat]):
     ```
 
     Args:
-        chat_id: ID запрашиваемого группового чата или канала. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)
+        chat_id: ID запрашиваемого группового чата или канала. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
 
     Источник: https://dev.max.ru/docs-api/methods/GET/chats/-chatId-
     """
@@ -25,4 +25,4 @@ class GetChat(MaxoMethod[Chat]):
     __method__ = "get"
 
     chat_id: Path[int]
-    """ID запрашиваемого группового чата или канала. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)"""
+    """ID запрашиваемого группового чата или канала. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""

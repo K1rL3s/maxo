@@ -28,11 +28,13 @@ class UpdateType(StrEnum):
         - `comment_removed` - пользователь или бот удалил комментарий. Для бота на свои действия события не приходят
         - `user_added` - в чат или канал добавлен или перешёл по ссылке новый пользователь
         - `user_removed` - пользователь удалён или покинул чат или канал
+        - `bot_admin_permissions_changed` - изменены права бота-администратора
 
      ## Свойства объекта Update
     """
 
     BOT_ADDED = "bot_added"
+    BOT_ADMIN_PERMISSIONS_CHANGED = "bot_admin_permissions_changed"
     BOT_REMOVED = "bot_removed"
     BOT_STARTED = "bot_started"
     BOT_STOPPED = "bot_stopped"

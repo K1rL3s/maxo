@@ -12,11 +12,6 @@ from dataclasses import dataclass, field
 
 SKIP_SCHEMAS: frozenset[str] = frozenset(
     {
-        # Reply-клавиатуры: клиенты MAX их не поддерживают. Пропуск `ReplyButton`
-        # каскадом убирает его подтипы и enum `ReplyButtonType`.
-        "ReplyButton",
-        "ReplyKeyboardAttachment",
-        "ReplyKeyboardAttachmentRequest",
         # Тела запросов: генератор размазывает их по `Body`-полям методов,
         # отдельный тип не нужен. Список явный - `NewMessageBody` тоже тело
         # запроса, но в maxo он нужен как публичный тип.
@@ -31,12 +26,8 @@ SKIP_SCHEMAS: frozenset[str] = frozenset(
         "UserIdsList",
         # Нерабочая кнопка: нет `ButtonType.CHAT`, в свагере сирота.
         "ChatButton",
-        # Вложение из reply-кнопки, в mapping'ах не участвует.
-        "DataAttachment",
         # Ошибки API описаны вручную в `maxo.errors`.
         "Error",
-        # Апдейт вне `Update.discriminator.mapping`, в maxo его нет.
-        "MessageChatCreatedUpdate",
     },
 )
 
@@ -57,8 +48,15 @@ SKIP_OPERATIONS: frozenset[str] = frozenset(
 
 # --- типы --------------------------------------------------------------------
 
-#: Схема `bigint` - это просто int64.
-INLINE_ALIASES: dict[str, str] = {"Bigint": "int", "MessageId": "str"}
+#: Схемы-скаляры, которые подставляются в аннотации как встроенный тип.
+INLINE_ALIASES: dict[str, str] = {
+    "Bigint": "int",
+    "ChatId": "int",
+    "MessageId": "str",
+    "SubscriptionUrl": "str",
+    "Url": "str",
+    "UserId": "int",
+}
 
 #: Схемы, чей файл не генерируется, но подтипы остаются: их предком становится
 #: указанный класс. В отличие от `SKIP_SCHEMAS`, каскада на наследников нет.
@@ -321,6 +319,7 @@ ENUM_EXTRAS: dict[str, EnumExtras] = {
 #: Миксины, которые подмешиваются в базы класса после основного предка.
 CLASS_MIXINS: dict[str, tuple[str, ...]] = {
     "BotAddedToChat": ("ChatMethodsFacade",),
+    "BotAdminPermissionsChanged": ("ChatMethodsFacade",),
     "BotRemovedFromChat": ("ChatMethodsFacade",),
     "BotStarted": ("ChatMethodsFacade",),
     "BotStopped": ("ChatMethodsFacade",),

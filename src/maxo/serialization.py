@@ -34,6 +34,7 @@ from maxo.types import (
     AudioAttachment,
     AudioAttachmentRequest,
     BotAddedToChat,
+    BotAdminPermissionsChanged,
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
@@ -97,6 +98,11 @@ if TYPE_CHECKING:
 TAG_PROVIDERS = concat_provider(
     # ---> UpdateType <---
     has_tag_provider(BotAddedToChat, "update_type", UpdateType.BOT_ADDED),
+    has_tag_provider(
+        BotAdminPermissionsChanged,
+        "update_type",
+        UpdateType.BOT_ADMIN_PERMISSIONS_CHANGED,
+    ),
     has_tag_provider(BotRemovedFromChat, "update_type", UpdateType.BOT_REMOVED),
     has_tag_provider(BotStarted, "update_type", UpdateType.BOT_STARTED),
     has_tag_provider(BotStopped, "update_type", UpdateType.BOT_STOPPED),

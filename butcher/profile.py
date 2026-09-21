@@ -193,8 +193,10 @@ class _Profile:
             for decl in document.declarations
             if isinstance(decl, IREnum)
         }
-        self._aliases: set[str] = {
-            decl.name for decl in document.declarations if isinstance(decl, IRAlias)
+        self._aliases: dict[str, IRAlias] = {
+            decl.name: decl
+            for decl in document.declarations
+            if isinstance(decl, IRAlias)
         }
         self._skipped: set[str] = set()
         self._class_names: dict[str, str] = {}
@@ -229,7 +231,7 @@ class _Profile:
 
     def _check_aliases(self) -> None:
         unsupported = sorted(
-            self._aliases - self._skipped - overrides.INLINE_ALIASES.keys(),
+            self._aliases.keys() - self._skipped - overrides.INLINE_ALIASES.keys(),
         )
         if unsupported:
             raise ProfileError(
@@ -342,6 +344,15 @@ class _Profile:
             return False
         return _has_timestamp_hint(ir_field.description)
 
+    def _describe(self, ir_type: IRType, description: str | None) -> str | None:
+        """Описание поля, а без него - описание встраиваемого алиаса его типа."""
+        if isinstance(ir_type, OptionalType):
+            ir_type = ir_type.inner
+        if description or not isinstance(ir_type, RefType):
+            return description
+        alias = self._aliases.get(ir_type.name)
+        return alias.description if alias is not None else None
+
     def _field_type(self, ir_field: IRField) -> IRType:
         return DATETIME if self._is_timestamp(ir_field) else ir_field.type
 
@@ -453,7 +464,7 @@ class _Profile:
         return Field(
             name=ir_field.name,
             annotation=annotation,
-            description=ir_field.description,
+            description=self._describe(ir_field.type, ir_field.description),
             omittable=omittable,
             comment=comment,
         )
@@ -608,7 +619,7 @@ class _Profile:
         for parameter in operation.parameters:
             description = overrides.METHOD_FIELD_DESCRIPTIONS.get(
                 (operation.class_name, parameter.name),
-                parameter.description,
+                self._describe(parameter.type, parameter.description),
             )
             annotation = self._method_field_type(
                 operation.class_name,
@@ -641,7 +652,7 @@ class _Profile:
         for body_field in body.fields:
             description = overrides.METHOD_FIELD_DESCRIPTIONS.get(
                 (operation.class_name, body_field.name),
-                body_field.description,
+                self._describe(body_field.type, body_field.description),
             )
             annotation = self._method_field_type(
                 operation.class_name,
