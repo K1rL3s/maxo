@@ -5,6 +5,7 @@ from maxo import Bot
 from maxo.enums import ChatType
 from maxo.types import (
     BotAddedToChat,
+    BotAdminPermissionsChanged,
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
@@ -29,6 +30,7 @@ ChatEvent = (
     | UserRemovedFromChat
     | BotAddedToChat
     | BotRemovedFromChat
+    | BotAdminPermissionsChanged
     | ErrorEvent[Any, Any]
 )
 

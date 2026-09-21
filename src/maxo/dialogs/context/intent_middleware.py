@@ -40,6 +40,7 @@ from maxo.routing.middlewares.update_context import (
 from maxo.routing.sentinels import UNHANDLED
 from maxo.types import (
     BotAddedToChat,
+    BotAdminPermissionsChanged,
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
@@ -154,6 +155,8 @@ def event_context_from_error(event: ErrorEvent[Any, Any], ctx: Ctx) -> EventCont
         return event_context_from_bot_added_to_chat(event.event, ctx)
     if isinstance(event.event, BotRemovedFromChat):
         return event_context_from_bot_removed_from_chat(event.event, ctx)
+    if isinstance(event.event, BotAdminPermissionsChanged):
+        return event_context_from_bot_admin_permissions_changed(event.event, ctx)
     raise ValueError(f"Unsupported event in ErrorEvent.event: {event.event}")
 
 
@@ -465,6 +468,20 @@ class IntentMiddlewareFactory:
         await self._load_default_context(update, ctx, event_context)
         return await next(ctx)
 
+    async def process_bot_admin_permissions_changed(
+        self,
+        update: BotAdminPermissionsChanged,
+        ctx: Ctx,
+        next: NextMiddleware[BotAdminPermissionsChanged],
+    ) -> Any:
+        if UPDATE_CONTEXT_KEY not in ctx:
+            return await next(ctx)
+
+        event_context = event_context_from_bot_admin_permissions_changed(update, ctx)
+        ctx[EVENT_CONTEXT_KEY] = event_context
+        await self._load_default_context(update, ctx, event_context)
+        return await next(ctx)
+
 
 SUPPORTED_ERROR_EVENTS = (
     MessageCreated,
@@ -475,6 +492,7 @@ SUPPORTED_ERROR_EVENTS = (
     UserRemovedFromChat,
     BotAddedToChat,
     BotRemovedFromChat,
+    BotAdminPermissionsChanged,
     DialogUpdateEvent,
     ErrorEvent,
 )
@@ -630,3 +648,18 @@ class IntentErrorMiddleware(BaseMiddleware[ErrorEvent[Any, Any]]):
                     await stored_proxy.save_context(context)
                 await stored_proxy.save_stack(ctx.get(STACK_KEY))
                 await stored_proxy.unlock()
+
+
+def event_context_from_bot_admin_permissions_changed(
+    event: BotAdminPermissionsChanged,
+    ctx: Ctx,
+) -> EventContext:
+    # В апдейте только user_id, объект пользователя есть, лишь если его подгрузил enrich
+    return EventContext(
+        bot=ctx["bot"],
+        user=ctx.get(EVENT_FROM_USER_KEY),
+        user_id=event.user_id,
+        chat_id=event.chat_id,
+        chat_type=ChatType.CHANNEL if event.is_channel else ChatType.CHAT,
+        chat=None,
+    )

@@ -158,6 +158,9 @@ def _register_middleware(
     router.bot_removed_from_chat.middleware.outer(
         intent_middleware.process_bot_removed_from_chat,
     )
+    router.bot_admin_permissions_changed.middleware.outer(
+        intent_middleware.process_bot_admin_permissions_changed,
+    )
     dialog_updates_handler.middleware.outer(intent_middleware.process_aiogd_update)
 
     router.message_created.middleware.outer(context_unlocker_middleware)
@@ -168,6 +171,7 @@ def _register_middleware(
     router.user_removed_from_chat.middleware.outer(context_unlocker_middleware)
     router.bot_added_to_chat.middleware.outer(context_unlocker_middleware)
     router.bot_removed_from_chat.middleware.outer(context_unlocker_middleware)
+    router.bot_admin_permissions_changed.middleware.outer(context_unlocker_middleware)
     dialog_updates_handler.middleware.outer(context_unlocker_middleware)
 
     router.message_created.middleware.inner(manager_middleware)
@@ -178,6 +182,7 @@ def _register_middleware(
     router.user_removed_from_chat.middleware.inner(manager_middleware)
     router.bot_added_to_chat.middleware.inner(manager_middleware)
     router.bot_removed_from_chat.middleware.inner(manager_middleware)
+    router.bot_admin_permissions_changed.middleware.inner(manager_middleware)
     router.exception.middleware.inner(manager_middleware)  # type: ignore[arg-type]
     dialog_updates_handler.middleware.inner(manager_middleware)
 
@@ -189,6 +194,7 @@ def _register_middleware(
     router.user_removed_from_chat.middleware.inner(context_saver_middleware)
     router.bot_added_to_chat.middleware.inner(context_saver_middleware)
     router.bot_removed_from_chat.middleware.inner(context_saver_middleware)
+    router.bot_admin_permissions_changed.middleware.inner(context_saver_middleware)
     dialog_updates_handler.middleware.inner(context_saver_middleware)
 
     bg_factory_middleware = BgFactoryMiddleware(bg_manager_factory)

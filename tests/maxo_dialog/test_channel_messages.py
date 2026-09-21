@@ -292,3 +292,31 @@ async def test_bg_factory_without_user_reaches_channel_default_stack(
     await wait_for_messages(message_manager, count=2)
     assert message_manager.last_message().body.text == "second"
     assert users == [None]
+
+
+@pytest.mark.parametrize(("user_id", "expected"), [(2, True), (5, False)])
+async def test_access_validator_falls_back_to_update_context_user_id(
+    event_message_created: MessageCreated,
+    user_id: int,
+    expected: bool,
+) -> None:
+    validator = DefaultAccessValidator()
+    stack = Stack(
+        _id="default",
+        access_settings=AccessSettings(user_ids=[1, 2, 3]),
+    )
+    ctx = Ctx(
+        {
+            UPDATE_CONTEXT_KEY: UpdateContext(type=ChatType.CHAT, user_id=user_id),
+            EVENT_FROM_USER_KEY: None,
+        },
+    )
+
+    allowed = await validator.is_allowed(
+        stack=stack,
+        context=None,
+        event=event_message_created,
+        ctx=ctx,
+    )
+
+    assert allowed is expected
