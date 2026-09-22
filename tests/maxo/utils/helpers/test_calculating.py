@@ -1,6 +1,9 @@
+from typing import cast
+
 import pytest
 
 from maxo.enums import ChatType
+from maxo.errors import UnknownChatTypeError
 from maxo.omit import Omittable, Omitted
 from maxo.utils.helpers.calculating import calculate_chat_id_and_user_id
 
@@ -9,14 +12,17 @@ from maxo.utils.helpers.calculating import calculate_chat_id_and_user_id
     ("chat_type", "chat_id", "user_id", "expected_chat_id", "expected_user_id"),
     [
         (ChatType.CHAT, 123, 456, 123, Omitted()),
+        (ChatType.CHAT, 0, 456, 0, Omitted()),
         (ChatType.CHAT, None, 456, Omitted(), Omitted()),
         (ChatType.CHAT, Omitted(), 456, Omitted(), Omitted()),
         (ChatType.DIALOG, 123, 456, 123, 456),
+        (ChatType.DIALOG, 0, 0, 0, 0),
         (ChatType.DIALOG, None, 456, Omitted(), 456),
         (ChatType.DIALOG, 123, None, 123, Omitted()),
         (ChatType.DIALOG, Omitted(), 456, Omitted(), 456),
         (ChatType.DIALOG, 123, Omitted(), 123, Omitted()),
         (ChatType.CHANNEL, 123, 456, 123, Omitted()),
+        (ChatType.CHANNEL, 0, 456, 0, Omitted()),
         (ChatType.CHANNEL, None, 456, Omitted(), Omitted()),
         (ChatType.CHANNEL, Omitted(), 456, Omitted(), Omitted()),
     ],
@@ -35,3 +41,12 @@ def test_calculate_chat_id_and_user_id(
     )
     assert result_chat_id == expected_chat_id
     assert result_user_id == expected_user_id
+
+
+def test_calculate_chat_id_and_user_id_unknown_chat_type() -> None:
+    with pytest.raises(UnknownChatTypeError, match="Неизвестный тип чата: unknown"):
+        calculate_chat_id_and_user_id(
+            chat_type=cast(ChatType, "unknown"),
+            chat_id=123,
+            user_id=456,
+        )

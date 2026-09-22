@@ -12,3 +12,10 @@ class AttributeIsEmptyError(MaxoError, AttributeError):
             f"{self.obj.__class__.__name__}.{self.attr} "
             f"is empty ({getattr(self.obj, self.attr)!r})"
         )
+
+
+class UnknownChatTypeError(MaxoError, ValueError):
+    chat_type: Any
+
+    def __str__(self) -> str:
+        return f"Неизвестный тип чата: {self.chat_type}"
