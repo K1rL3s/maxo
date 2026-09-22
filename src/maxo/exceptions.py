@@ -21,7 +21,7 @@ from maxo.errors.network import MaxBotNetworkError, MaxBotTimeoutError
 from maxo.errors.payload import InvalidPayloadError
 from maxo.errors.routing import CycleRoutersError, RouterAlreadyIncludedError
 from maxo.errors.subscriptions import UnsubscribeError
-from maxo.errors.types import AttributeIsEmptyError
+from maxo.errors.types import AttributeIsEmptyError, UnknownChatTypeError
 from maxo.errors.webapp import InvalidWebAppInitDataError
 
 __all__ = (
@@ -47,5 +47,6 @@ __all__ = (
     "MaxoError",
     "RetvalReturnedError",
     "RouterAlreadyIncludedError",
+    "UnknownChatTypeError",
     "UnsubscribeError",
 )
