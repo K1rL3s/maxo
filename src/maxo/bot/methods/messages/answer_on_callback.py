@@ -51,7 +51,6 @@ class AnswerOnCallback(MaxoMethod[SimpleQueryResult]):
         disable_link_preview: Если `true`, сервер не будет генерировать превью для ссылок в тексте сообщения или поста
         message: Заполните это, если хотите изменить текущее сообщение
         notification: Заполните это, если хотите просто отправить одноразовое уведомление пользователю
-            Примечание: поле отсутствует в актуальном Swagger, но поддерживается библиотекой
 
     Источник: https://dev.max.ru/docs-api/methods/POST/answers
     """
@@ -75,8 +74,4 @@ class AnswerOnCallback(MaxoMethod[SimpleQueryResult]):
     message: Body[Omittable[NewMessageBody | None]] = Omitted()
     """Заполните это, если хотите изменить текущее сообщение"""
     notification: Body[Omittable[str | None]] = Omitted()
-    """
-    Заполните это, если хотите просто отправить одноразовое уведомление пользователю
-
-    Примечание: поле отсутствует в актуальном Swagger, но поддерживается библиотекой
-    """
+    """Заполните это, если хотите просто отправить одноразовое уведомление пользователю"""

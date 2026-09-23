@@ -27,6 +27,8 @@ class GetMessages(MaxoMethod[MessageList]):
     ```
 
     Args:
+        after: Время, начиная с которого будут запрошены все сообщения или посты. Формат времени: Unix timestamp в миллисекундах
+        before: Время, до которого будут запрошены все сообщения или посты. Формат времени: Unix timestamp в миллисекундах
         chat_id: ID чата или канала, чтобы получить из него сообщения или посты. Обязательный параметр, если не указан `message_ids`. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         count: Максимальное количество сообщений или постов в ответе
         from_: Время, до которого будут запрошены все сообщения или посты, начиная с первого опубликованного. Формат времени: Unix timestamp в миллисекундах
@@ -39,6 +41,10 @@ class GetMessages(MaxoMethod[MessageList]):
     __url__ = "messages"
     __method__ = "get"
 
+    after: Query[Omittable[datetime]] = Omitted()
+    """Время, начиная с которого будут запрошены все сообщения или посты. Формат времени: Unix timestamp в миллисекундах"""
+    before: Query[Omittable[datetime]] = Omitted()
+    """Время, до которого будут запрошены все сообщения или посты. Формат времени: Unix timestamp в миллисекундах"""
     chat_id: Query[Omittable[int]] = Omitted()
     """ID чата или канала, чтобы получить из него сообщения или посты. Обязательный параметр, если не указан `message_ids`. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
     count: Query[Omittable[int]] = Omitted()

@@ -11,9 +11,9 @@ class SenderAction(StrEnum):
         -  `"sending_file"` - Бот отправляет файл
     """
 
+    MARK_SEEN = "mark_seen"
     SENDING_AUDIO = "sending_audio"
     SENDING_FILE = "sending_file"
     SENDING_PHOTO = "sending_photo"
     SENDING_VIDEO = "sending_video"
     TYPING_ON = "typing_on"
-    MARK_SEEN = "mark_seen"  # Удалён из доки, работает

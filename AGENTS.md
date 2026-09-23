@@ -63,7 +63,7 @@ just test-all
 just all
 just build         # uv build
 just check-dist    # сборка + twine check --strict + check_dist.py
-just butcher       # генерация типов/enum'ов/методов по max-swagger.json
+just butcher       # генерация типов/enum'ов/методов по max-swagger.json и .yaml
 just butcher-test  # тесты самого генератора
 ```
 
@@ -615,7 +615,11 @@ TAG_PROVIDERS = concat_provider(
 ## Кодогенерация: butcher
 
 `src/maxo/types`, `src/maxo/enums` и `src/maxo/bot/methods` генерируются из
-`max-swagger.json` в корне - это единственный источник правды по контракту API.
+`max-swagger.json` и `max-swagger.yaml` в корне - это источник правды по
+контракту API. MAX публикует контракт дважды: json отдаёт `dev.max.ru`
+(русские описания), yaml лежит в репозитории `max-messenger/api-schema`
+(`nullable`, `deprecated` и то, чего на сайте ещё нет). Butcher генерирует по
+объединению обеих публикаций, поэтому обновлять нужно оба файла.
 Генератор живёт в `butcher/` и работает поверх PyPI-пакета
 `unihttp-openapi-generator==0.3.1` из dependency group `butcher`. Запуск -
 `just butcher`.

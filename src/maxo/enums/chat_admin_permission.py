@@ -16,5 +16,5 @@ class ChatAdminPermission(StrEnum):
     PIN_MESSAGE = "pin_message"
     POST_EDIT_DELETE_MESSAGE = "post_edit_delete_message"
     READ_ALL_MESSAGES = "read_all_messages"
+    VIEW_STATS = "view_stats"
     WRITE = "write"
-    VIEW_STATS = "view_stats"  # Нет в доке, приходит
