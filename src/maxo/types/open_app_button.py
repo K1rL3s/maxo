@@ -17,9 +17,9 @@ class OpenAppButton(Button):
 
     type: ButtonType = ButtonType.OPEN_APP
 
-    contact_id: Omittable[int] = Omitted()
+    contact_id: Omittable[int | None] = Omitted()
     """Идентификатор бота, чьё мини-приложение надо запустить"""
-    payload: Omittable[str] = Omitted()
+    payload: Omittable[str | None] = Omitted()
     """Параметр запуска, который будет передан в [initData](https://dev.max.ru/docs/webapps/bridge#WebAppData) мини-приложения"""
     web_app: Omittable[str] = Omitted()
     """Публичное имя (username) бота или ссылка на него, чьё мини-приложение надо запустить"""

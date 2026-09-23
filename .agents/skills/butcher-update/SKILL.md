@@ -24,12 +24,19 @@ description: Используется при изменении контракт
    git status --porcelain -- src/maxo
    ```
 
-2. Сгенерируй снимок по спеке из `HEAD` и снимок по новой спеке:
+2. Скачай обе публикации спеки: yaml из репозитория `max-messenger/api-schema`
+   в `max-swagger.yaml` целиком, json с `dev.max.ru` - в сторону, а в
+   `max-swagger.json` перенеси из него дельту, сохранив ручные правки.
+   Команды и правила слияния - в `butcher/AGENTS.md`.
+
+3. Сгенерируй снимок по спекам из `HEAD` и снимок по новым:
 
    ```bash
    mkdir -p .butcher
    git show HEAD:max-swagger.json > .butcher/spec-before.json
-   just butcher --spec .butcher/spec-before.json --output-dir .butcher/before
+   git show HEAD:max-swagger.yaml > .butcher/spec-before.yaml
+   just butcher --spec .butcher/spec-before.json \
+     --extra-spec .butcher/spec-before.yaml --output-dir .butcher/before
    just butcher --output-dir .butcher/after
    diff -ru .butcher/before .butcher/after
    ```
@@ -37,17 +44,17 @@ description: Используется при изменении контракт
    Если меняются базы сгенерированных классов, добавь оверрайд до создания
    `.butcher/after`.
 
-3. Перенеси дельту вручную, сохранив ручные части файлов. Перед удалением
+4. Перенеси дельту вручную, сохранив ручные части файлов. Перед удалением
    исчезнувшего символа проверь его использование через `rg` в `src/`,
    `tests/`, `docs/`, `examples/` и `butcher/`.
 
-4. Для нового update, полиморфного подтипа, метода, поля или enum пройди карту
+5. Для нового update, полиморфного подтипа, метода, поля или enum пройди карту
    касаний из `butcher/AGENTS.md` и `references/manual-layer.md`. В частности,
    union из Swagger не заменяет регистрацию в `TAG_PROVIDERS`, а корректировка
    ссылки на другой тип требует `FieldOverride(ref=...)`, а не только
    `annotation`.
 
-5. Сверь итог с новым снимком:
+6. Сверь итог с новым снимком:
 
    ```bash
    just butcher --output-dir .butcher/check
@@ -59,7 +66,7 @@ description: Используется при изменении контракт
    Допустимы только заранее известные расхождения ручного слоя. Проверяй
    конкретный список, а не историческое количество файлов.
 
-6. Запусти проверки из `AGENTS.md`; если менялся `butcher/`, добавь
+7. Запусти проверки из `AGENTS.md`; если менялся `butcher/`, добавь
    `just butcher-test`. Форматируй только затронутые файлы:
 
    ```bash

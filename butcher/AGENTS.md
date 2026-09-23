@@ -5,8 +5,69 @@
 тире, строгая типизация, conventional commits) действуют и здесь.
 
 Butcher генерирует `src/maxo/types`, `src/maxo/enums` и `src/maxo/bot/methods`
-из `max-swagger.json` в корне репозитория. Этот файл - единственный источник
-правды по контракту MAX Bot API.
+из двух файлов в корне репозитория: `max-swagger.json` и `max-swagger.yaml`.
+Вместе они - источник правды по контракту MAX Bot API.
+
+## Две публикации спеки
+
+MAX выкладывает контракт дважды, и публикации расходятся: у каждой есть то,
+чего нет у другой. Генерация идёт по объединению, поэтому качать нужно обе.
+
+| Файл                | Откуда                                             | Что есть только там                                                                      |
+|---------------------|----------------------------------------------------|------------------------------------------------------------------------------------------|
+| `max-swagger.json`  | `dev.max.ru/docs-api`, способом из `examples/swagger_watcher.py` | Русские описания, свежие методы и апдейты, права администратора, свёрнутые методы вроде `GET /chats` |
+| `max-swagger.yaml`  | Репозиторий `max-messenger/api-schema`             | `nullable`, `deprecated`, `ChatStatus.suspended`, `mark_seen`, `view_stats`, параметры `before`/`after` |
+
+```bash
+# исходник из репозитория MAX - кладётся в корень как есть
+gh api repos/max-messenger/api-schema/contents/schema.yaml \
+  -H "Accept: application/vnd.github.raw" > max-swagger.yaml
+
+# спека с сайта - сначала в сторону, чтобы не затереть ручные правки докстрингов
+uv run python - <<'PY'
+import asyncio, json, sys
+from pathlib import Path
+
+sys.path.insert(0, "examples")
+from aiohttp import ClientSession, ClientTimeout
+from swagger_watcher import REQUEST_HEADERS, fetch_openapi
+
+
+async def main() -> None:
+    async with ClientSession(
+        headers=REQUEST_HEADERS,
+        timeout=ClientTimeout(total=60),
+    ) as session:
+        spec = await fetch_openapi(session)
+    Path(".butcher/site-swagger.json").write_text(
+        json.dumps(spec, ensure_ascii=False, indent=4) + "\n",
+    )
+
+
+asyncio.run(main())
+PY
+```
+
+Скачанный `.butcher/site-swagger.json` сравнивается с `max-swagger.json`, и в
+корневой файл переносится только дельта: ручные правки докстрингов, свёрнутые
+методы и параметры, которые в maxo оставлены осознанно, должны уцелеть. Список
+таких расхождений - в `.agents/skills/butcher-update/references/manual-layer.md`.
+
+`max-swagger.yaml` перезаписывается целиком: ручного слоя в нём нет.
+
+### Слияние
+
+`merge.py` накладывает yaml на json и отдаёт самый полный вариант. База - json:
+описания, `required` и ручные правки остаются его. Из yaml добираются только
+сведения, которых в базе нет: новые пути, методы, схемы, свойства, параметры,
+члены enum'ов и флаги `nullable`/`deprecated`. Части `allOf` сопоставляются по
+порядку и только при одинаковом их числе.
+
+Описания в yaml английские, а docstring'и maxo русские. Поэтому поле или
+параметр, который принёс yaml, дописывается в `max-swagger.json` с русским
+описанием - слияние тогда оставит русский текст, а типы и флаги доберёт из
+yaml. Так добавлены `notification` у `CallbackAnswer`, `stat` у
+`CommentMessage` и параметры `before`/`after` у `GET /messages`.
 
 ## Команды
 
@@ -18,6 +79,8 @@ just butcher-test  # тесты butcher
 `just butcher` принимает аргументы CLI, например
 `just butcher --output-dir /tmp/maxo-gen` - удобно, чтобы посмотреть вывод, не
 трогая рабочее дерево, или `--spec <путь или URL>` для другой спеки.
+`--extra-spec` задаёт вторую публикацию (по умолчанию `max-swagger.yaml`),
+а `--extra-spec ""` отключает слияние и генерирует только по `--spec`.
 
 **Не начинай обновление контракта с `just butcher` без `--output-dir`.**
 Генератор перезаписывает файлы целиком и стирает ручной слой. Прямой вывод в
@@ -38,7 +101,8 @@ group `butcher`. `uv sync --all-groups` устанавливает его вме
 За butcher остаётся только то, чем maxo отличается от голого свагера.
 
 ```text
-max-swagger.json
+max-swagger.json + max-swagger.yaml
+  -> merge.merge_specs()      самый полный вариант спеки
   -> spec.load()            загрузка + build_ir (генератор)
   -> profile.build_profile()  maxo-трансформации IR
   -> render/*                 стиль вывода maxo
@@ -48,6 +112,7 @@ max-swagger.json
 | Модуль          | Назначение                                                                 |
 |-----------------|----------------------------------------------------------------------------|
 | `spec.py`       | Загрузка спеки и построение IR. Здесь же выбираются флаги генератора.       |
+| `merge.py`      | Слияние двух публикаций спеки в самый полный вариант.                       |
 | `profile.py`    | Трансформации IR в структуры `Model`/`Enum`/`Unions`/`Method`.              |
 | `overrides.py`  | Декларативные таблицы отличий maxo от свагера. Только данные, без логики.   |
 | `naming.py`     | Имена классов и пути модулей внутри пакета `maxo`.                          |
@@ -100,7 +165,9 @@ false` - это `Omittable[...] = Omitted()`, а не `= <default>`.
   `markup_elements.py`, `updates.py` и чем заменяется ссылка на базу в
   аннотациях полей.
 - `ENUM_EXTRAS` - самодельные члены enum'ов и aiogram-алиасы
-  (`AttachmentType.TEXT`, `SenderAction.MARK_SEEN`, `ParseMode`, `ContentType`).
+  (`AttachmentType.TEXT`, `ChatType.PRIVATE`, `ParseMode`, `ContentType`).
+  Член, который есть хотя бы в одной публикации спеки, сюда не дописывается:
+  будет дубль имени в enum.
 - `TYPE_ALIASES` - алиасы уровня модуля внутри сгенерированного типа
   (`CallbackQuery = MessageCallback`).
 - `CLASS_MIXINS` - фасады в базах классов (`MessageMethodsFacade` и другие).
@@ -147,10 +214,13 @@ Butcher не создаёт и при генерации затрёт, если 
 Обычное обновление переносит дельту между двумя генерациями:
 
 1. Убедись, что `git status --porcelain -- src/maxo` пуст.
-2. Возьми старую спецификацию через `git show HEAD:max-swagger.json`, сгенерируй
-   её в `.butcher/before`.
-3. Обнови `max-swagger.json`. Для нового апдейта добавь запись в
-   `overrides.CLASS_MIXINS` **до** генерации следующего снимка.
+2. Возьми старые спецификации через `git show HEAD:max-swagger.json` и
+   `git show HEAD:max-swagger.yaml`, сгенерируй их в `.butcher/before`
+   (`--spec` и `--extra-spec` на эти файлы).
+3. Скачай обе публикации, обнови `max-swagger.yaml` целиком, а в
+   `max-swagger.json` перенеси дельту сайта, сохранив ручной слой. Для нового
+   апдейта добавь запись в `overrides.CLASS_MIXINS` **до** генерации
+   следующего снимка.
 4. Сгенерируй новую спецификацию в `.butcher/after` и получи дельту через
    `diff -ru .butcher/before .butcher/after`.
 5. Перенеси только эту дельту в `src/maxo`, не удаляя ручной слой. Новый файл

@@ -137,10 +137,6 @@ MODEL_FIELD_OVERRIDES: dict[tuple[str, str], FieldOverride] = {
     ("CommentMessage", "link"): FieldOverride(
         comment="type: ignore[mutable-override]",
     ),
-    # Описание допускает `null`, но в Swagger нет `nullable: true`
-    ("CommentMessage", "sender"): FieldOverride(annotation="User | None"),
-    # CommentMessage является Message, поэтому общий контракт допускает `null`.
-    ("Message", "sender"): FieldOverride(annotation="User | None"),
     # `Button.text` обязателен, но принятая кнопка может прийти без него.
     ("MessageButton", "text"): FieldOverride(
         omittable=True,
@@ -284,15 +280,6 @@ ENUM_EXTRAS: dict[str, EnumExtras] = {
         aliases_comment=_AIOGRAM,
         type_aliases=(("ContentType", _AIOGRAM),),
     ),
-    "ChatAdminPermission": EnumExtras(
-        trailing=(
-            EnumMember(
-                name="VIEW_STATS",
-                value="view_stats",
-                comment="Нет в доке, приходит",
-            ),
-        ),
-    ),
     "ChatType": EnumExtras(
         aliases=(
             EnumMember(name="PRIVATE", value="dialog", alias_of="DIALOG"),
@@ -300,15 +287,6 @@ ENUM_EXTRAS: dict[str, EnumExtras] = {
             EnumMember(name="SUPERGROUP", value="chat", alias_of="CHAT"),
         ),
         aliases_comment=_AIOGRAM,
-    ),
-    "SenderAction": EnumExtras(
-        trailing=(
-            EnumMember(
-                name="MARK_SEEN",
-                value="mark_seen",
-                comment="Удалён из доки, работает",
-            ),
-        ),
     ),
     "TextFormat": EnumExtras(type_aliases=(("ParseMode", _AIOGRAM),)),
 }

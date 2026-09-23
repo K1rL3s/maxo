@@ -1076,6 +1076,26 @@
                             "minimum": 1,
                             "maximum": 100
                         }
+                    },
+                    {
+                        "name": "before",
+                        "in": "query",
+                        "description": "Время, до которого будут запрошены все сообщения или посты. Формат времени: Unix timestamp в миллисекундах",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64",
+                            "minimum": 0
+                        }
+                    },
+                    {
+                        "name": "after",
+                        "in": "query",
+                        "description": "Время, начиная с которого будут запрошены все сообщения или посты. Формат времени: Unix timestamp в миллисекундах",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64",
+                            "minimum": 0
+                        }
                     }
                 ],
                 "responses": {
@@ -2610,6 +2630,16 @@
                         "allOf": [
                             {
                                 "$ref": "#/components/schemas/CommentMessageBody"
+                            }
+                        ]
+                    },
+                    "stat": {
+                        "description": "Статистика просмотров постов и репостов - возвращается только для каналов",
+                        "nullable": true,
+                        "readOnly": false,
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MessageStat"
                             }
                         ]
                     }
@@ -4375,6 +4405,12 @@
                                 "$ref": "#/components/schemas/NewMessageBody"
                             }
                         ]
+                    },
+                    "notification": {
+                        "description": "Заполните это, если хотите просто отправить одноразовое уведомление пользователю",
+                        "nullable": true,
+                        "readOnly": false,
+                        "type": "string"
                     }
                 }
             },

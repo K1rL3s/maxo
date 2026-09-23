@@ -8,3 +8,4 @@ class ChatStatus(StrEnum):
     CLOSED = "closed"
     LEFT = "left"
     REMOVED = "removed"
+    SUSPENDED = "suspended"
