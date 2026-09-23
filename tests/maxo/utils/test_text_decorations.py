@@ -229,3 +229,24 @@ class TestTextDecoration:
         result: str,
     ) -> None:
         assert decorator.unparse(text, entities) == result
+
+
+class TestMarkdownDecorationBlockquote:
+    """Regression tests for #304: `MarkdownDecoration.blockquote` used to
+    drop content on `str.splitlines()` edge cases (empty string, trailing
+    newline), unlike `HtmlDecoration.blockquote` which is symmetric."""
+
+    def test_empty_string_is_not_dropped(self) -> None:
+        # Previously: "".splitlines() == [] -> "" (quote vanished).
+        assert markdown_decoration.blockquote("") == "> "
+
+    def test_trailing_newline_is_preserved(self) -> None:
+        # Previously: "a\n".splitlines() == ["a"] -> "> a" (trailing
+        # newline silently eaten).
+        assert markdown_decoration.blockquote("a\n") == "> a\n> "
+
+    def test_multiline_value(self) -> None:
+        assert markdown_decoration.blockquote("a\nb") == "> a\n> b"
+
+    def test_single_line_value_unaffected(self) -> None:
+        assert markdown_decoration.blockquote("test") == "> test"
