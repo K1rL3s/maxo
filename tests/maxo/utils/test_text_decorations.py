@@ -250,3 +250,15 @@ class TestMarkdownDecorationBlockquote:
 
     def test_single_line_value_unaffected(self) -> None:
         assert markdown_decoration.blockquote("test") == "> test"
+
+    def test_crlf_line_ending_is_treated_as_a_single_break(self) -> None:
+        # CommonMark treats "\r\n" as one line ending, not two.
+        assert markdown_decoration.blockquote("a\r\nb") == "> a\n> b"
+
+    def test_lone_cr_line_ending_is_treated_as_a_break(self) -> None:
+        # A standalone "\r" (old Mac-style ending) is a line break too;
+        # splitting on "\n" alone would leave "b" on the same quoted line.
+        assert markdown_decoration.blockquote("a\rb") == "> a\n> b"
+
+    def test_trailing_lone_cr_is_preserved(self) -> None:
+        assert markdown_decoration.blockquote("a\r") == "> a\n> "
