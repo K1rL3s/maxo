@@ -27,6 +27,8 @@
 - ``Payload`` (алиас ``CallbackData``) - типизированный payload инлайн-кнопки (см. ниже).
 - ``DeeplinkFilter`` - диплинк в ``BotStarted``; значение попадает в ``ctx`` под
   ключами ``deeplink``, ``payload`` и ``args``.
+- ``ChatAdminPermissionFilter`` - проверяет права бота в апдейте
+  ``BotAdminPermissionsChanged`` (см. ниже).
 - ``ExceptionTypeFilter`` и ``ExceptionMessageFilter`` - для обработчиков ошибок,
   см. :doc:`errors`.
 - ``SyncFilter`` - оборачивает синхронную функцию-предикат, чтобы её можно было использовать как фильтр (см. ниже).
@@ -193,6 +195,44 @@ Payload (типизированный callback)
     )
     async def on_buy(update: MessageCallback, payload: ItemPayload) -> None:
         ...
+
+Права бота-администратора
+-------------------------
+
+``ChatAdminPermissionFilter`` пропускает апдейт ``BotAdminPermissionsChanged``,
+только если боту выданы **все** перечисленные права. Для «хотя бы одного из»
+объединяйте фильтры через ``|``.
+
+.. code-block:: python
+
+    from maxo.enums import ChatAdminPermission
+    from maxo.routing.filters import ChatAdminPermissionFilter
+    from maxo.types import BotAdminPermissionsChanged
+
+    @dispatcher.bot_admin_permissions_changed(
+        ChatAdminPermissionFilter(
+            ChatAdminPermission.WRITE,
+            ChatAdminPermission.PIN_MESSAGE,
+        ),
+    )
+    async def can_post_and_pin(update: BotAdminPermissionsChanged):
+        ...
+
+    @dispatcher.bot_admin_permissions_changed(
+        ChatAdminPermissionFilter(ChatAdminPermission.EDIT)
+        | ChatAdminPermissionFilter(ChatAdminPermission.DELETE),
+    )
+    async def can_edit_or_delete(update: BotAdminPermissionsChanged):
+        ...
+
+Устаревшие названия прав фильтр приводит к текущим, поэтому
+``ChatAdminPermission.WRITE`` сработает и когда MAX пришлёт
+``post_edit_delete_message``. То же для пар ``edit_message`` - ``edit`` и
+``delete_message`` - ``delete``.
+
+Когда у бота забрали права администратора, список прав в апдейте не приходит,
+и фильтр не срабатывает. Само событие MAX доставляет только вебхуком, поэтому
+на long polling такой обработчик не вызовется.
 
 SyncFilter (синхронные предикаты)
 ---------------------------------
