@@ -8,7 +8,7 @@ from maxo.types.user import User
 
 class BotStopped(MaxUpdate, ChatMethodsFacade):
     """
-    Вы получите это событие, как только пользователь остановит бота в его настройках в МАКС
+    Вы получите это событие, как только пользователь остановит бота в его настройках в MAX
 
     Args:
         chat_id: ID диалога, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)

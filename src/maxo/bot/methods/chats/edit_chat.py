@@ -20,7 +20,9 @@ class EditChat(MaxoMethod[Chat]):
       -H "Content-Type: application/json" \
       -d '{
       "icon": { "url": "https://example.com/image.jpg" },
-      "title": "Название чата",
+      "title": "Название чата или канала",
+      "description": "Описание чата или канала - от 0 до 16000 символов",
+      "pin": "ID сообщения для закрепления в чате или канале",
       "notify": true
     }'
     ```
