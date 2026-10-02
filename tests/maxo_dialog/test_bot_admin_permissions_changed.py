@@ -26,9 +26,7 @@ from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.state import State, StatesGroup
 from maxo.fsm.storages.memory import SimpleEventIsolation
 from maxo.routing.filters import ExceptionTypeFilter
-from maxo.routing.signals import AfterStartup, BeforeStartup, MaxoUpdate
-from maxo.types import BotAdminPermissionsChanged
-from tests.constants import NOW
+from maxo.routing.signals import AfterStartup, BeforeStartup
 
 from .conftest import wait_for_messages
 
@@ -82,19 +80,7 @@ async def startup(client: BotClient) -> None:
 
 
 async def feed_admin_update(client: BotClient) -> None:
-    update = BotAdminPermissionsChanged(
-        chat_id=client.chat.chat_id,
-        user_id=client.user.user_id,
-        bot_id=client.bot.state.info.user_id,
-        is_channel=False,
-        is_admin=True,
-        timestamp=NOW,
-    )
-    # Незакрытый лок стека подвесил бы прогон, поэтому с таймаутом
-    await asyncio.wait_for(
-        client.dp.feed_update(MaxoUpdate(update=update.as_(client.bot)), client.bot),
-        timeout=5,
-    )
+    await asyncio.wait_for(client.bot_admin_permissions_changed(), timeout=5)
 
 
 async def test_dialog_started_from_update_keeps_state(
