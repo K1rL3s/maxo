@@ -286,3 +286,13 @@ async def test_get_messages_with_time_bounds(
         message_ids=Omitted(),
         to=Omitted(),
     )
+
+
+async def test_get_messages_keeps_positional_order(
+    facade: MockChatFacade,
+    mock_bot: MagicMock,
+) -> None:
+    await facade.get_messages(20)
+
+    assert mock_bot.get_messages.call_args.kwargs["count"] == 20
+    assert mock_bot.get_messages.call_args.kwargs["after"] == Omitted()

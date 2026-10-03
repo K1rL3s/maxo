@@ -78,12 +78,12 @@ class ChatMethodsFacade(AttachmentsFacade):
 
     async def get_messages(
         self,
-        after: Omittable[datetime] = Omitted(),
-        before: Omittable[datetime] = Omitted(),
         count: Omittable[int] = Omitted(),
         from_: Omittable[datetime] = Omitted(),
         message_ids: Omittable[list[str] | None] = Omitted(),
         to: Omittable[datetime] = Omitted(),
+        after: Omittable[datetime] = Omitted(),
+        before: Omittable[datetime] = Omitted(),
     ) -> "MessageList":
         return await self.bot.get_messages(
             after=after,
