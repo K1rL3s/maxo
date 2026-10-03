@@ -25,9 +25,32 @@ class EditMessage(MaxoMethod[SimpleQueryResult]):
     curl -X PUT "https://platform-api2.max.ru/messages?message_id=message_id" \
       -H "Authorization: {access_token}" \
       -H "Content-Type: application/json" \
-      -d '{
-      "text": "Изменённый текст"
-    }'
+     -d '{
+      "text": "**Новый текст**",
+      "attachments": [
+        {
+          "type": "inline_keyboard",
+          "payload": {
+            "buttons": [
+              [
+                {
+                 "type": "link",
+                 "text": "Откройте сайт",
+                 "url": "https://example.com"
+                }
+              ]
+            ]
+          }
+        }
+      ],
+       "link": {
+              "type": "reply",
+              "mid": "mid.message_id"
+        },
+       "notify": false,
+       "format": "markdown"
+       }
+     }'
     ```
 
     Args:

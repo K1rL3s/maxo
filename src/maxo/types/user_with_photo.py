@@ -13,11 +13,11 @@ class UserWithPhoto(User):
         full_avatar_url: URL аватара пользователя или бота в полном размере
     """
 
-    avatar_url: Omittable[str] = Omitted()
+    avatar_url: Omittable[str | None] = Omitted()
     """URL аватара пользователя или бота в уменьшенном размере"""
     description: Omittable[str | None] = Omitted()
     """Описание пользователя или бота. В случае с пользователем может принимать значение `null`, если описание не заполнено"""
-    full_avatar_url: Omittable[str] = Omitted()
+    full_avatar_url: Omittable[str | None] = Omitted()
     """URL аватара пользователя или бота в полном размере"""
 
     @property

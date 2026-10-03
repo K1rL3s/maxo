@@ -12,7 +12,7 @@ class BotCommandsInfo(MaxoType):
         commands: Команды, которые поддерживает бот
     """
 
-    commands: Omittable[list[BotCommand]] = Omitted()
+    commands: Omittable[list[BotCommand] | None] = Omitted()
     """Команды, которые поддерживает бот"""
 
     @property

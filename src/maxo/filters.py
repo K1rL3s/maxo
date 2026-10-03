@@ -7,6 +7,7 @@
 
 from maxo.routing.filters.always import AlwaysFalseFilter, AlwaysTrueFilter
 from maxo.routing.filters.base import BaseFilter
+from maxo.routing.filters.chat_admin_permission import ChatAdminPermissionFilter
 from maxo.routing.filters.command import Command, CommandObject, CommandStart
 from maxo.routing.filters.deeplink import DeeplinkFilter
 from maxo.routing.filters.exception import ExceptionMessageFilter, ExceptionTypeFilter
@@ -28,6 +29,7 @@ __all__ = (
     "AndFilter",
     "BaseFilter",
     "CallbackData",
+    "ChatAdminPermissionFilter",
     "Command",
     "CommandObject",
     "CommandStart",

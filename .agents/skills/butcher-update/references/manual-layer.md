@@ -86,8 +86,6 @@
 
 ## Хвосты методов
 
-- `AnswerOnCallback.notification` - поле отсутствует в актуальном Swagger,
-  но поддерживается библиотекой.
 - `GetUpdates` - объявление класса с `slots=False` и метод `make_response`
   (терпимость к незагружаемым апдейтам).
 - `UploadMedia.validate_response` - в ручном файле, генерацией не затирается.
@@ -102,6 +100,11 @@
 
 Параметр `disable_link_preview` у `sendComment` из официальной спеки убран, но
 в `max-swagger.json` оставлен, чтобы не ломать публичный `SendComment`.
+
+`notification` у `CallbackAnswer`, `stat` у `CommentMessage` и параметры
+`before`/`after` у `GET /messages` есть только в `max-swagger.yaml`. В
+`max-swagger.json` они дописаны с русскими описаниями: слияние двух публикаций
+берёт описания из json, а типы и флаги - из yaml.
 
 Предупреждение об удалении `addMembers` официальная спека держит в
 нестандартном ключе операции `disable-notification`, который генератор не

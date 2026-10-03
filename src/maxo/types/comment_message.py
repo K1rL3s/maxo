@@ -6,6 +6,7 @@ from maxo.types.comment_linked_message import CommentLinkedMessage
 from maxo.types.comment_message_body import CommentMessageBody
 from maxo.types.facades.comment import CommentMethodsFacade
 from maxo.types.message import Message
+from maxo.types.message_stat import MessageStat
 from maxo.types.recipient import Recipient
 from maxo.types.user import User
 
@@ -19,6 +20,7 @@ class CommentMessage(Message, CommentMethodsFacade):
         link: Комментарий, на который получен ответ
         recipient: Получатель сообщения: для комментариев - канал
         sender: Пользователь, отправивший комментарий. Может быть `null`, если сообщение было опубликовано от имени канала
+        stat: Статистика просмотров постов и репостов - возвращается только для каналов
         timestamp: Время создания сообщения в формате Unix timestamp в миллисекундах
     """
 
@@ -33,6 +35,8 @@ class CommentMessage(Message, CommentMethodsFacade):
     """Комментарий, на который получен ответ"""
     sender: Omittable[User | None] = Omitted()
     """Пользователь, отправивший комментарий. Может быть `null`, если сообщение было опубликовано от имени канала"""
+    stat: Omittable[MessageStat | None] = Omitted()
+    """Статистика просмотров постов и репостов - возвращается только для каналов"""
 
     @property
     def unsafe_link(self) -> CommentLinkedMessage:
@@ -52,4 +56,14 @@ class CommentMessage(Message, CommentMethodsFacade):
         raise AttributeIsEmptyError(
             obj=self,
             attr="sender",
+        )
+
+    @property
+    def unsafe_stat(self) -> MessageStat:
+        if is_defined(self.stat):
+            return self.stat
+
+        raise AttributeIsEmptyError(
+            obj=self,
+            attr="stat",
         )

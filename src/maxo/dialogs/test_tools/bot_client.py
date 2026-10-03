@@ -5,11 +5,12 @@ from unittest.mock import AsyncMock
 
 from maxo import Bot, Dispatcher
 from maxo.bot.state import RunningBotState
-from maxo.enums import ChatStatus, ChatType, MessageLinkType
-from maxo.omit import Omitted, is_defined
+from maxo.enums import ChatAdminPermission, ChatStatus, ChatType, MessageLinkType
+from maxo.omit import Omittable, Omitted, is_defined
 from maxo.routing.signals import MaxoUpdate
 from maxo.types import (
     BotAddedToChat,
+    BotAdminPermissionsChanged,
     BotInfo,
     Callback,
     CallbackButton,
@@ -273,6 +274,26 @@ class BotClient:
                     chat_id=self.chat.chat_id,
                     is_channel=self.chat.type == ChatType.CHANNEL,
                     user=self.user,
+                    timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
+                ).as_(self.bot),
+            ),
+            self.bot,
+        )
+
+    async def bot_admin_permissions_changed(
+        self,
+        permissions: Omittable[list[ChatAdminPermission] | None] = Omitted(),
+        is_admin: bool = True,
+    ) -> Any:
+        return await self.dp.feed_update(
+            MaxoUpdate(
+                update=BotAdminPermissionsChanged(
+                    chat_id=self.chat.chat_id,
+                    user_id=self.user.user_id,
+                    bot_id=self.bot.state.info.user_id,
+                    is_channel=self.chat.type == ChatType.CHANNEL,
+                    is_admin=is_admin,
+                    permissions=permissions,
                     timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
                 ).as_(self.bot),
             ),

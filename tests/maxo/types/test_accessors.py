@@ -1450,6 +1450,7 @@ def test_comment_accessors() -> None:
         timestamp=NOW,
         link=link,
         sender=sender,
+        stat=MessageStat(views=5),
     )
     new_body = NewCommentBody(format=TextFormat.HTML)
 
@@ -1462,6 +1463,7 @@ def test_comment_accessors() -> None:
     assert comment_removed.unsafe_post_id == "post"
     assert comment.unsafe_link is link
     assert comment.unsafe_sender is sender
+    assert comment.unsafe_stat == MessageStat(views=5)
     assert new_body.unsafe_format is TextFormat.HTML
 
     with pytest.raises(AttributeIsEmptyError):
@@ -1496,6 +1498,12 @@ def test_comment_accessors() -> None:
             recipient=recipient,
             timestamp=NOW,
         ).unsafe_sender
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentMessage(
+            body=body,
+            recipient=recipient,
+            timestamp=NOW,
+        ).unsafe_stat
     with pytest.raises(AttributeIsEmptyError):
         _ = MessageRemoved(
             chat_id=10,
