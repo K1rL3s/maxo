@@ -78,6 +78,13 @@ async def test_fails_on_demoted_bot() -> None:
     permission_filter = ChatAdminPermissionFilter(ChatAdminPermission.WRITE)
 
     assert await permission_filter(make_update(is_admin=False), Ctx({})) is False
+    assert (
+        await permission_filter(
+            make_update([ChatAdminPermission.WRITE], is_admin=False),
+            Ctx({}),
+        )
+        is False
+    )
     assert await permission_filter(make_update(None), Ctx({})) is False
     assert await permission_filter(make_update([]), Ctx({})) is False
 

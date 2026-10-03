@@ -78,21 +78,19 @@ def _merge_parameters(
     extra: list[Any],
     path: tuple[str, ...],
 ) -> list[Any]:
-    by_name = {
-        item["name"]: item
-        for item in extra
-        if isinstance(item, dict) and "name" in item
+    extra_by_key = {
+        key: item for item in extra if (key := _parameter_key(item)) is not None
     }
     merged = [
         (
-            _merge(item, by_name[item["name"]], path)
-            if isinstance(item, dict) and item.get("name") in by_name
+            _merge(item, extra_by_key[key], path)
+            if (key := _parameter_key(item)) in extra_by_key
             else item
         )
         for item in base
     ]
-    known = {item["name"] for item in base if isinstance(item, dict) and "name" in item}
-    merged.extend(item for name, item in by_name.items() if name not in known)
+    known = {_parameter_key(item) for item in base}
+    merged.extend(item for key, item in extra_by_key.items() if key not in known)
     return merged
 
 
@@ -102,3 +100,9 @@ def _extendable(path: tuple[str, ...]) -> bool:
     if path == ("components", "schemas"):
         return True
     return bool(path) and path[-1] == "properties"
+
+
+def _parameter_key(item: object) -> tuple[str, str] | None:
+    if isinstance(item, dict) and "name" in item:
+        return item["name"], item.get("in", "")
+    return None

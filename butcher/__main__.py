@@ -38,12 +38,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    extra_spec = args.extra_spec or None
-    if extra_spec is not None and not Path(extra_spec).exists():
-        print(f"Дополняющая спека {extra_spec} не найдена, генерирую по {args.spec}.")
-        extra_spec = None
-
-    document = build_profile(load(args.spec, extra_spec))
+    document = build_profile(load(args.spec, args.extra_spec or None))
     written = write(document, Path(args.output_dir))
 
     print(

@@ -110,6 +110,8 @@ async def test_get_messages_no_params(
     await facade.get_messages()
 
     mock_bot.get_messages.assert_called_once_with(
+        after=Omitted(),
+        before=Omitted(),
         chat_id=12345,
         count=Omitted(),
         from_=Omitted(),
@@ -125,6 +127,8 @@ async def test_get_messages_with_count(
     await facade.get_messages(count=20)
 
     mock_bot.get_messages.assert_called_once_with(
+        after=Omitted(),
+        before=Omitted(),
         chat_id=12345,
         count=20,
         from_=Omitted(),
@@ -143,6 +147,8 @@ async def test_get_messages_with_datetime_params(
     await facade.get_messages(from_=from_time, to=to_time)
 
     mock_bot.get_messages.assert_called_once_with(
+        after=Omitted(),
+        before=Omitted(),
         chat_id=12345,
         count=Omitted(),
         from_=from_time,
@@ -158,6 +164,8 @@ async def test_get_messages_with_message_ids(
     await facade.get_messages(message_ids=["mid1", "mid2", "mid3"])
 
     mock_bot.get_messages.assert_called_once_with(
+        after=Omitted(),
+        before=Omitted(),
         chat_id=12345,
         count=Omitted(),
         from_=Omitted(),
@@ -259,3 +267,22 @@ async def test_send_message_with_keyboard_only(facade: MockChatFacade) -> None:
         await facade.send_message(text="With keyboard", keyboard=keyboard)
 
         mock_build.assert_called_once_with(base=[], keyboard=keyboard, files=None)
+
+
+async def test_get_messages_with_time_bounds(
+    facade: MockChatFacade,
+    mock_bot: MagicMock,
+) -> None:
+    before = datetime(2026, 1, 31, tzinfo=UTC)
+
+    await facade.get_messages(after=NOW, before=before)
+
+    mock_bot.get_messages.assert_called_once_with(
+        after=NOW,
+        before=before,
+        chat_id=12345,
+        count=Omitted(),
+        from_=Omitted(),
+        message_ids=Omitted(),
+        to=Omitted(),
+    )

@@ -142,3 +142,14 @@ def test_merge_does_not_mutate_arguments() -> None:
 
     assert BASE["components"]["schemas"]["SenderAction"]["enum"] == ["typing_on"]
     assert "stat" not in BASE["components"]["schemas"]["Message"]["properties"]
+
+
+def test_merge_tells_parameters_apart_by_location() -> None:
+    query_id = {"name": "id", "in": "query", "description": "ID в запросе"}
+    path_id = {"name": "id", "in": "path", "nullable": True}
+    base = {"paths": {"/items": {"get": {"parameters": [query_id]}}}}
+    extra = {"paths": {"/items": {"get": {"parameters": [path_id]}}}}
+
+    merged = merge_specs(base, extra)
+
+    assert merged["paths"]["/items"]["get"]["parameters"] == [query_id, path_id]

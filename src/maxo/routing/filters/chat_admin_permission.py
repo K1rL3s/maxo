@@ -23,7 +23,7 @@ class ChatAdminPermissionFilter(BaseFilter[BotAdminPermissionsChanged]):
         return self._signature_to_string(*sorted(self._permissions))
 
     async def __call__(self, update: BotAdminPermissionsChanged, ctx: Ctx) -> bool:
-        if not is_defined(update.permissions):
+        if not update.is_admin or not is_defined(update.permissions):
             return False
 
         granted = {self._to_canon(granted) for granted in update.permissions}
