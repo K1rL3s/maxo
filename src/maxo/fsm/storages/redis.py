@@ -49,6 +49,15 @@ from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
 
 
 class RedisStorage(BaseStorage):
+    __slots__ = (
+        "data_ttl",
+        "json_dumps",
+        "json_loads",
+        "key_builder",
+        "redis",
+        "state_ttl",
+    )
+
     def __init__(
         self,
         redis: Redis,
