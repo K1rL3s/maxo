@@ -34,6 +34,21 @@ class LongPolling:
         self._backoff_config = backoff_config
         self._lock = asyncio.Lock()
 
+    async def _feed_shutdown_signal(
+        self,
+        signal: BeforeShutdown | AfterShutdown,
+        bot: Bot,
+    ) -> None:
+        try:
+            await self._dispatcher.feed_signal(signal, bot)
+        except Exception as exception:  # noqa: BLE001
+            loggers.dispatcher.exception(
+                "%s handler failed - %s: %s",
+                type(signal).__name__,
+                type(exception).__name__,
+                exception,
+            )
+
     def run(
         self,
         bot: Bot,
@@ -87,67 +102,76 @@ class LongPolling:
 
             await dispatcher.feed_signal(BeforeStartup(), bot)
 
-            async with bot.context(auto_close=auto_close_bot):
-                loggers.dispatcher.info(
-                    "Polling started for @%s id=%s",
-                    bot.state.info.username,
-                    bot.state.info.user_id,
-                )
-
-                if clear_subscriptions:
-                    cleared = await bot.clear_subscriptions()
-                    loggers.long_polling.info(
-                        "Удалено WebHook-подписок перед запуском Long Polling (%d): %s",
-                        len(cleared.removed),
-                        [subscription.url for subscription in cleared.removed],
-                    )
-                else:
+            # Почему так: https://github.com/K1rL3s/maxo/pull/310
+            shutdown_started = False
+            try:
+                async with bot.context(auto_close=auto_close_bot):
                     try:
-                        subscriptions = await bot.get_subscriptions()
-                    except Exception as exception:  # noqa: BLE001
-                        loggers.long_polling.warning(
-                            "Не удалось проверить WebHook-подписки перед "
-                            "запуском Long Polling - %s: %s",
-                            type(exception).__name__,
-                            exception,
+                        loggers.dispatcher.info(
+                            "Polling started for @%s id=%s",
+                            bot.state.info.username,
+                            bot.state.info.user_id,
                         )
-                    else:
-                        if subscriptions.subscriptions:
-                            loggers.long_polling.warning(
-                                "У бота @%s есть активные WebHook-подписки (%d). "
-                                "Они не были очищены перед запуском Long Polling. "
-                                "Передайте clear_subscriptions=True, чтобы удалить их.",
-                                bot.state.info.username,
-                                len(subscriptions.subscriptions),
+
+                        if clear_subscriptions:
+                            cleared = await bot.clear_subscriptions()
+                            loggers.long_polling.info(
+                                "Удалено WebHook-подписок перед запуском "
+                                "Long Polling (%d): %s",
+                                len(cleared.removed),
+                                [subscription.url for subscription in cleared.removed],
                             )
+                        else:
+                            try:
+                                subscriptions = await bot.get_subscriptions()
+                            except Exception as exception:  # noqa: BLE001
+                                loggers.long_polling.warning(
+                                    "Не удалось проверить WebHook-подписки "
+                                    "перед запуском Long Polling - %s: %s",
+                                    type(exception).__name__,
+                                    exception,
+                                )
+                            else:
+                                if subscriptions.subscriptions:
+                                    loggers.long_polling.warning(
+                                        "У бота @%s есть активные "
+                                        "WebHook-подписки (%d). Они не были "
+                                        "очищены перед запуском Long Polling. "
+                                        "Передайте clear_subscriptions=True, "
+                                        "чтобы удалить их.",
+                                        bot.state.info.username,
+                                        len(subscriptions.subscriptions),
+                                    )
 
-                await dispatcher.feed_signal(AfterStartup(), bot)
+                        await dispatcher.feed_signal(AfterStartup(), bot)
 
-                updates_poller = self._get_updates(
-                    bot=bot,
-                    timeout=timeout,
-                    limit=limit,
-                    marker=marker,
-                    types=used_types or Omitted(),
-                    drop_pending_updates=drop_pending_updates,
-                )
+                        updates_poller = self._get_updates(
+                            bot=bot,
+                            timeout=timeout,
+                            limit=limit,
+                            marker=marker,
+                            types=used_types or Omitted(),
+                            drop_pending_updates=drop_pending_updates,
+                        )
 
-                with contextlib.suppress(KeyboardInterrupt):
-                    async with asyncio.TaskGroup() as tg:
-                        async for update in updates_poller:
-                            tg.create_task(  # type: ignore[unused-awaitable]
-                                dispatcher.feed_max_update(update, bot),
-                            )
+                        with contextlib.suppress(KeyboardInterrupt):
+                            async with asyncio.TaskGroup() as tg:
+                                async for update in updates_poller:
+                                    tg.create_task(  # type: ignore[unused-awaitable]
+                                        dispatcher.feed_max_update(update, bot),
+                                    )
+                    finally:
+                        shutdown_started = True
+                        await self._feed_shutdown_signal(BeforeShutdown(), bot)
 
-                await dispatcher.feed_signal(BeforeShutdown(), bot)
-
-                loggers.dispatcher.info(
-                    "Polling stop for @%s bot id=%s",
-                    bot.state.info.username,
-                    bot.state.info.user_id,
-                )
-
-        await dispatcher.feed_signal(AfterShutdown())
+                        loggers.dispatcher.info(
+                            "Polling stop for @%s bot id=%s",
+                            bot.state.info.username,
+                            bot.state.info.user_id,
+                        )
+            finally:
+                if shutdown_started:
+                    await self._feed_shutdown_signal(AfterShutdown(), bot)
 
     async def _get_updates(
         self,
