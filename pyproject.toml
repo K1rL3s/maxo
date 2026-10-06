@@ -290,7 +290,6 @@ ignore = [
 "src/maxo/enums/*.py" = ["E501", "D", "W291", "W293"]
 "src/maxo/bot/methods/*.py" = ["E501", "D", "W291", "W293"]
 "src/maxo/dialogs/test_tools/**/*.py" = ["S101"]
-"src/maxo/serialization.py" = ["PLW0603"]
 
 [tool.ruff.lint.isort]
 case-sensitive = true
