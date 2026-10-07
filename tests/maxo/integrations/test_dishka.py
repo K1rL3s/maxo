@@ -1,7 +1,9 @@
+import inspect
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from dishka import (
+    AsyncContainer,
     FromDishka,
     Provider,
     Scope,
@@ -11,7 +13,7 @@ from dishka import (
 
 from maxo import Bot, Dispatcher
 from maxo.enums import ChatType
-from maxo.integrations.dishka import setup_dishka
+from maxo.integrations.dishka import CONTAINER_NAME, inject, setup_dishka
 from maxo.routing.signals.startup import BeforeStartup
 from maxo.routing.signals.update import MaxoUpdate
 from maxo.types import Message, MessageBody, MessageCreated, Recipient
@@ -82,6 +84,21 @@ async def test_dishka_auto_inject(update: MessageCreated, bot: Bot) -> None:
     # 8. Assert
     handler_mock.assert_awaited_once_with("mocked_done")
     await container.close()
+
+
+def test_inject_additional_container_param_annotated_as_async_container() -> None:
+    # Regression test for #301: the synthetic `dishka_container` parameter
+    # added by `inject` must be annotated as `dishka.AsyncContainer`, not
+    # `collections.abc.Container`. `wrap_injection` only exposes additional
+    # params in `__signature__` when the function has at least one real
+    # `FromDishka` dependency, so the handler below needs one.
+    async def handler(service: FromDishka[MyService]) -> None:
+        del service
+
+    wrapped = inject(handler)
+    param = inspect.signature(wrapped).parameters[CONTAINER_NAME]
+
+    assert param.annotation is AsyncContainer
 
 
 async def test_dishka_no_auto_inject(update: MessageCreated, bot: Bot) -> None:
