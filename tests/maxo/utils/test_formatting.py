@@ -127,6 +127,12 @@ class TestNode:
         node = Text("Hello, ", Bold("World"), "!")
         assert node.as_markdown() == r"Hello, **World**\!"
 
+    def test_blockquote_as_markdown_trailing_newline(self) -> None:
+        # Regression for #304: a trailing newline in the quoted text used
+        # to be silently dropped by MarkdownDecoration.blockquote.
+        node = BlockQuote("a\n")
+        assert node.as_markdown() == "> a\n> "
+
     def test_replace(self) -> None:
         node0 = Text("test0", param0="test1")
         node1 = node0.replace("test1", "test2", param1="test1")
