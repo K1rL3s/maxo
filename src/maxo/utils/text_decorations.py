@@ -217,7 +217,8 @@ class MarkdownDecoration(TextDecoration):
     MARKDOWN_QUOTE_PATTERN: Pattern[str] = re.compile(r"([_*\[\]()~`>#+\-=|{}.!\\^])")
 
     def blockquote(self, value: str) -> str:
-        return "\n".join(f"> {line}" for line in value.splitlines())
+        normalized = value.replace("\r\n", "\n").replace("\r", "\n")
+        return "\n".join(f"> {line}" for line in normalized.split("\n"))
 
     def emphasized(self, value: str) -> str:
         return f"_{value}_"
