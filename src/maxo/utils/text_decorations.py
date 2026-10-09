@@ -217,11 +217,7 @@ class MarkdownDecoration(TextDecoration):
     MARKDOWN_QUOTE_PATTERN: Pattern[str] = re.compile(r"([_*\[\]()~`>#+\-=|{}.!\\^])")
 
     def blockquote(self, value: str) -> str:
-        # CommonMark считает концом строки \n, \r\n и одиночный \r - нормализуем
-        # все три к \n перед разбиением, иначе строка после одиночного \r
-        # осталась бы внутри той же "строки" и не получила бы маркер цитаты.
-        normalized = value.replace("\r\n", "\n").replace("\r", "\n")
-        return "\n".join(f"> {line}" for line in normalized.split("\n"))
+        return "\n".join(f"> {line}" for line in value.splitlines())
 
     def emphasized(self, value: str) -> str:
         return f"_{value}_"
