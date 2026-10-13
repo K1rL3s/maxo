@@ -70,8 +70,7 @@
 - `Chat.chat_message_id: Omittable[str | None]` + `unsafe_chat_message_id`.
 - `ShareAttachment.payload` - `field(default_factory=ShareAttachmentPayload)`
   вместо обязательного поля.
-- `MessageCallback` - `# type: ignore[misc]` на классе, `message: Message | None`
-  с `# type: ignore[assignment]`. Импорты фасадов (`maxo.types.facades.callback`,
+- `MessageCallback` - `# type: ignore[misc]` на классе. Импорты фасадов (`maxo.types.facades.callback`,
   `maxo.types.facades.message`) генерирует сам butcher по `FACADE_MODULES` в
   `overrides.py` - руками их поправлять больше не нужно.
 
@@ -109,11 +108,13 @@
 ## Реестры и compat-слои, о которых легко не узнать
 
 Генерация их не трогает, но по ним расходится ручная регистрация новых
-апдейтов и фасадов. Полный порядок действий - в карте касаний `SKILL.md`.
+апдейтов и фасадов. Полный порядок действий - в `butcher/AGENTS.md`.
 
 - `src/maxo/serialization.py` - `TAG_PROVIDERS`, регистрация полиморфных типов
   в retort. Union-алиасы генерируются, а эта таблица - нет.
 - `src/maxo/bot/warming_up.py` - кортежи `_types` и `_methods`.
+- `src/maxo/serialization.py` - `TypesWithFormat` и `TypesWithLinkPreview`,
+  методы, которым подставляются `BotDefaults`.
 - `src/maxo/types/facades/attachments.py` - `MEDIA_ATTACHMENT_FACTORIES`,
   карта `UploadType` -> `factory` для заливаемых медиа.
 - `src/maxo/routing/middlewares/update_context.py` - ветки `isinstance`,
@@ -135,5 +136,6 @@
 **Вердикт: в рамках обновления контракта такой дрейф не чинится.** Если файл не
 попал в дельту двух генераций - не трогай его, даже если видишь расхождение.
 Это отдельная задача и отдельный коммит: смена типа публичного поля ломает
-пользовательский код и требует своего решения мейнтейнера. На шаге 9 такие
-файлы обязаны остаться в списке расходящихся - это норма.
+пользовательский код и требует своего решения мейнтейнера. При сверке с
+`.butcher/check` такие файлы обязаны остаться в списке расходящихся - это
+норма.
