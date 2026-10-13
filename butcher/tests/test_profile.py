@@ -264,7 +264,7 @@ def test_model_field_override(
     document = build_profile(load(str(path)))
     url = next(f for f in _model(document, "Message").fields if f.name == "url")
     assert url.omittable
-    assert url.annotation == "CommentMessage"
+    assert url.annotation == "CommentMessage | None"
     assert url.comment == "type: ignore[assignment]"
 
 

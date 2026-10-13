@@ -450,7 +450,11 @@ class _Profile:
         override = overrides.MODEL_FIELD_OVERRIDES.get((class_name, ir_field.name))
         field_type = self._field_type(ir_field)
         if override is not None and override.ref is not None:
-            field_type = RefType(override.ref)
+            ref_type = RefType(override.ref)
+            if isinstance(field_type, OptionalType):
+                field_type = OptionalType(ref_type)
+            else:
+                field_type = ref_type
         annotation = self._annotate(field_type, imports)
         # Дефолты свагера игнорируем: необязательное поле - это `Omitted()`.
         omittable = not ir_field.required
