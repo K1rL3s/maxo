@@ -154,6 +154,7 @@ MODEL_FIELD_OVERRIDES: dict[tuple[str, str], FieldOverride] = {
     # required. Сужение жило в src ручной правкой - переносим в оверрайды,
     # иначе следующая генерация снесёт его вместе с `unsafe_name`.
     ("User", "name"): FieldOverride(omittable=True),
+    ("VideoAttachmentDetails", "thumbnail"): FieldOverride(ref="VideoThumbnail"),
 }
 
 

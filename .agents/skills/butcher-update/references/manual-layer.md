@@ -83,6 +83,12 @@
 наследует `MessageMethodsFacade`: поэтому общий API сообщения сохраняется, а
 `answer()` использует методы комментариев.
 
+`VideoAttachmentDetails.thumbnail` в Swagger ссылается на
+`PhotoAttachmentPayload` с обязательными `photo_id` и `token`, а
+`GET /videos/{videoToken}` присылает только `{"url": ...}`, и ответ не
+загружается. Поэтому `FieldOverride(ref="VideoThumbnail")` - тот же тип, что у
+`VideoAttachment.thumbnail`.
+
 ## Хвосты методов
 
 - `GetUpdates` - объявление класса с `slots=False` и метод `make_response`

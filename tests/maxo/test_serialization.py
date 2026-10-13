@@ -36,6 +36,8 @@ from maxo.types import (
     NewMessageBody,
     UpdateList,
     User,
+    VideoAttachmentDetails,
+    VideoThumbnail,
 )
 from maxo.types.base import MaxoType
 from tests.factories import make_bot
@@ -374,3 +376,21 @@ def test_retort_loads_bot_admin_permissions_changed() -> None:
         ChatAdminPermission.CAN_CALL,
     ]
     assert retort.dump(update)["update_type"] == "bot_admin_permissions_changed"
+
+
+def test_retort_loads_video_details_with_url_only_thumbnail() -> None:
+    retort = create_retort(warming_up=False)
+
+    details = retort.load(
+        {
+            "token": "video-token",
+            "width": 320,
+            "height": 240,
+            "duration": 7000,
+            "urls": {"mp4_240": "https://example.com/video.mp4"},
+            "thumbnail": {"url": "https://example.com/thumb.jpg"},
+        },
+        VideoAttachmentDetails,
+    )
+
+    assert details.thumbnail == VideoThumbnail(url="https://example.com/thumb.jpg")

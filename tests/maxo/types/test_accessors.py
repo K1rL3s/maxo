@@ -63,7 +63,6 @@ from maxo.types import (
     NewMessageLink,
     OpenAppButton,
     PhotoAttachment,
-    PhotoAttachmentPayload,
     PhotoAttachmentRequest,
     PhotoAttachmentRequestPayload,
     PhotoToken,
@@ -677,11 +676,7 @@ def test_video_urls_and_details_accessors() -> None:
         height=2,
         token=TOKEN,
         width=3,
-        thumbnail=PhotoAttachment.factory(
-            photo_id=1,
-            token=TOKEN,
-            url="thumbnail",
-        ).payload,
+        thumbnail=VideoThumbnail(url="thumbnail"),
         urls=urls,
     )
 
@@ -1021,11 +1016,7 @@ def test_media_and_message_models() -> None:
         height=1080,
         token=DETAILS_ID,
         width=1920,
-        thumbnail=PhotoAttachmentPayload(
-            photo_id=1,
-            token=PHOTO_ATTACHMENT_ID,
-            url="https://example.com/video.png",
-        ),
+        thumbnail=VideoThumbnail(url="https://example.com/video.png"),
         urls=VideoUrls(mp4_720="https://example.com/720.mp4"),
     )
     video_urls = VideoUrls(mp4_720="https://example.com/720.mp4")
