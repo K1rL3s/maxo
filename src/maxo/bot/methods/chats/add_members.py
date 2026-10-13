@@ -7,10 +7,6 @@ class AddMembers(MaxoMethod[ModifyMembersResult]):
     """
     Добавление участников в групповой чат
 
-    > ! **С 9 сентября 2026** работа метода `POST /chats/{chatId}/members` будет ограничена, а **с 30 сентября 2026** он будет удалён
-
-     С 30 сентября API MAX не предоставляет готовой возможности для добавления участников в групповой чат. Однако мы постоянно работаем над расширением функциональности API - следите за обновлениями документации
-
     Добавляет участников в групповой чат
 
      Бот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата с соответствующим правом `add_remove_members`. Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах - в описании [`POST /chats/{chatId}/members/admins`](https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора)
@@ -28,7 +24,7 @@ class AddMembers(MaxoMethod[ModifyMembersResult]):
     ```
 
     Args:
-        chat_id: ID группового чата
+        chat_id: ID группового чата. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         user_ids: Массив ID пользователей, которых вы хотите добавить в групповой чат. В одном запросе можно передать максимум 100 идентификаторов
 
     Источник: https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members
@@ -38,7 +34,7 @@ class AddMembers(MaxoMethod[ModifyMembersResult]):
     __method__ = "post"
 
     chat_id: Path[int]
-    """ID группового чата"""
+    """ID группового чата. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
 
     user_ids: Body[list[int]]
     """Массив ID пользователей, которых вы хотите добавить в групповой чат. В одном запросе можно передать максимум 100 идентификаторов"""

@@ -20,7 +20,7 @@ class RemoveMember(MaxoMethod[SimpleQueryResult]):
 
     Args:
         block: Если передать `true`, пользователь будет заблокирован в чате. Применяется только для чатов с публичной или приватной ссылкой. Игнорируется в остальных случаях
-        chat_id: ID группового чата или канала
+        chat_id: ID группового чата или канала. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         user_id: ID пользователя, которого нужно удалить из группового чата или канала
 
     Источник: https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/members
@@ -30,7 +30,7 @@ class RemoveMember(MaxoMethod[SimpleQueryResult]):
     __method__ = "delete"
 
     chat_id: Path[int]
-    """ID группового чата или канала"""
+    """ID группового чата или канала. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
 
     user_id: Query[int]
     """ID пользователя, которого нужно удалить из группового чата или канала"""

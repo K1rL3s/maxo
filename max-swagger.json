@@ -6,7 +6,7 @@
         "license": {
             "name": "Apache 2.0"
         },
-        "description": "# About\nBot API allows bots to interact with Max. Methods are called by sending HTTPS requests to [platform-api2.max.ru](https://platform-api2.max.ru) domain.\nBots are third-party applications that use Max features. A bot can legitimately take part in a conversation. It can be achieved through HTTP requests to the Max Bot API.\n\n## Features\nMax bots of the current version are able to:\n- Communicate with users and respond to requests\n- Recommend users complete actions via programmed buttons\n- Request personal data from users (name, short reference, phone number)\nWe'll keep working on expanding bot capabilities in the future.\n\n## Examples\nBots can be used for the following purposes:\n- Providing support, answering frequently asked questions\n- Sending typical information\n- Voting\n- Likes/dislikes\n- Following external links\n- Forwarding a user to a chat/channel\n\n## HTTP verbs\n`GET` &mdash; getting resources, parameters are transmitted via URL\n\n`POST` &mdash; creation of resources (for example, sending new messages)\n\n`PUT` &mdash; editing resources\n\n`DELETE` &mdash; deleting resources\n\n`PATCH` &mdash; patching resources\n\n## HTTP response codes\n`200` &mdash; successful operation\n\n`400` &mdash; invalid request\n\n`401` &mdash; authentication error\n\n`404` &mdash; resource not found\n\n`405` &mdash; method is not allowed\n\n`429` &mdash; the number of requests is exceeded\n\n`503` &mdash; service unavailable\n\n## Resources format\nFor content requests (PUT and POST) and responses, the API uses the JSON format.\nAll strings are UTF-8 encoded.\nDate/time fields are represented as the number of milliseconds that have elapsed since 00:00 January 1, 1970 in the long format. To get it, you can simply multiply the UNIX timestamp by 1000. All date/time fields have a UTC timezone.\n## Error responses\nIn case of an error, the API returns a response with the corresponding HTTP code and JSON with the following fields:\n\n`code` - the string with the error key\n\n`message` - a string describing the error </br>\n\nFor example:\n```bash\n> http https://platform-api2.max.ru/chats?access_token={EXAMPLE_TOKEN}\nHTTP / 1.1 403 Forbidden\nCache-Control: no-cache\nConnection: Keep-Alive\nContent-Length: 57\nContent-Type: application / json; charset = utf-8\nSet-Cookie: web_ui_lang = ru; Path = /; Domain = .max.ru; Expires = 2019-03-24T11: 45: 36.500Z\n{\n   \"code\": \"verify.token\",\n   \"message\": \"Invalid access_token\"\n}\n```\n## Receiving notifications\nMax Bot API supports 2 options of receiving notifications on new events for bots:\n- Push notifications via WebHook. To receive data via WebHook, you'll have to [add subscription](https://dev.max.ru/docs-api/methods/POST/subscriptions);\n- Notifications upon request via [long polling](/docs-api/methods/GET/updates) API. All data can be received via long polling **by default** after creating the bot.\n\nBoth methods **cannot** be used simultaneously.\nRefer to the response schema of [GET:/updates](https://dev.max.ru/docs-api/methods/GET/updates) method to check all available types of updates.\n\n### Webhook\nThere is some notes about how we handle webhook subscription:\n1. Sometimes webhook notification cannot be delivered in case when bot server or network is down.\n\n  In such case we well retry delivery in a short period of time (from 30 to 60 seconds) and will do this until get\n  `200 OK` status code from your server, but not longer than **8 hours** (*may change over time*) since update happened.\n\n  We also consider any non `200`-response from server as failed delivery.\n\n2. To protect your bot from unexpected high load we send **no more than 100** notifications per second by default.\n  If you want increase this limit, contact us at [@support](https://max.ru/support).\n\n\nIt should be from one of the following subnets:\n```\n185.16.150.0/30\n185.16.150.84/30\n185.16.150.152/30\n185.16.150.192/30\n```\n\n\n## Message buttons\nYou can program buttons for users answering a bot.\nMax supports the following types of buttons:\n\n`callback` &mdash; sends a notification with payload to a bot (via WebHook or long polling)\n\n`link` &mdash; makes a user to follow a link\n\n`request_contact` &mdash; requests the user permission to access contact information (phone number, short link, email)\n\n`request_geo_location` &mdash; asks user to provide current geo location\n\n`chat` &mdash; creates chat associated with message\n\nTo start create buttons [send message](/docs-api/methods/POST/messages) with `InlineKeyboardAttachment`:\n```json\n{\n  \"text\": \"It is message with inline keyboard\",\n  \"attachments\": [\n    {\n      \"type\": \"inline_keyboard\",\n      \"payload\": {\n        \"buttons\": [\n          [\n            {\n              \"type\": \"callback\",\n              \"text\": \"Press me!\",\n              \"payload\": \"button1 pressed\"\n            }\n          ],\n          [\n            {\n              \"type\": \"chat\",\n              \"text\": \"Discuss\",\n              \"chat_title\": \"Message discussion\"\n            }\n          ]\n        ]\n      }\n    }\n  ]\n}\n```\n### Chat button\nChat button is a button that starts chat assosiated with the current message. It will be **private** chat with a link, bot will be added as administrator by default.\n\nChat will be created as soon as the first user taps on button. Bot will receive `message_chat_created` update.\n\nBot can set title and description of new chat by setting `chat_title` and `chat_description` properties.\n\nWhereas keyboard can contain several `chat`-buttons there is `uuid` property to distinct them between each other.\nIn case you do not pass `uuid` we will generate it. If you edit message, pass `uuid` so we know that this button starts the same chat as before.\n\nChat button also can contain `start_payload` that will be sent to bot as part of `message_chat_created` update.\n\n## Deep linking\nMax supports deep linking mechanism for bots. It allows passing additional payload to the bot on startup.\nDeep link can contain any data encoded into string up to **512** characters long. Longer strings will be omitted and **not** passed to the bot.\n\nEach bot has start link that looks like:\n```\nhttps://max.ru/<botName>?start=<payload>\n```\nAs soon as user clicks on such link we open dialog with bot and send this payload to bot as part of `bot_started` update:\n```json\n{\n    \"update_type\": \"bot_started\",\n    \"timestamp\": 1573226679188,\n    \"chat_id\": 1234567890,\n    \"user\": {\n        \"user_id\": 1234567890,\n        \"name\": \"Boris\",\n        \"username\": \"borisd84\"\n    },\n    \"payload\": \"any data meaningful to bot\"\n}\n```\n\nDeep linking mechanism is supported for iOS version 2.7.0 and Android 2.9.0 and higher.\n\n## Text formatting\n\nMessage text can be improved with basic formatting such as: **strong**, *emphasis*, ~strikethough~, \n<ins>underline</ins>, `code` or link. You can use either markdown-like or HTML formatting.\n\nTo enable text formatting set the `format` property of [NewMessageBody](#tag/new_message_model).\n\n### Max flavored Markdown\nTo enable [Markdown](https://spec.commonmark.org/0.29/) parsing, set the `format` property of [NewMessageBody](#tag/new_message_model) to `markdown`.\n\nWe currently support only the following syntax:\n\n`*empasized*` or `_empasized_` for *italic* text\n\n`**strong**` or `__strong__` for __bold__ text\n\n`~~strikethough~~`  for ~strikethough~ text\n\n`++underline++`  for <ins>underlined</ins> text\n\n``` `code` ``` or ` ```code``` ` for `monospaced` text\n\n`^^important^^` for highlighted text (colored in red, by default)\n\n`[Inline URL](https://dev.max.ru/)` for inline URLs\n\n`[User mention](max://user/%user_id%)` for user mentions without username\n\n`# Header` for header\n\n### HTML support\n\nTo enable HTML parsing, set the `format` property of [NewMessageBody](#tag/new_message_model) to `html`.\n \nOnly the following HTML tags are supported. All others will be stripped:\n\nEmphasized: `<i>` or `<em>`\n\nStrong: `<b>` or `<strong>`\n\nStrikethrough: `<del>` or `<s>`\n\nUnderlined: `<ins>` or `<u>`\n\nLink: `<a href=\"https://dev.max.ru\">Docs</a>`\n\nMonospaced text: `<pre>` or `<code>`\n\nHighlighted text: `<mark>`\n\nHeader: `<h1>`\n\nText formatting is supported for iOS since version 3.1 and Android since 2.20.0.\n\n# Versioning\nAPI models and interface may change over time. To make sure your bot will get the right info, we strongly recommend adding API version number to each request. You can add it as `v` parameter to each HTTP-request. For instance, `v=0.1.2`.\nTo specify the data model version you are getting through WebHook subscription, use the `version` property in the request body of the [subscribe](https://dev.max.ru/docs-api/methods/POST/subscriptions) request.\n\n# Libraries\nWe have developed the official [Java client](https://github.com/tamtam-chat/tamtam-bot-api) and [SDK](https://github.com/tamtam-chat/tamtam-bot-sdk).\n\n# Changelog\nTo see changelog for older versions visit our [GitHub](https://github.com/tamtam-chat/tamtam-bot-api-schema/releases)."
+        "description": "# About\nBot API allows bots to interact with Max. Methods are called by sending HTTPS requests to [platform-api2.max.ru](https://platform-api2.max.ru) domain.\nBots are third-party applications that use Max features. A bot can legitimately take part in a conversation. It can be achieved through HTTP requests to the Max Bot API.\n\n## Features\nMax bots of the current version are able to:\n- Communicate with users and respond to requests\n- Recommend users complete actions via programmed buttons\n- Request personal data from users (name, short reference, phone number)\nWe'll keep working on expanding bot capabilities in the future.\n\n## Examples\nBots can be used for the following purposes:\n- Providing support, answering frequently asked questions\n- Sending typical information\n- Voting\n- Likes/dislikes\n- Following external links\n- Forwarding a user to a chat/channel\n\n## HTTP verbs\n`GET` &mdash; getting resources, parameters are transmitted via URL\n\n`POST` &mdash; creation of resources (for example, sending new messages)\n\n`PUT` &mdash; editing resources\n\n`DELETE` &mdash; deleting resources\n\n`PATCH` &mdash; patching resources\n\n## HTTP response codes\n`200` &mdash; successful operation\n\n`400` &mdash; invalid request\n\n`401` &mdash; authentication error\n\n`404` &mdash; resource not found\n\n`405` &mdash; method is not allowed\n\n`429` &mdash; the number of requests is exceeded\n\n`503` &mdash; service unavailable\n\n## Resources format\nFor content requests (PUT and POST) and responses, the API uses the JSON format.\nAll strings are UTF-8 encoded.\nDate/time fields are represented as the number of milliseconds that have elapsed since 00:00 January 1, 1970 in the long format. To get it, you can simply multiply the UNIX timestamp by 1000. All date/time fields have a UTC timezone.\n## Error responses\nIn case of an error, the API returns a response with the corresponding HTTP code and JSON with the following fields:\n\n`code` - the string with the error key\n\n`message` - a string describing the error </br>\n\nFor example:\n```bash\n> http https://platform-api2.max.ru/chats?access_token={EXAMPLE_TOKEN}\nHTTP / 1.1 403 Forbidden\nCache-Control: no-cache\nConnection: Keep-Alive\nContent-Length: 57\nContent-Type: application / json; charset = utf-8\nSet-Cookie: web_ui_lang = ru; Path = /; Domain = .max.ru; Expires = 2019-03-24T11: 45: 36.500Z\n{\n   \"code\": \"verify.token\",\n   \"message\": \"Invalid access_token\"\n}\n```\n## Receiving notifications\nMax Bot API supports 2 options of receiving notifications on new events for bots:\n- Push notifications via WebHook. To receive data via WebHook, you'll have to [add subscription](/docs-api/methods/POST/subscriptions);\n- Notifications upon request via [long polling](/docs-api/methods/GET/updates) API. All data can be received via long polling **by default** after creating the bot.\n\nBoth methods **cannot** be used simultaneously.\nRefer to the response schema of [GET:/updates](/docs-api/methods/GET/updates) method to check all available types of updates.\n\n### Webhook\nThere is some notes about how we handle webhook subscription:\n1. Sometimes webhook notification cannot be delivered in case when bot server or network is down.\n\n  In such case we well retry delivery in a short period of time (from 30 to 60 seconds) and will do this until get\n  `200 OK` status code from your server, but not longer than **8 hours** (*may change over time*) since update happened.\n\n  We also consider any non `200`-response from server as failed delivery.\n\n2. To protect your bot from unexpected high load we send **no more than 100** notifications per second by default.\n  If you want increase this limit, contact us at [@support](https://max.ru/support).\n\n\nIt should be from one of the following subnets:\n```\n185.16.150.0/30\n185.16.150.84/30\n185.16.150.152/30\n185.16.150.192/30\n```\n\n\n## Message buttons\nYou can program buttons for users answering a bot.\nMax supports the following types of buttons:\n\n`callback` &mdash; sends a notification with payload to a bot (via WebHook or long polling)\n\n`link` &mdash; makes a user to follow a link\n\n`request_contact` &mdash; requests the user permission to access contact information (phone number, short link, email)\n\n`request_geo_location` &mdash; asks user to provide current geo location\n\n`chat` &mdash; creates chat associated with message\n\nTo start create buttons [send message](/docs-api/methods/POST/messages) with `InlineKeyboardAttachment`:\n```json\n{\n  \"text\": \"It is message with inline keyboard\",\n  \"attachments\": [\n    {\n      \"type\": \"inline_keyboard\",\n      \"payload\": {\n        \"buttons\": [\n          [\n            {\n              \"type\": \"callback\",\n              \"text\": \"Press me!\",\n              \"payload\": \"button1 pressed\"\n            }\n          ],\n          [\n            {\n              \"type\": \"chat\",\n              \"text\": \"Discuss\",\n              \"chat_title\": \"Message discussion\"\n            }\n          ]\n        ]\n      }\n    }\n  ]\n}\n```\n### Chat button\nChat button is a button that starts chat assosiated with the current message. It will be **private** chat with a link, bot will be added as administrator by default.\n\nChat will be created as soon as the first user taps on button. Bot will receive `message_chat_created` update.\n\nBot can set title and description of new chat by setting `chat_title` and `chat_description` properties.\n\nWhereas keyboard can contain several `chat`-buttons there is `uuid` property to distinct them between each other.\nIn case you do not pass `uuid` we will generate it. If you edit message, pass `uuid` so we know that this button starts the same chat as before.\n\nChat button also can contain `start_payload` that will be sent to bot as part of `message_chat_created` update.\n\n## Deep linking\nMax supports deep linking mechanism for bots. It allows passing additional payload to the bot on startup.\nDeep link can contain any data encoded into string up to **512** characters long. Longer strings will be omitted and **not** passed to the bot.\n\nEach bot has start link that looks like:\n```\nhttps://max.ru/<botName>?start=<payload>\n```\nAs soon as user clicks on such link we open dialog with bot and send this payload to bot as part of `bot_started` update:\n```json\n{\n    \"update_type\": \"bot_started\",\n    \"timestamp\": 1573226679188,\n    \"chat_id\": 1234567890,\n    \"user\": {\n        \"user_id\": 1234567890,\n        \"name\": \"Boris\",\n        \"username\": \"borisd84\"\n    },\n    \"payload\": \"any data meaningful to bot\"\n}\n```\n\nDeep linking mechanism is supported for iOS version 2.7.0 and Android 2.9.0 and higher.\n\n## Text formatting\n\nMessage text can be improved with basic formatting such as: **strong**, *emphasis*, ~strikethough~, \n<ins>underline</ins>, `code` or link. You can use either markdown-like or HTML formatting.\n\nTo enable text formatting set the `format` property of [NewMessageBody](#tag/new_message_model).\n\n### Max flavored Markdown\nTo enable [Markdown](https://spec.commonmark.org/0.29/) parsing, set the `format` property of [NewMessageBody](#tag/new_message_model) to `markdown`.\n\nWe currently support only the following syntax:\n\n`*empasized*` or `_empasized_` for *italic* text\n\n`**strong**` or `__strong__` for __bold__ text\n\n`~~strikethough~~`  for ~strikethough~ text\n\n`++underline++`  for <ins>underlined</ins> text\n\n``` `code` ``` or ` ```code``` ` for `monospaced` text\n\n`^^important^^` for highlighted text (colored in red, by default)\n\n`[Inline URL](https://dev.max.ru/)` for inline URLs\n\n`[User mention](max://user/%user_id%)` for user mentions without username\n\n`# Header` for header\n\n### HTML support\n\nTo enable HTML parsing, set the `format` property of [NewMessageBody](#tag/new_message_model) to `html`.\n \nOnly the following HTML tags are supported. All others will be stripped:\n\nEmphasized: `<i>` or `<em>`\n\nStrong: `<b>` or `<strong>`\n\nStrikethrough: `<del>` or `<s>`\n\nUnderlined: `<ins>` or `<u>`\n\nLink: `<a href=\"https://dev.max.ru\">Docs</a>`\n\nMonospaced text: `<pre>` or `<code>`\n\nHighlighted text: `<mark>`\n\nHeader: `<h1>`\n\nText formatting is supported for iOS since version 3.1 and Android since 2.20.0.\n\n# Versioning\nAPI models and interface may change over time. To make sure your bot will get the right info, we strongly recommend adding API version number to each request. You can add it as `v` parameter to each HTTP-request. For instance, `v=0.1.2`.\nTo specify the data model version you are getting through WebHook subscription, use the `version` property in the request body of the [subscribe](/docs-api/methods/POST/subscriptions) request.\n\n# Libraries\nWe have developed the official [Java client](https://github.com/tamtam-chat/tamtam-bot-api) and [SDK](https://github.com/tamtam-chat/tamtam-bot-sdk).\n\n# Changelog\nTo see changelog for older versions visit our [GitHub](https://github.com/tamtam-chat/tamtam-bot-api-schema/releases)."
     },
     "servers": [
         {
@@ -171,7 +171,7 @@
                     "chats"
                 ],
                 "operationId": "getChats",
-                "description": "> ! Начиная **с июня 2026** метод `GET /chats` больше не поддерживается, и API не предоставляет готовой возможности для получения списка групповых чатов и каналов, в которые добавлен бот\n\n Если вам требуется получить для бота такой список, используйте [POST /subscriptions](/docs-api/methods/POST/subscriptions). При этом задача сбора, хранения и поддержки идентификаторов ложится на разработчика: он выбирает способ реализации исходя из своей инфраструктуры и сценария использования\n\n**Возможный алгоритм действий:**\n\n1. **Cоздайте подписку** через [POST /subscriptions](/docs-api/methods/POST/subscriptions) и укажите нужные типы событий в параметре `update_types[]`, например, `bot_added` или `bot_started`. Список поддерживаемых типов событий – в объекте [Update](/docs-api/objects/Update)\n\n2. **Получите `chat_id` в событии** – о том, как это сделать, см. в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)\n\n3. **Сохраните `chat_id`**:\n\n   - разверните на своей стороне хранилище данных\n   - при получении каждого события с `chat_id` — сохраните его, если он ещё не сохранён\n   - обработайте возможные дубли (одно и то же событие может прийти повторно)\n   - удалите `chat_id` при возникновении соответствующих событий, например, `bot_removed`\n\n4. **Используйте сохранённый `chat_id` для вызовов API**. После того как `chat_id` окажется в вашем хранилище, вы сможете использовать его во всех методах, где он требуется:\n\n   - [POST `/messages`](/docs-api/methods/POST/messages) — отправить сообщение в чат\n   - [GET `/chats/{chat_id}/members`](/docs-api/methods/GET/chats/-chatId-/members) — получить участников группового чата или канала\n   - [POST `/chats/{chat_id}/actions`](/docs-api/methods/POST/chats/-chatId-/actions) — отправить действия бота в групповой чат\n   - и любые другие методы, принимающие `chat_id` как параметр\n\n > Использование [Long Polling](/docs-api/use-cases/event-notifications#Long%C2%A0Polling) для получения списка чатов и каналов для бота не предусмотрено",
+                "description": "> ! Начиная **с июня 2026** метод `GET /chats` больше не поддерживается, и API не предоставляет готовой возможности для получения списка групповых чатов и каналов, в которые добавлен бот\n\n Если вам требуется получить для бота такой список, используйте [POST /subscriptions](/docs-api/methods/POST/subscriptions). При этом задача сбора, хранения и поддержки идентификаторов ложится на разработчика: он выбирает способ реализации исходя из своей инфраструктуры и сценария использования\n\n**Возможный алгоритм действий:**\n\n1. **Cоздайте подписку** через [POST /subscriptions](/docs-api/methods/POST/subscriptions) и укажите нужные типы событий в параметре `update_types[]`, например, `bot_added` или `bot_started`. Список поддерживаемых типов событий – в объекте [Update](/docs-api/objects/Update)\n\n2. **Получите `chat_id` в событии** – о том, как это сделать, см. [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)\n\n3. **Сохраните `chat_id`**:\n\n   - разверните на своей стороне хранилище данных\n   - при получении каждого события с `chat_id` — сохраните его, если он ещё не сохранён\n   - обработайте возможные дубли (одно и то же событие может прийти повторно)\n   - удалите `chat_id` при возникновении соответствующих событий, например, `bot_removed`\n\n4. **Используйте сохранённый `chat_id` для вызовов API**. После того как `chat_id` окажется в вашем хранилище, вы сможете использовать его во всех методах, где он требуется:\n\n   - [POST `/messages`](/docs-api/methods/POST/messages) — отправить сообщение в чат\n   - [GET `/chats/{chat_id}/members`](/docs-api/methods/GET/chats/-chatId-/members) — получить участников группового чата или канала\n   - [POST `/chats/{chat_id}/actions`](/docs-api/methods/POST/chats/-chatId-/actions) — отправить действия бота в групповой чат\n   - и любые другие методы, принимающие `chat_id` как параметр\n\n > Использование [Long Polling](/docs-api/use-cases/event-notifications#Long%C2%A0Polling) для получения списка чатов и каналов для бота не предусмотрено",
                 "summary": "Получение списка всех групповых чатов и каналов для бота"
             }
         },
@@ -187,7 +187,7 @@
                 "parameters": [
                     {
                         "name": "chatId",
-                        "description": "ID запрашиваемого группового чата или канала. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                        "description": "ID запрашиваемого группового чата или канала. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "required": true,
                         "in": "path",
                         "schema": {
@@ -227,7 +227,7 @@
                 "parameters": [
                     {
                         "name": "chatId",
-                        "description": "ID чата или канала",
+                        "description": "ID чата или канала. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "required": true,
                         "in": "path",
                         "schema": {
@@ -281,7 +281,7 @@
                 "parameters": [
                     {
                         "name": "chatId",
-                        "description": "ID чата",
+                        "description": "ID чата. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "required": true,
                         "in": "path",
                         "schema": {
@@ -325,7 +325,7 @@
                 "parameters": [
                     {
                         "name": "chatId",
-                        "description": "ID чата",
+                        "description": "ID чата. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "required": true,
                         "in": "path",
                         "schema": {
@@ -370,7 +370,7 @@
                 "parameters": [
                     {
                         "name": "chatId",
-                        "description": "ID группового чата или канала, где нужно закрепить сообщение",
+                        "description": "ID группового чата или канала, где нужно закрепить сообщение. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "required": true,
                         "in": "path",
                         "schema": {
@@ -418,7 +418,7 @@
                 "parameters": [
                     {
                         "name": "chatId",
-                        "description": "ID группового чата или канала, в котором нужно открепить сообщение или пост",
+                        "description": "ID группового чата или канала, в котором нужно открепить сообщение или пост. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "required": true,
                         "in": "path",
                         "schema": {
@@ -466,7 +466,7 @@
                 "parameters": [
                     {
                         "name": "chatId",
-                        "description": "ID группового чата или канала",
+                        "description": "ID группового чата или канала. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "required": true,
                         "in": "path",
                         "schema": {
@@ -512,7 +512,7 @@
                 "parameters": [
                     {
                         "name": "chatId",
-                        "description": "ID группового чата или канала",
+                        "description": "ID группового чата или канала. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "required": true,
                         "in": "path",
                         "schema": {
@@ -559,7 +559,7 @@
                 "parameters": [
                     {
                         "name": "chatId",
-                        "description": "ID группового чата или канала",
+                        "description": "ID группового чата или канала. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "required": true,
                         "in": "path",
                         "schema": {
@@ -604,7 +604,7 @@
                 "parameters": [
                     {
                         "name": "chatId",
-                        "description": "ID группового чата или канала",
+                        "description": "ID группового чата или канала. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "required": true,
                         "in": "path",
                         "schema": {
@@ -648,7 +648,7 @@
                 "parameters": [
                     {
                         "name": "chatId",
-                        "description": "ID группового чата или канала",
+                        "description": "ID группового чата или канала. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "required": true,
                         "in": "path",
                         "schema": {
@@ -699,7 +699,7 @@
                 "parameters": [
                     {
                         "name": "chatId",
-                        "description": "ID группового чата или канала",
+                        "description": "ID группового чата или канала. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "required": true,
                         "in": "path",
                         "schema": {
@@ -776,12 +776,12 @@
                 ],
                 "disable-notification": "<p style=\"margin: 8px 0 0 0;\"><strong>С 9 сентября 2026</strong> работа метода <code>POST /chats/{chatId}/members</code> будет ограничена, а <strong>с 30 сентября 2026</strong> он будет удалён</p><p style=\"margin: 8px 0 0 0;\">С 30 сентября API MAX не предоставляет готовой возможности для добавления участников в групповой чат. Однако мы постоянно работаем над расширением функциональности API — следите за обновлениями документации</p>",
                 "operationId": "addMembers",
-                "description": "> ! **С 9 сентября 2026** работа метода `POST /chats/{chatId}/members` будет ограничена, а **с 30 сентября 2026** он будет удалён\n\n С 30 сентября API MAX не предоставляет готовой возможности для добавления участников в групповой чат. Однако мы постоянно работаем над расширением функциональности API - следите за обновлениями документации\n\nДобавляет участников в групповой чат\n\n Бот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата с соответствующим правом `add_remove_members`. Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании [`POST /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора)\n\n >Добавить подписчиков в канал с помощью этого метода нельзя \n\n**Пример запроса**:\n```bash\ncurl -X POST \"https://platform-api2.max.ru/chats/{chatId}/members\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"user_ids\": [\"{user_id_1}\", \"{user_id_2}\"]\n}'\n```",
+                "description": "Добавляет участников в групповой чат\n\n Бот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата с соответствующим правом `add_remove_members`. Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании [`POST /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора)\n\n >Добавить подписчиков в канал с помощью этого метода нельзя \n\n**Пример запроса**:\n```bash\ncurl -X POST \"https://platform-api2.max.ru/chats/{chatId}/members\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"user_ids\": [\"{user_id_1}\", \"{user_id_2}\"]\n}'\n```",
                 "summary": "Добавление участников в групповой чат",
                 "parameters": [
                     {
                         "name": "chatId",
-                        "description": "ID группового чата",
+                        "description": "ID группового чата. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "required": true,
                         "in": "path",
                         "schema": {
@@ -836,7 +836,7 @@
                 "parameters": [
                     {
                         "name": "chatId",
-                        "description": "ID группового чата или канала",
+                        "description": "ID группового чата или канала. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "required": true,
                         "in": "path",
                         "schema": {
@@ -921,7 +921,7 @@
                     "subscriptions"
                 ],
                 "operationId": "subscribe",
-                "description": "Метод настраивает доставку событий бота через Webhook  — основной механизм получения событий в продуктовых интеграциях. При активной подписке Long Polling не работает \n\n> ! \n> - Для повышения безопасности **с 25 мая** прекращается поддержка получения вебхуков по HTTP, а также самоподписных сертификатов. Рекомендуем заранее перейти на HTTPS и сертификаты от доверенных центров, в том числе сертификаты Минцифры. Чтобы обновить подписку на события, используйте текущий метод\n> - Получение обновлений с помощью [Long Polling](/docs-api/methods/GET/updates) ограничено по скорости и сроку хранения событий — этот способ не подходит для production-окружения. Рекомендуем на всех этапах работы использовать [Webhook](/docs-api/methods/POST/subscriptions)\n\n ## Модель доставки событий\n\nПосле вызова метода `POST /subscriptions` события отправляются на указанный Webhook-endpoint в виде HTTPS POST-запросов с объектом [`Update`](https://dev.max.ru/docs-api/objects/Update)\n\nКак обрабатывается событие:\n\n1. При наступлении события выполняется вызов Webhook-endpoint\n2. Выполняется TLS-валидация целевого endpoint для безопасной передачи данных\n3. На endpoint отправляется HTTPS-запрос\n4. Если при создании подписки указан `secret`, проверяется заголовок `X-Max-Bot-Api-Secret` \n5. При успешной валидации возвращается HTTP `200 OK`\n6. Выполняется обработка события\n7. Инициируются вызовы MAX API\n\n\n## Требования к Webhook-endpoint\n\n### URL и порт\n\nWebhook-endpoint должен быть доступен по HTTPS на порту 443. Ваш сервер должен прослушивать этот порт. Порт в URL не указывается:\n\n```\nhttps://your-domain.com/webhook\n```\n\n> Поддерживается только порт 443. Если endpoint недоступен, события не доставляются\n\n### Безопасность соединения (TLS)\n\nПеред отправкой событий устанавливается HTTPS-соединение, и Webhook-endpoint проверяется на соответствие следующим требованиям безопасности соединения:\n- Webhook-endpoint удостоверен TLS-сертификатом, выданным доверенным центром сертификации, или TLS-сертификатом Минцифры. Самоподписанные сертификаты не поддерживаются \n- Доменное имя в URL Webhook-endpoint совпадает с CN или SAN сертификата\n- Сервер предоставляет полную цепочку сертификатов\n\n> Если проверка не пройдена, события не доставляются\n\n### Обработка запросов\n\nWebhook-endpoint должен возвращать **HTTP 200** в течение 30 секунд. Любой другой код ответа или превышение тайм-аута считается ошибкой доставки\n\n#### Пример запроса:\n```bash\ncurl -X POST \"https://platform-api2.max.ru/subscriptions\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"url\": \"https://your-domain.com/webhook\",\n  \"update_types\": [\"message_created\", \"bot_started\"],\n  \"secret\": \"your_secret\"\n}'\n```\n\n### Политика повторных попыток\n\nЕсли доставка не удалась, выполняется до 10 повторных попыток с экспоненциально растущим интервалом:\n\n- 1-я попытка: через 60 секунд\n- 2-я попытка: через 150 секунд (60 × 2,5)\n- 3-я попытка: через 375 секунд (150 × 2,5)\n- и так далее\n\n> Если в течение 8 часов от Webhook-endpoint не получен успешный ответ, бот автоматически от него отписывается\n\n## Безопасность Webhook-запросов\n\n Параметр `secret` позволяет убедиться, что Webhook-запросы приходят от MAX, а не от третьей стороны. Это необязательный параметр, но мы настоятельно рекомендуем указывать его. Проверяйте значение заголовка `X-Max-Bot-Api-Secret` на Webhook-сервере и отклоняйте запросы при несоответствии \n\nЕсли `secret` указан при создании подписки, он передаётся в заголовке `X-Max-Bot-Api-Secret` каждого Webhook-запроса\n\n  \n\n---\n\n## Формат и типы событий\n\nWebhook-запрос содержит объект [`Update`](https://dev.max.ru/docs-api/objects/Update)\n\nПолный список типов событий и структура объекта описаны в разделе [Update](https://dev.max.ru/docs-api/objects/Update)",
+                "description": "Метод настраивает доставку событий бота через Webhook  — основной механизм получения событий в продуктовых интеграциях. При активной подписке Long Polling не работает \n\n> ! \n> - Для повышения безопасности **с 25 мая** прекращается поддержка получения вебхуков по HTTP, а также самоподписных сертификатов. Рекомендуем заранее перейти на HTTPS и сертификаты от доверенных центров, в том числе сертификаты Минцифры. Чтобы обновить подписку на события, используйте текущий метод\n> - Получение обновлений с помощью [Long Polling](/docs-api/methods/GET/updates) ограничено по скорости и сроку хранения событий — этот способ не подходит для production-окружения. Рекомендуем на всех этапах работы использовать [Webhook](/docs-api/methods/POST/subscriptions)\n\n ## Модель доставки событий\n\nПосле вызова метода `POST /subscriptions` события отправляются на указанный Webhook-endpoint в виде HTTPS POST-запросов с объектом [`Update`](/docs-api/objects/Update)\n\nКак обрабатывается событие:\n\n1. При наступлении события выполняется вызов Webhook-endpoint\n2. Выполняется TLS-валидация целевого endpoint для безопасной передачи данных\n3. На endpoint отправляется HTTPS-запрос\n4. Если при создании подписки указан `secret`, проверяется заголовок `X-Max-Bot-Api-Secret` \n5. При успешной валидации возвращается HTTP `200 OK`\n6. Выполняется обработка события\n7. Инициируются вызовы MAX API\n\n\n## Требования к Webhook-endpoint\n\n### URL и порт\n\nWebhook-endpoint должен быть доступен по HTTPS на порту 443. Ваш сервер должен прослушивать этот порт. Порт в URL не указывается:\n\n```\nhttps://your-domain.com/webhook\n```\n\n> Поддерживается только порт 443. Если endpoint недоступен, события не доставляются\n\n### Безопасность соединения (TLS)\n\nПеред отправкой событий устанавливается HTTPS-соединение, и Webhook-endpoint проверяется на соответствие следующим требованиям безопасности соединения:\n- Webhook-endpoint удостоверен TLS-сертификатом, выданным доверенным центром сертификации, или TLS-сертификатом Минцифры. Самоподписанные сертификаты не поддерживаются \n- Доменное имя в URL Webhook-endpoint совпадает с CN или SAN сертификата\n- Сервер предоставляет полную цепочку сертификатов\n\n> Если проверка не пройдена, события не доставляются\n\n### Обработка запросов\n\nWebhook-endpoint должен возвращать **HTTP 200** в течение 30 секунд. Любой другой код ответа или превышение тайм-аута считается ошибкой доставки\n\n#### Пример запроса:\n```bash\ncurl -X POST \"https://platform-api2.max.ru/subscriptions\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"url\": \"https://your-domain.com/webhook\",\n  \"update_types\": [\"message_created\", \"bot_started\"],\n  \"secret\": \"your_secret\"\n}'\n```\n\n### Политика повторных попыток\n\nЕсли доставка не удалась, выполняется до 10 повторных попыток с экспоненциально растущим интервалом:\n\n- 1-я попытка: через 60 секунд\n- 2-я попытка: через 150 секунд (60 × 2,5)\n- 3-я попытка: через 375 секунд (150 × 2,5)\n- и так далее\n\n> Если в течение 8 часов от Webhook-endpoint не получен успешный ответ, бот автоматически от него отписывается\n\n## Безопасность Webhook-запросов\n\n Параметр `secret` позволяет убедиться, что Webhook-запросы приходят от MAX, а не от третьей стороны. Это необязательный параметр, но мы настоятельно рекомендуем указывать его. Проверяйте значение заголовка `X-Max-Bot-Api-Secret` на Webhook-сервере и отклоняйте запросы при несоответствии \n\nЕсли `secret` указан при создании подписки, он передаётся в заголовке `X-Max-Bot-Api-Secret` каждого Webhook-запроса\n\n  \n\n---\n\n## Формат и типы событий\n\nWebhook-запрос содержит объект [`Update`](/docs-api/objects/Update)\n\nПолный список типов событий и структура объекта описаны в разделе [Update](/docs-api/objects/Update)",
                 "summary": "Подписка на обновления о новых событиях через Webhook",
                 "requestBody": {
                     "required": true,
@@ -989,7 +989,7 @@
                     "upload"
                 ],
                 "operationId": "getUploadUrl",
-                "description": "Метод возвращает URL для загрузки медиафайла и последующей отправки его во вложении к сообщению в чате или канале. После загрузки файлу присваивается токен, который нужно передать в запросе [POST /messages](/docs-api/methods/POST/messages) или [PUT /messages](/docs-api/methods/PUT/messages) в параметре `attachments.payload.token`\n\n  По URL-ссылке, которая вернётся в ответ на запрос, можно загрузить только один файл. Если вы хотите загрузить ещё, отправьте повторно запрос `POST /uploads` и используйте новую URL-ссылку \n\n Подробные сценарии и примеры загрузки разных типов медиа смотрите [в разделе «Отправка сообщений с медиафайлами»](/docs-api/mediafiles) \n\n #### Пример запроса для загрузки медиафайла \n\n```bash\ncurl -X POST \"https://platform-api2.max.ru/uploads?type={type}\" \\\n  -H \"Authorization: {access_token}\"\n```\n\n### Способы загрузки медиафайлов\n\nВ ответ на текущий запрос `POST /uploads` в поле `url` вернётся URL для загрузки медиафайла — загрузить можно одним из двух способов: \n\n- **Resumable upload** — надёжный способ, если заголовок `Content-Type` не равен `multipart/form-data`. Этот способ позволяет загружать файл частями и возобновлять загрузку с последней успешно загруженной части в случае ошибок \n\n **Пример загрузки файла по URL**:\n\n```bash\ncurl -X POST \"%UPLOAD_URL%\" \\\n  -H \"Authorization: {access_token}\" \\\n  -F \"data=@example.mp4\"\n```\n\nгде `%UPLOAD_URL%` — это значение поля `url`, которое вернулось [в ответе](/docs-api/methods/POST/uploads#Результат) на запрос `POST /uploads`\n\n- **Multipart upload** — более простой, но менее надёжный способ. В этом случае используется заголовок `Content-Type: multipart/form-data`. Файл отправляется целиком одним запросом. Если загрузка прервётся, невозможно её возобновить — придётся начать заново\n\n **Пример использования cURL для загрузки файла**:\n\n```shell\ncurl -i -X POST \\\n  -H \"Content-Type: multipart/form-data\" \\\n  -F \"data=@movie.pdf\" \"%UPLOAD_URL%\"\n```\n\nгде `%UPLOAD_URL%` — это значение поля `url`, которое вернулось [в ответе](/docs-api/methods/POST/uploads#Результат) на запрос `POST /uploads`\n\n## Обработка медиафайлов\n\nПосле успешной загрузки сервер обрабатывает файл. Файлы от нескольких мегабайт обрабатываются дольше\n\n> Для стабильной работы сервисов MAX убедитесь, что максимальное количество запросов в секунду на platform-api2.max.ru — 30 rps \n\nЕсли отправить сообщение с вложением сразу после загрузки, может возникнуть ошибка:\n\n```json\n{\n  \"code\": \"attachment.not.ready\",\n  \"message\": \"Key: errors.process.attachment.file.not.processed\"\n}\n```\n\n**Как избежать ошибки:**\n- После загрузки файла сделайте паузу перед отправкой сообщения\n- Если отправка не удалась, повторите попытку через некоторое время. Увеличивайте интервал с каждой попыткой\n- Загружайте часто используемые файлы заранее и переиспользуйте токен\n\n",
+                "description": "Метод возвращает URL для загрузки медиафайла и последующей отправки его во вложении к сообщению в чате или канале. После загрузки файлу присваивается токен, который нужно передать в запросе [POST /messages](/docs-api/methods/POST/messages) или [PUT /messages](/docs-api/methods/PUT/messages) в параметре `attachments.payload.token`\n\n  По URL-ссылке, которая вернётся в ответ на запрос, можно загрузить только один файл. Если вы хотите загрузить ещё, отправьте повторно запрос `POST /uploads` и используйте новую URL-ссылку \n\n Подробные сценарии и примеры загрузки разных типов медиа смотрите [в разделе «Отправка сообщений с медиафайлами»](/docs-api/use-cases/sending-messages/media) \n\n #### Пример запроса для загрузки медиафайла \n\n```bash\ncurl -X POST \"https://platform-api2.max.ru/uploads?type={type}\" \\\n  -H \"Authorization: {access_token}\"\n```\n\n### Способы загрузки медиафайлов\n\nВ ответ на текущий запрос `POST /uploads` в поле `url` вернётся URL для загрузки медиафайла — загрузить можно одним из двух способов: \n\n- **Resumable upload** — надёжный способ, если заголовок `Content-Type` не равен `multipart/form-data`. Этот способ позволяет загружать файл частями и возобновлять загрузку с последней успешно загруженной части в случае ошибок \n\n **Пример загрузки файла по URL**:\n\n```bash\ncurl -X POST \"%UPLOAD_URL%\" \\\n  -H \"Authorization: {access_token}\" \\\n  -F \"data=@example.mp4\"\n```\n\nгде `%UPLOAD_URL%` — это значение поля `url`, которое вернулось [в ответе](/docs-api/methods/POST/uploads#Результат) на запрос `POST /uploads`\n\n- **Multipart upload** — более простой, но менее надёжный способ. В этом случае используется заголовок `Content-Type: multipart/form-data`. Файл отправляется целиком одним запросом. Если загрузка прервётся, невозможно её возобновить — придётся начать заново\n\n **Пример использования cURL для загрузки файла**:\n\n```shell\ncurl -i -X POST \\\n  -H \"Content-Type: multipart/form-data\" \\\n  -F \"data=@movie.pdf\" \"%UPLOAD_URL%\"\n```\n\nгде `%UPLOAD_URL%` — это значение поля `url`, которое вернулось [в ответе](/docs-api/methods/POST/uploads#Результат) на запрос `POST /uploads`\n\n## Обработка медиафайлов\n\nПосле успешной загрузки сервер обрабатывает файл. Файлы от нескольких мегабайт обрабатываются дольше\n\n> Для стабильной работы сервисов MAX убедитесь, что максимальное количество запросов в секунду на platform-api2.max.ru — 30 rps \n\nЕсли отправить сообщение с вложением сразу после загрузки, может возникнуть ошибка:\n\n```json\n{\n  \"code\": \"attachment.not.ready\",\n  \"message\": \"Key: errors.process.attachment.file.not.processed\"\n}\n```\n\n**Как избежать ошибки:**\n- После загрузки файла сделайте паузу перед отправкой сообщения\n- Если отправка не удалась, повторите попытку через некоторое время. Увеличивайте интервал с каждой попыткой\n- Загружайте часто используемые файлы заранее и переиспользуйте токен\n\n",
                 "summary": "Загрузка медиафайлов",
                 "parameters": [
                     {
@@ -1028,11 +1028,11 @@
                     "messages"
                 ],
                 "operationId": "getMessages",
-                "description": "Возвращает информацию о сообщении или массив сообщений из чата или посты из каналов. Для выполнения запроса нужно указать один из параметров — `chat_id` или `message_ids`:\n\n- `chat_id` — метод возвращает массив сообщений или постов из указанного чата или канала, только если чат-бот в них является администратором. Сообщения возвращаются в обратном порядке: последние сообщения будут первыми в массиве. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)\n\n- `message_ids` — метод возвращает информацию о запрошенных сообщениях или постах. Можно указать один идентификатор или несколько\n\n#### Пример запроса с использованием `chat_id`:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/messages?chat_id={chat_id}\" \\\n  -H \"Authorization: {access_token}\"\n```\n\n#### Пример запроса с использованием `message_ids`:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/messages?message_ids={message_id1},{message_id2}\" \\\n  -H \"Authorization: {access_token}\"\n```",
+                "description": "Возвращает информацию о сообщении или массив сообщений из чата или посты из каналов. Для выполнения запроса нужно указать один из параметров — `chat_id` или `message_ids`:\n\n- `chat_id` — метод возвращает массив сообщений или постов из указанного чата или канала, только если чат-бот в них является администратором. Сообщения возвращаются в обратном порядке: последние сообщения будут первыми в массиве. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)\n\n- `message_ids` — метод возвращает информацию о запрошенных сообщениях или постах. Можно указать один идентификатор или несколько\n\n#### Пример запроса с использованием `chat_id`:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/messages?chat_id={chat_id}\" \\\n  -H \"Authorization: {access_token}\"\n```\n\n#### Пример запроса с использованием `message_ids`:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/messages?message_ids={message_id1},{message_id2}\" \\\n  -H \"Authorization: {access_token}\"\n```",
                 "summary": "Получение информации о сообщениях или постах",
                 "parameters": [
                     {
-                        "description": "ID чата или канала, чтобы получить из него сообщения или посты. Обязательный параметр, если не указан `message_ids`. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                        "description": "ID чата или канала, чтобы получить из него сообщения или посты. Обязательный параметр, если не указан `message_ids`. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "name": "chat_id",
                         "in": "query",
                         "schema": {
@@ -1147,7 +1147,7 @@
                     },
                     {
                         "name": "chat_id",
-                        "description": "Если сообщение отправляется в чат или канал, укажите ID этого чата или канала. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                        "description": "Если сообщение отправляется в чат или канал, укажите ID этого чата или канала. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "schema": {
                             "type": "integer",
                             "format": "int64"
@@ -1899,7 +1899,7 @@
                 "format": "int64"
             },
             "ChatId": {
-                "description": "ID чата или канала — в зависимости от ограничений метода и от того, с чем вы работаете. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                "description": "ID чата или канала — в зависимости от ограничений метода и от того, с чем вы работаете. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                 "type": "integer",
                 "format": "int64"
             },
@@ -2124,7 +2124,7 @@
                 "description": "Объект содержит общую информацию о групповом чате или канале: его тип, настройки отображения (название, аватар, описание, ссылка), публичную доступность, а также информацию об участниках (владельце, боте и других пользователях), времени их последней активности и событиях",
                 "properties": {
                     "chat_id": {
-                        "description": "ID чата или канала — в зависимости от ограничений метода и от того, с чем вы работаете. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                        "description": "ID чата или канала — в зависимости от ограничений метода и от того, с чем вы работаете. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "type": "integer",
                         "format": "int64"
                     },
@@ -2509,7 +2509,7 @@
                 "description": "Новый получатель сообщения. Может быть пользователем, чатом или каналом",
                 "properties": {
                     "chat_id": {
-                        "description": "ID чата или канала — в зависимости от ограничений метода и от того, с чем вы работаете. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                        "description": "ID чата или канала — в зависимости от ограничений метода и от того, с чем вы работаете. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "type": "integer",
                         "format": "int64",
                         "nullable": true
@@ -2929,7 +2929,7 @@
                         "readOnly": false
                     },
                     "chat_id": {
-                        "description": "Чат или канал, в котором сообщение было изначально опубликовано. Только для пересланных сообщений с `type = forward`. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                        "description": "Чат или канал, в котором сообщение было изначально опубликовано. Только для пересланных сообщений с `type = forward`. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "type": "integer",
                         "format": "int64",
                         "readOnly": false
@@ -2967,7 +2967,7 @@
                         "readOnly": false
                     },
                     "chat_id": {
-                        "description": "Чат или канал, в котором сообщение было изначально опубликовано. Только для пересланных сообщений с `type = forward`. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                        "description": "Чат или канал, в котором сообщение было изначально опубликовано. Только для пересланных сообщений с `type = forward`. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                         "type": "integer",
                         "format": "int64",
                         "readOnly": false
@@ -4694,7 +4694,7 @@
                                 "type": "string"
                             },
                             "chat_id": {
-                                "description": "ID чата, где сообщение было удалено. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                                "description": "ID чата, где сообщение было удалено. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4833,7 +4833,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата или канала, куда был добавлен бот. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                                "description": "ID чата или канала, куда был добавлен бот. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4867,7 +4867,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, откуда был удалён бот. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                                "description": "ID чата, откуда был удалён бот. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4901,7 +4901,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                                "description": "ID чата, где произошло событие. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4940,7 +4940,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                                "description": "ID чата, где произошло событие. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4973,7 +4973,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                                "description": "ID чата, где произошло событие. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -5006,7 +5006,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                                "description": "ID чата, где произошло событие. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -5039,7 +5039,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                                "description": "ID чата, где произошло событие. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -5080,7 +5080,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                                "description": "ID чата, где произошло событие. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -5120,7 +5120,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID диалога, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                                "description": "ID диалога, где произошло событие. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -5161,7 +5161,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID диалога, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                                "description": "ID диалога, где произошло событие. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -5195,7 +5195,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api/use-cases/getting-chat-id)",
+                                "description": "ID чата, где произошло событие. Как получить ID — [на странице «Получение ID чата или канала»](/docs-api/use-cases/getting-chat-id)",
                                 "type": "integer",
                                 "format": "int64"
                             },

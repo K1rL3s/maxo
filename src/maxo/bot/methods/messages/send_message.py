@@ -58,7 +58,7 @@ class SendMessage(MaxoMethod[SendMessageResult]):
 
     Args:
         attachments: Вложения отправляемого сообщения. Пустое значение означает, что вложений нет
-        chat_id: Если сообщение отправляется в чат или канал, укажите ID этого чата или канала. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
+        chat_id: Если сообщение отправляется в чат или канал, укажите ID этого чата или канала. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         disable_link_preview: Если `true`, сервер не будет генерировать превью для ссылок в тексте сообщения или поста
         format: Разметка текста сообщения. Подробнее - в разделе [Форматирование](https://dev.max.ru/docs-api/use-cases/sending-messages/text-formatting)
         link: Ссылка на сообщение в чате или пост в канале. Ссылки на комментарии к постам в каналах не поддержаны
@@ -73,7 +73,7 @@ class SendMessage(MaxoMethod[SendMessageResult]):
     __method__ = "post"
 
     chat_id: Query[Omittable[int]] = Omitted()
-    """Если сообщение отправляется в чат или канал, укажите ID этого чата или канала. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
+    """Если сообщение отправляется в чат или канал, укажите ID этого чата или канала. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
     disable_link_preview: Query[Omittable[bool]] = Omitted()
     """Если `true`, сервер не будет генерировать превью для ссылок в тексте сообщения или поста"""
     user_id: Query[Omittable[int]] = Omitted()

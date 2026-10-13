@@ -24,7 +24,7 @@ class PinMessage(MaxoMethod[SimpleQueryResult]):
     ```
 
     Args:
-        chat_id: ID группового чата или канала, где нужно закрепить сообщение
+        chat_id: ID группового чата или канала, где нужно закрепить сообщение. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         message_id: ID сообщения, которое нужно закрепить. Соответствует полю `Message.body.mid`
         notify: Если `true`, участники получат уведомление с системным сообщением о закреплении
 
@@ -35,7 +35,7 @@ class PinMessage(MaxoMethod[SimpleQueryResult]):
     __method__ = "put"
 
     chat_id: Path[int]
-    """ID группового чата или канала, где нужно закрепить сообщение"""
+    """ID группового чата или канала, где нужно закрепить сообщение. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
 
     message_id: Body[str]
     """ID сообщения, которое нужно закрепить. Соответствует полю `Message.body.mid`"""
