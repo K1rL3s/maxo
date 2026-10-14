@@ -394,3 +394,21 @@ def test_retort_loads_video_details_with_url_only_thumbnail() -> None:
     )
 
     assert details.thumbnail == VideoThumbnail(url="https://example.com/thumb.jpg")
+
+
+def test_retort_loads_user_with_null_last_activity_time() -> None:
+    retort = create_retort(warming_up=False)
+
+    user = retort.load(
+        {
+            "user_id": 1,
+            "first_name": "Ivan",
+            "is_bot": False,
+            "last_activity_time": None,
+        },
+        User,
+    )
+
+    assert user.last_activity_time is None
+    with pytest.raises(AttributeIsEmptyError):
+        _ = user.unsafe_last_activity_time
