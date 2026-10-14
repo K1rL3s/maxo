@@ -32,6 +32,7 @@ from re import Match, Pattern
 from typing import Any, cast
 
 from maxo import Bot, Ctx
+from maxo.enums import MessageLinkType
 from maxo.omit import is_defined
 from maxo.routing.filters import BaseFilter
 from maxo.types import MessageCreated
@@ -128,7 +129,11 @@ class Command(BaseFilter[MessageCreated]):
     ) -> bool:
         if message.message.body.text:
             text = message.message.body.text
-        elif is_defined(link := message.message.link) and link.message.text:
+        elif (
+            is_defined(link := message.message.link)
+            and link.type == MessageLinkType.FORWARD
+            and link.message.text
+        ):
             text = link.message.text
         else:
             text = None
