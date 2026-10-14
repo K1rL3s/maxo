@@ -136,6 +136,10 @@ def test_user_unsafe_accessors_raise_for_omitted_fields() -> None:
 
     assert not is_defined(user.last_activity_time)
     with pytest.raises(AttributeIsEmptyError):
+        _ = user.unsafe_avatar_url
+    with pytest.raises(AttributeIsEmptyError):
+        _ = user.unsafe_full_avatar_url
+    with pytest.raises(AttributeIsEmptyError):
         _ = user.unsafe_last_activity_time
     with pytest.raises(AttributeIsEmptyError):
         _ = user.unsafe_last_name

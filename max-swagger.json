@@ -1952,6 +1952,18 @@
                         "type": "string",
                         "readOnly": true,
                         "nullable": true
+                    },
+                    "avatar_url": {
+                        "description": "URL аватара пользователя или бота в уменьшенном размере",
+                        "type": "string",
+                        "readOnly": false,
+                        "nullable": true
+                    },
+                    "full_avatar_url": {
+                        "description": "URL аватара пользователя или бота в полном размере",
+                        "type": "string",
+                        "readOnly": false,
+                        "nullable": true
                     }
                 },
                 "required": [

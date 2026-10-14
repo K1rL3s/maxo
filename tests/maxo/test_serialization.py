@@ -27,6 +27,7 @@ from maxo.serialization import (
 )
 from maxo.types import (
     BotAdminPermissionsChanged,
+    BotStarted,
     CommentCreated,
     CommentEdited,
     CommentMessage,
@@ -412,3 +413,26 @@ def test_retort_loads_user_with_null_last_activity_time() -> None:
     assert user.last_activity_time is None
     with pytest.raises(AttributeIsEmptyError):
         _ = user.unsafe_last_activity_time
+
+
+def test_retort_keeps_avatar_of_user_in_update() -> None:
+    retort = create_retort(warming_up=False)
+
+    update = retort.load(
+        {
+            "update_type": "bot_started",
+            "timestamp": 1,
+            "chat_id": 10,
+            "user": {
+                "user_id": 1,
+                "first_name": "Ivan",
+                "is_bot": False,
+                "avatar_url": "https://i.oneme.ru/small",
+                "full_avatar_url": "https://i.oneme.ru/full",
+            },
+        },
+        BotStarted,
+    )
+
+    assert update.user.unsafe_avatar_url == "https://i.oneme.ru/small"
+    assert update.user.unsafe_full_avatar_url == "https://i.oneme.ru/full"
