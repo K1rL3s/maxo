@@ -1534,3 +1534,13 @@ def test_bot_admin_permissions_changed_unsafe_permissions() -> None:
     for missing in (make(), make(permissions=None)):
         with pytest.raises(AttributeIsEmptyError):
             _ = missing.unsafe_permissions
+
+
+def test_linked_message_generated_url_is_none_for_inaccessible_chat() -> None:
+    linked = LinkedMessage(
+        type=MessageLinkType.FORWARD,
+        message=MessageBody(mid="mid", seq=5, text="forwarded"),
+        chat_id=0,
+    )
+
+    assert linked.generated_url is None

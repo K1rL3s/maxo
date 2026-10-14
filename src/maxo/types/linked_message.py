@@ -57,9 +57,10 @@ class LinkedMessage(MaxoType):
         Генерирует ссылку на сообщение.
 
         Возвращает:
-            str | None: Ссылка на сообщение или `None`, если `chat_id` не определен.
+            str | None: Ссылка на сообщение или `None`, если `chat_id` не определен
+            или равен 0: так MAX отдаёт чат-источник, к которому у бота нет доступа.
         """
-        if not is_defined(self.chat_id):
+        if not is_defined(self.chat_id) or self.chat_id == 0:
             return None
 
         return id_to_message_url(
