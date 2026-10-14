@@ -15,7 +15,7 @@ from butcher.profile import (
     ProfileError,
     build_profile,
 )
-from butcher.spec import load
+from butcher.spec import load, mark_deprecated_parameters
 from butcher.tests.conftest import SPEC
 
 
@@ -473,3 +473,27 @@ def test_deprecated_method_override(
 
     assert _method(document, "GetChat").deprecated == "Метод удалён"
     assert _method(document, "SendMessage").deprecated is None
+
+
+def test_deprecated_parameter_gets_note_in_description() -> None:
+    spec = {
+        "paths": {
+            "/messages": {
+                "parameters": [],
+                "get": {
+                    "parameters": [
+                        {"name": "from", "description": "Время", "deprecated": True},
+                        {"name": "to", "deprecated": True},
+                        {"name": "count", "description": "Количество"},
+                    ],
+                },
+            },
+        },
+    }
+
+    mark_deprecated_parameters(spec)
+
+    params = spec["paths"]["/messages"]["get"]["parameters"]
+    assert params[0]["description"] == "Время\n\n_Устаревший параметр_"
+    assert params[1]["description"] == "_Устаревший параметр_"
+    assert params[2]["description"] == "Количество"
