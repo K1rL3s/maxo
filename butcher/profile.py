@@ -159,6 +159,7 @@ class Method:
     doc_link: str
     field_groups: tuple[tuple[Field, ...], ...]
     imports: frozenset[Import]
+    deprecated: str | None
 
     @property
     def fields(self) -> tuple[Field, ...]:
@@ -354,7 +355,11 @@ class _Profile:
         return alias.description if alias is not None else None
 
     def _field_type(self, ir_field: IRField) -> IRType:
-        return DATETIME if self._is_timestamp(ir_field) else ir_field.type
+        if not self._is_timestamp(ir_field):
+            return ir_field.type
+        if isinstance(ir_field.type, OptionalType):
+            return OptionalType(DATETIME)
+        return DATETIME
 
     @staticmethod
     def _parameter_type(ir_type: IRType, description: str | None) -> IRType:
@@ -450,7 +455,11 @@ class _Profile:
         override = overrides.MODEL_FIELD_OVERRIDES.get((class_name, ir_field.name))
         field_type = self._field_type(ir_field)
         if override is not None and override.ref is not None:
-            field_type = RefType(override.ref)
+            ref_type = RefType(override.ref)
+            if isinstance(field_type, OptionalType):
+                field_type = OptionalType(ref_type)
+            else:
+                field_type = ref_type
         annotation = self._annotate(field_type, imports)
         # Дефолты свагера игнорируем: необязательное поле - это `Omitted()`.
         omittable = not ir_field.required
@@ -583,6 +592,9 @@ class _Profile:
         self._add_field_helpers(fields, imports)
         for marker in {f.marker for f in fields if f.marker}:
             imports.add(Import(MARKERS_MODULE, marker))
+        deprecated = overrides.DEPRECATED_METHODS.get(operation.class_name)
+        if deprecated is not None:
+            imports.add(Import("typing_extensions", "deprecated"))
         return Method(
             name=operation.class_name,
             tag=operation.tag,
@@ -594,6 +606,7 @@ class _Profile:
             doc_link=_doc_link(operation),
             field_groups=_method_field_groups(fields),
             imports=frozenset(imports),
+            deprecated=deprecated,
         )
 
     def _method_field_type(

@@ -15,14 +15,19 @@
 - `src/maxo/types/base.py` - `MaxoType`, `BaseMaxoType`, `MaxUpdate`,
   `BaseUpdate`.
 - `src/maxo/types/facades/base.py` - `BaseMethodsFacade`.
-- `src/maxo/types/error_event.py`, `update_context.py`, `upload_media_result.py`.
+- `src/maxo/types/error_event.py`, `update_context.py`, `upload_media_result.py`,
+  `clear_subscriptions_result.py`.
 - `src/maxo/bot/methods/base.py`, `markers.py`.
 - Методы вне свагера: `bots/edit_bot_info.py`, `chats/delete_chat.py`,
   `chats/get_chat_by_link.py`, `chats/get_chats.py`, `chats/set_admins.py`,
   `upload/upload_media.py`.
+- `chats/delete_admin.py` - алиас `DeleteAdmin = DeleteAdmins`.
 
 Их реэкспорт в сгенерированные `__init__.py` держат `TYPES_EXTRA_EXPORTS` и
-`METHODS_EXTRA_EXPORTS` в `butcher/overrides.py`.
+`METHODS_EXTRA_EXPORTS` в `butcher/overrides.py`. `EditBotInfo`, `DeleteChat`,
+`GetChats` и `GetChatByLink` помечены `@deprecated` прямо в файле, а в
+`METHODS_EXTRA_EXPORTS` - флагом `deprecated=True`: их нет в документации
+dev.max.ru, `GET /chats` там объявлен неподдерживаемым.
 
 ## `factory()` - фабричные конструкторы
 
@@ -70,8 +75,7 @@
 - `Chat.chat_message_id: Omittable[str | None]` + `unsafe_chat_message_id`.
 - `ShareAttachment.payload` - `field(default_factory=ShareAttachmentPayload)`
   вместо обязательного поля.
-- `MessageCallback` - `# type: ignore[misc]` на классе, `message: Message | None`
-  с `# type: ignore[assignment]`. Импорты фасадов (`maxo.types.facades.callback`,
+- `MessageCallback` - `# type: ignore[misc]` на классе. Импорты фасадов (`maxo.types.facades.callback`,
   `maxo.types.facades.message`) генерирует сам butcher по `FACADE_MODULES` в
   `overrides.py` - руками их поправлять больше не нужно.
 
@@ -83,6 +87,18 @@
 `CommentMessage` наследует `Message` и `CommentMethodsFacade`, который сам
 наследует `MessageMethodsFacade`: поэтому общий API сообщения сохраняется, а
 `answer()` использует методы комментариев.
+
+`OpenAppButton.web_app` в json необязателен, но без него API отвечает 400
+`Field 'webApp' cannot be null`, а yaml поле требует. Поэтому
+`FieldOverride(omittable=False)` делает его обязательным. У обязательного поля
+генератор `unsafe_web_app` не создаёт, его держит ручной слой ради
+совместимости: свойство просто возвращает `web_app`.
+
+`VideoAttachmentDetails.thumbnail` в Swagger ссылается на
+`PhotoAttachmentPayload` с обязательными `photo_id` и `token`, а
+`GET /videos/{videoToken}` присылает только `{"url": ...}`, и ответ не
+загружается. Поэтому `FieldOverride(ref="VideoThumbnail")` - тот же тип, что у
+`VideoAttachment.thumbnail`.
 
 ## Хвосты методов
 
@@ -106,19 +122,25 @@
 `max-swagger.json` они дописаны с русскими описаниями: слияние двух публикаций
 берёт описания из json, а типы и флаги - из yaml.
 
-Предупреждение об удалении `addMembers` официальная спека держит в
-нестандартном ключе операции `disable-notification`, который генератор не
-читает. В `max-swagger.json` его текст перенесён в начало `description` в
-формате `> !`, как у `GET /chats`, чтобы он попал в docstring `AddMembers`.
+У `NewMessageBody.text` на сайте нет описания: оно дописано в
+`max-swagger.json`. Смысл `null` и пустой строки при редактировании задаёт
+`METHOD_FIELD_DESCRIPTIONS` для `EditMessage.text`.
+
+`avatar_url` и `full_avatar_url` по обеим спекам есть только у
+`UserWithPhoto`, но пользователь в апдейтах (`bot_started` и других) приходит
+с ними. В `max-swagger.json` они дописаны и в `User`, иначе adaptix молча
+отбрасывает аватар.
 
 ## Реестры и compat-слои, о которых легко не узнать
 
 Генерация их не трогает, но по ним расходится ручная регистрация новых
-апдейтов и фасадов. Полный порядок действий - в карте касаний `SKILL.md`.
+апдейтов и фасадов. Полный порядок действий - в `butcher/AGENTS.md`.
 
 - `src/maxo/serialization.py` - `TAG_PROVIDERS`, регистрация полиморфных типов
   в retort. Union-алиасы генерируются, а эта таблица - нет.
 - `src/maxo/bot/warming_up.py` - кортежи `_types` и `_methods`.
+- `src/maxo/serialization.py` - `TypesWithFormat` и `TypesWithLinkPreview`,
+  методы, которым подставляются `BotDefaults`.
 - `src/maxo/types/facades/attachments.py` - `MEDIA_ATTACHMENT_FACTORIES`,
   карта `UploadType` -> `factory` для заливаемых медиа.
 - `src/maxo/routing/middlewares/update_context.py` - ветки `isinstance`,
@@ -134,11 +156,10 @@
 
 - `Chat.participants` - в спеке `additionalProperties: integer`, генератор даёт
   `dict[str, int]`, в дереве остался `dict[str, Any]`.
-- `User.name` - в спеке лежит в `required`, генератор даёт `str | None = None`,
-  а в дереве `Omittable[str | None]`.
 
 **Вердикт: в рамках обновления контракта такой дрейф не чинится.** Если файл не
 попал в дельту двух генераций - не трогай его, даже если видишь расхождение.
 Это отдельная задача и отдельный коммит: смена типа публичного поля ломает
-пользовательский код и требует своего решения мейнтейнера. На шаге 9 такие
-файлы обязаны остаться в списке расходящихся - это норма.
+пользовательский код и требует своего решения мейнтейнера. При сверке с
+`.butcher/check` такие файлы обязаны остаться в списке расходящихся - это
+норма.

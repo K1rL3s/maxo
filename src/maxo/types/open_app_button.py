@@ -17,12 +17,13 @@ class OpenAppButton(Button):
 
     type: ButtonType = ButtonType.OPEN_APP
 
+    web_app: str
+    """Публичное имя (username) бота или ссылка на него, чьё мини-приложение надо запустить"""
+
     contact_id: Omittable[int | None] = Omitted()
     """Идентификатор бота, чьё мини-приложение надо запустить"""
     payload: Omittable[str | None] = Omitted()
     """Параметр запуска, который будет передан в [initData](https://dev.max.ru/docs/webapps/bridge#WebAppData) мини-приложения"""
-    web_app: Omittable[str] = Omitted()
-    """Публичное имя (username) бота или ссылка на него, чьё мини-приложение надо запустить"""
 
     @property
     def unsafe_contact_id(self) -> int:
@@ -46,10 +47,4 @@ class OpenAppButton(Button):
 
     @property
     def unsafe_web_app(self) -> str:
-        if is_defined(self.web_app):
-            return self.web_app
-
-        raise AttributeIsEmptyError(
-            obj=self,
-            attr="web_app",
-        )
+        return self.web_app

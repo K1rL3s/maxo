@@ -115,7 +115,8 @@ class KeyboardBuilder:
         text: str,
         contact_id: Omittable[int] = Omitted(),
         payload: Omittable[str] = Omitted(),
-        web_app: Omittable[str] = Omitted(),
+        *,
+        web_app: str,
     ) -> Self:
         return self.add(
             OpenAppButton(

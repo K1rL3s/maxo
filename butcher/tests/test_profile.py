@@ -15,7 +15,7 @@ from butcher.profile import (
     ProfileError,
     build_profile,
 )
-from butcher.spec import load
+from butcher.spec import load, mark_deprecated_parameters
 from butcher.tests.conftest import SPEC
 
 
@@ -264,7 +264,7 @@ def test_model_field_override(
     document = build_profile(load(str(path)))
     url = next(f for f in _model(document, "Message").fields if f.name == "url")
     assert url.omittable
-    assert url.annotation == "CommentMessage"
+    assert url.annotation == "CommentMessage | None"
     assert url.comment == "type: ignore[assignment]"
 
 
@@ -444,3 +444,56 @@ def test_field_without_description_takes_inline_alias_description(
     assert params["to"].description == "Описание алиаса"
     assert params["big"].description == "Описание алиаса"
     assert params["from_"].description == "Время, начиная с которого нужны сообщения"
+
+
+def test_nullable_timestamp_keeps_none(tmp_path: Path) -> None:
+    spec = copy.deepcopy(SPEC)
+    spec["components"]["schemas"]["Message"]["properties"]["value"] = {
+        "type": "integer",
+        "format": "int64",
+        "nullable": True,
+        "description": "Unix timestamp в миллисекундах",
+    }
+
+    document = _build_document(tmp_path, spec)
+    value = next(
+        item for item in _model(document, "Message").fields if item.name == "value"
+    )
+
+    assert value.annotation == "datetime | None"
+
+
+def test_deprecated_method_override(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setitem(overrides.DEPRECATED_METHODS, "GetChat", "Метод удалён")
+
+    document = _build_document(tmp_path, SPEC)
+
+    assert _method(document, "GetChat").deprecated == "Метод удалён"
+    assert _method(document, "SendMessage").deprecated is None
+
+
+def test_deprecated_parameter_gets_note_in_description() -> None:
+    spec = {
+        "paths": {
+            "/messages": {
+                "parameters": [],
+                "get": {
+                    "parameters": [
+                        {"name": "from", "description": "Время", "deprecated": True},
+                        {"name": "to", "deprecated": True},
+                        {"name": "count", "description": "Количество"},
+                    ],
+                },
+            },
+        },
+    }
+
+    mark_deprecated_parameters(spec)
+
+    params = spec["paths"]["/messages"]["get"]["parameters"]
+    assert params[0]["description"] == "Время\n\n_Устаревший параметр_"
+    assert params[1]["description"] == "_Устаревший параметр_"
+    assert params[2]["description"] == "Количество"

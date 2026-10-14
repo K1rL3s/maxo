@@ -4,9 +4,14 @@ import json
 import re
 from pathlib import Path
 
-from butcher import emit
-from butcher.profile import Enum, Field, MaxoDocument, Method, Model
+import pytest
+
+from butcher import emit, overrides
+from butcher.overrides import ExtraExport
+from butcher.profile import Enum, Field, MaxoDocument, Method, Model, build_profile
 from butcher.render import docs, enums, fields, inits, methods, types, unions
+from butcher.spec import load
+from butcher.tests.conftest import SPEC
 
 
 def _model(document: MaxoDocument, name: str) -> Model:
@@ -253,3 +258,29 @@ def test_field_docstring_strips_trailing_whitespace() -> None:
         "    следующая",
         '    """',
     ]
+
+
+def test_deprecated_method_renders_decorator(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setitem(overrides.DEPRECATED_METHODS, "GetChat", "Метод удалён")
+    path = tmp_path / "spec.json"
+    path.write_text(json.dumps(SPEC), encoding="utf-8")
+
+    source = methods.render(_method(build_profile(load(str(path))), "GetChat"))
+
+    assert "from typing_extensions import deprecated" in source
+    assert '@deprecated("Метод удалён", stacklevel=2)\nclass GetChat(' in source
+
+
+def test_methods_init_marks_deprecated_extra_export(document: MaxoDocument) -> None:
+    source = inits.methods(
+        document,
+        (ExtraExport(module="chats.get_chats", names=("GetChats",), deprecated=True),),
+    )
+
+    assert "from .chats.get_chat import GetChat\n" in source
+    assert (
+        "from .chats.get_chats import GetChats  # type: ignore[deprecated]\n" in source
+    )

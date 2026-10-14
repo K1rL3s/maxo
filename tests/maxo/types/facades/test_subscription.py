@@ -156,3 +156,16 @@ async def test_unsubscribe(
 
     mock_bot.unsubscribe.assert_called_once_with(url="https://example.com/webhook")
     assert result.success is True
+
+
+async def test_edit_bot_info_is_deprecated(
+    facade: MockSubscriptionFacade,
+    mock_bot: MagicMock,
+) -> None:
+    mock_bot.edit_bot_info = AsyncMock()
+
+    with pytest.warns(DeprecationWarning, match="PATCH /me") as record:
+        await facade.edit_bot_info(first_name="Bot")  # type: ignore[deprecated]
+
+    assert record[0].filename == __file__
+    mock_bot.edit_bot_info.assert_awaited_once()

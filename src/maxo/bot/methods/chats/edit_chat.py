@@ -28,7 +28,7 @@ class EditChat(MaxoMethod[Chat]):
     ```
 
     Args:
-        chat_id: ID чата или канала
+        chat_id: ID чата или канала. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         description: Новое описание чата или канала. Чтобы удалить описание, передайте пустую строку
         icon: Данные для прикрепления изображения в качестве аватара чата или канала
         notify: Если `true`, участники получат системное уведомление об изменении
@@ -42,7 +42,7 @@ class EditChat(MaxoMethod[Chat]):
     __method__ = "patch"
 
     chat_id: Path[int]
-    """ID чата или канала"""
+    """ID чата или канала. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
 
     description: Body[Omittable[str | None]] = Omitted()
     """Новое описание чата или канала. Чтобы удалить описание, передайте пустую строку"""

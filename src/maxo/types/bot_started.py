@@ -11,7 +11,7 @@ class BotStarted(MaxUpdate, ChatMethodsFacade):
     Вы получите это событие, как только пользователь начнёт или возобновит общение с ботом: нажмёт соответствующую кнопку в настройках бота в MAX
 
     Args:
-        chat_id: ID диалога, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
+        chat_id: ID диалога, где произошло событие. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         payload: Дополнительные данные из диплинков, переданные при запуске бота. Подробнее о диплинках - [в разделе FAQ](https://dev.max.ru/help/deeplinks)
         type:
         user: Пользователь, который запустил бота через интерфейс, например, нажав кнопку `Start`
@@ -21,7 +21,7 @@ class BotStarted(MaxUpdate, ChatMethodsFacade):
     type = UpdateType.BOT_STARTED
 
     chat_id: int
-    """ID диалога, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
+    """ID диалога, где произошло событие. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
     user: User
     """Пользователь, который запустил бота через интерфейс, например, нажав кнопку `Start`"""
 

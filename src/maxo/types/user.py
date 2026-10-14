@@ -14,7 +14,9 @@ class User(MaxoType):
         - [`ChatMember`](https://dev.max.ru/docs-api/objects/ChatMember) - объект включает общую информацию о пользователе или боте, URL аватара и описание при его наличии. Дополнительно содержит данные для пользователей-участников чата. Возвращается только при вызове некоторых методов группы `/chats`, например [`GET /chats/{chatId}/members`](https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members)
 
     Args:
+        avatar_url: URL аватара пользователя или бота в уменьшенном размере
         first_name: Отображаемое имя пользователя или бота
+        full_avatar_url: URL аватара пользователя или бота в полном размере
         is_bot: `true`, если это бот
         last_activity_time: Время последней активности пользователя или бота в MAX (Unix timestamp в миллисекундах). Если пользователь отключил в настройках профиля мессенджера MAX возможность видеть, что он в сети онлайн, поле может не возвращаться
         last_name: Отображаемая фамилия пользователя. Для ботов это поле не возвращается
@@ -33,7 +35,11 @@ class User(MaxoType):
     username: str | None = None
     """Никнейм бота или уникальное публичное имя пользователя. В случае с пользователем может быть `null`, если тот недоступен или имя не задано"""
 
-    last_activity_time: Omittable[datetime] = Omitted()
+    avatar_url: Omittable[str | None] = Omitted()
+    """URL аватара пользователя или бота в уменьшенном размере"""
+    full_avatar_url: Omittable[str | None] = Omitted()
+    """URL аватара пользователя или бота в полном размере"""
+    last_activity_time: Omittable[datetime | None] = Omitted()
     """Время последней активности пользователя или бота в MAX (Unix timestamp в миллисекундах). Если пользователь отключил в настройках профиля мессенджера MAX возможность видеть, что он в сети онлайн, поле может не возвращаться"""
     last_name: Omittable[str | None] = Omitted()
     """Отображаемая фамилия пользователя. Для ботов это поле не возвращается"""
@@ -51,6 +57,26 @@ class User(MaxoType):
         return self.first_name
 
     full_name = fullname  # Подражание aiogram
+
+    @property
+    def unsafe_avatar_url(self) -> str:
+        if is_defined(self.avatar_url):
+            return self.avatar_url
+
+        raise AttributeIsEmptyError(
+            obj=self,
+            attr="avatar_url",
+        )
+
+    @property
+    def unsafe_full_avatar_url(self) -> str:
+        if is_defined(self.full_avatar_url):
+            return self.full_avatar_url
+
+        raise AttributeIsEmptyError(
+            obj=self,
+            attr="full_avatar_url",
+        )
 
     @property
     def unsafe_last_activity_time(self) -> datetime:

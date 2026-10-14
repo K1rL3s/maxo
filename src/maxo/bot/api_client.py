@@ -45,7 +45,7 @@ from unihttp.serialize import RequestDumper, ResponseLoader
 
 from maxo import loggers
 from maxo.__meta__ import __version__
-from maxo.bot.methods import AddMembers
+from maxo.bot.methods import AddMembers  # type: ignore[deprecated]
 from maxo.bot.middlewares import AttachmentNotReadyRetryMiddleware
 from maxo.bot.upload import UploadConfig, resumable_upload
 from maxo.errors.api import raise_api_error

@@ -177,6 +177,7 @@ Contributors
    pages/utils/link
    pages/utils/callback_answer
    pages/utils/chat_action
+   pages/utils/contact
 
 .. toctree::
    :maxdepth: 1

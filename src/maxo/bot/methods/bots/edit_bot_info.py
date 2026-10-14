@@ -1,3 +1,5 @@
+from typing_extensions import deprecated
+
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.methods.markers import Body
 from maxo.omit import Omittable, Omitted
@@ -6,8 +8,8 @@ from maxo.types.bot_info import BotInfo
 from maxo.types.photo_attachment_request_payload import PhotoAttachmentRequestPayload
 
 
-# Метода нет в документации, но работает
 # Самодельный объект
+@deprecated("PATCH /me нет в API MAX, команды задаёт EditMyCommands", stacklevel=2)
 class EditBotInfo(MaxoMethod[BotInfo]):
     """
     Изменение информации о текущем боте.

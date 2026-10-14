@@ -44,7 +44,7 @@ async def test_callback_answer_defaults(
 
     mock_bot.answer_on_callback.assert_awaited_once_with(
         callback_id="cb",
-        notification=Omitted(),
+        notification="",
         message=None,
         disable_link_preview=Omitted(),
     )
@@ -104,4 +104,29 @@ async def test_answer_alias_forwards_disable_link_preview(
         notification="Готово",
         message=None,
         disable_link_preview=True,
+    )
+
+
+async def test_callback_answer_replaces_null_notification_without_message(
+    facade: MockCallbackFacade,
+    mock_bot: MagicMock,
+) -> None:
+    await facade.callback_answer(notification=None)
+
+    assert mock_bot.answer_on_callback.await_args.kwargs["notification"] == ""
+
+
+async def test_callback_answer_with_message_keeps_notification_omitted(
+    facade: MockCallbackFacade,
+    mock_bot: MagicMock,
+) -> None:
+    message = NewMessageBody(text="edited")
+
+    await facade.callback_answer(message=message)
+
+    mock_bot.answer_on_callback.assert_awaited_once_with(
+        callback_id="cb",
+        notification=Omitted(),
+        message=message,
+        disable_link_preview=Omitted(),
     )

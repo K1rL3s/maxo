@@ -1,16 +1,17 @@
 """Рендер файлов `maxo/bot/methods/<tag>/*.py`."""
 
+import json
+
 from butcher.profile import Method
 from butcher.render import docs, fields, imports
 
 
 def render(method: Method) -> str:
-    lines = [
-        imports.render(method.imports),
-        "",
-        "",
-        f"class {method.name}(MaxoMethod[{method.returns}]):",
-    ]
+    lines = [imports.render(method.imports), "", ""]
+    if method.deprecated is not None:
+        message = json.dumps(method.deprecated, ensure_ascii=False)
+        lines.append(f"@deprecated({message}, stacklevel=2)")
+    lines.append(f"class {method.name}(MaxoMethod[{method.returns}]):")
 
     lines.extend(
         docs.render(

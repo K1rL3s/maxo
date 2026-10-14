@@ -63,7 +63,6 @@ from maxo.types import (
     NewMessageLink,
     OpenAppButton,
     PhotoAttachment,
-    PhotoAttachmentPayload,
     PhotoAttachmentRequest,
     PhotoAttachmentRequestPayload,
     PhotoToken,
@@ -136,6 +135,10 @@ def test_user_unsafe_accessors_raise_for_omitted_fields() -> None:
     )
 
     assert not is_defined(user.last_activity_time)
+    with pytest.raises(AttributeIsEmptyError):
+        _ = user.unsafe_avatar_url
+    with pytest.raises(AttributeIsEmptyError):
+        _ = user.unsafe_full_avatar_url
     with pytest.raises(AttributeIsEmptyError):
         _ = user.unsafe_last_activity_time
     with pytest.raises(AttributeIsEmptyError):
@@ -677,11 +680,7 @@ def test_video_urls_and_details_accessors() -> None:
         height=2,
         token=TOKEN,
         width=3,
-        thumbnail=PhotoAttachment.factory(
-            photo_id=1,
-            token=TOKEN,
-            url="thumbnail",
-        ).payload,
+        thumbnail=VideoThumbnail(url="thumbnail"),
         urls=urls,
     )
 
@@ -799,7 +798,7 @@ def test_base_message_button_accessors() -> None:
 
 def test_button_accessors_raise_for_omitted_values() -> None:
     message_button = MessageButton()
-    open_app_button = OpenAppButton(text="Open")
+    open_app_button = OpenAppButton(text="Open", web_app="app")
 
     with pytest.raises(AttributeIsEmptyError):
         _ = message_button.unsafe_text
@@ -807,8 +806,6 @@ def test_button_accessors_raise_for_omitted_values() -> None:
         _ = open_app_button.unsafe_contact_id
     with pytest.raises(AttributeIsEmptyError):
         _ = open_app_button.unsafe_payload
-    with pytest.raises(AttributeIsEmptyError):
-        _ = open_app_button.unsafe_web_app
 
 
 def test_video_urls_and_user_with_photo_accessors() -> None:
@@ -1021,11 +1018,7 @@ def test_media_and_message_models() -> None:
         height=1080,
         token=DETAILS_ID,
         width=1920,
-        thumbnail=PhotoAttachmentPayload(
-            photo_id=1,
-            token=PHOTO_ATTACHMENT_ID,
-            url="https://example.com/video.png",
-        ),
+        thumbnail=VideoThumbnail(url="https://example.com/video.png"),
         urls=VideoUrls(mp4_720="https://example.com/720.mp4"),
     )
     video_urls = VideoUrls(mp4_720="https://example.com/720.mp4")
@@ -1048,7 +1041,7 @@ def test_remaining_optional_branches() -> None:
         stat=MessageStat(views=1),
         url="https://example.com",
     )
-    open_app = OpenAppButton(text="open")
+    open_app = OpenAppButton(text="open", web_app="app")
     new_message = NewMessageBody(
         attachments=[],
         format=TextFormat.HTML,
@@ -1083,6 +1076,7 @@ def test_remaining_optional_branches() -> None:
         match=r"OpenAppButton.contact_id is empty \(<Omitted>\)",
     ):
         _ = open_app.unsafe_contact_id
+    assert open_app.unsafe_web_app == "app"
     assert new_message.unsafe_attachments == []
     assert new_message.unsafe_format == TextFormat.HTML
     with pytest.raises(
@@ -1172,7 +1166,7 @@ def test_missing_optional_fields_raise_for_unsafe_accessors() -> None:
         token=DETAILS_ID,
         width=1920,
     )
-    open_app = OpenAppButton(text="open")
+    open_app = OpenAppButton(text="open", web_app="app")
     share_payload = ShareAttachmentPayload()
     video_urls = VideoUrls()
     message = Message(
@@ -1239,8 +1233,6 @@ def test_missing_optional_fields_raise_for_unsafe_accessors() -> None:
         _ = open_app.unsafe_contact_id
     with pytest.raises(AttributeIsEmptyError):
         _ = open_app.unsafe_payload
-    with pytest.raises(AttributeIsEmptyError):
-        _ = open_app.unsafe_web_app
     with pytest.raises(AttributeIsEmptyError):
         _ = share_payload.unsafe_token
     with pytest.raises(AttributeIsEmptyError):
@@ -1542,3 +1534,13 @@ def test_bot_admin_permissions_changed_unsafe_permissions() -> None:
     for missing in (make(), make(permissions=None)):
         with pytest.raises(AttributeIsEmptyError):
             _ = missing.unsafe_permissions
+
+
+def test_linked_message_generated_url_is_none_for_inaccessible_chat() -> None:
+    linked = LinkedMessage(
+        type=MessageLinkType.FORWARD,
+        message=MessageBody(mid="mid", seq=5, text="forwarded"),
+        chat_id=0,
+    )
+
+    assert linked.generated_url is None
