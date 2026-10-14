@@ -155,11 +155,16 @@ class Command(BaseFilter[MessageCreated]):
         except ValueError as e:
             raise CommandException("not enough values to unpack") from e
 
+        leading_mention = None
+        if full_command.startswith("@") and "@" not in self.prefix and args:
+            leading_mention = full_command[1:]
+            full_command, *args = args[0].split(maxsplit=1)
+
         prefix, (command, _, mention) = full_command[0], full_command[1:].partition("@")
         return CommandObject(
             prefix=prefix,
             command=command,
-            mention=mention or None,
+            mention=mention or leading_mention or None,
             args=args[0] if args else None,
         )
 
