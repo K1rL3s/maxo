@@ -38,6 +38,7 @@
 - [Link Utility](https://maxo.readthedocs.io/ru/latest/pages/utils/link.html): Сборка ссылок `max://` и `https://max.ru`, перевод ID сообщения в ссылку и обратно.
 - [Авто-ответ на колбэк](https://maxo.readthedocs.io/ru/latest/pages/utils/callback_answer.html): `CallbackAnswerMiddleware` отвечает на `MessageCallback` после нажатия инлайн-кнопки.
 - [Действия бота в чате](https://maxo.readthedocs.io/ru/latest/pages/utils/chat_action.html): `ChatActionSender` и `ChatActionMiddleware` для повторной отправки действий в чате.
+- [Проверка контакта](https://maxo.readthedocs.io/ru/latest/pages/utils/contact.html): `check_contact_hash` сверяет `hash` контакта из кнопки `request_contact` с токеном бота.
 
 ## API Reference
 
