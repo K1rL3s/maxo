@@ -2818,6 +2818,7 @@
                 "description": "Объект используется при отправке нового сообщения в чат или канал[`POST /messages`](/docs-api/methods/POST/messages), редактировании существующего сообщения или поста [`PUT /messages`](/docs-api/methods/PUT/messages), а также callback-отправке сообщения пользователю при нажатии им кнопки в чате или канале [`POST /answers`](/docs-api/methods/POST/answers) \n\nПараметры объекта содержат: текст и способ его форматирования, вложения, ссылку на связанное сообщение (ответ или пересылка), настройку PUSH-уведомлений для участников чата",
                 "properties": {
                     "text": {
+                        "description": "Текст сообщения, до 4000 символов",
                         "type": "string",
                         "maxLength": 4000,
                         "nullable": true

@@ -59,7 +59,7 @@ class EditMessage(MaxoMethod[SimpleQueryResult]):
         link: Ссылка на сообщение в чате или пост в канале. Ссылки на комментарии к постам в каналах не поддержаны
         message_id: ID редактируемого сообщения
         notify: Если `false`, участники чата не получат push-уведомления. Для каналов необходимо отправлять запрос с `notify = true` или без этого поля, т.к. каналы не подразумевают отправку постов без push-уведомлений
-        text:
+        text: Новый текст сообщения, до 4000 символов. `null` оставляет текст без изменений, пустая строка удаляет его
 
     Источник: https://dev.max.ru/docs-api/methods/PUT/messages
     """
@@ -75,6 +75,7 @@ class EditMessage(MaxoMethod[SimpleQueryResult]):
     link: Body[NewMessageLink | None] = None
     """Ссылка на сообщение в чате или пост в канале. Ссылки на комментарии к постам в каналах не поддержаны"""
     text: Body[str | None] = None
+    """Новый текст сообщения, до 4000 символов. `null` оставляет текст без изменений, пустая строка удаляет его"""
     format: Body[Omittable[TextFormat | None]] = Omitted()
     """Разметка текста сообщения. Подробнее - в разделе [Форматирование](https://dev.max.ru/docs-api/use-cases/sending-messages/text-formatting)"""
     notify: Body[Omittable[bool]] = Omitted()

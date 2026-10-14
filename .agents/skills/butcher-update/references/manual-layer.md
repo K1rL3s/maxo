@@ -120,6 +120,10 @@ dev.max.ru, `GET /chats` там объявлен неподдерживаемы�
 `max-swagger.json` они дописаны с русскими описаниями: слияние двух публикаций
 берёт описания из json, а типы и флаги - из yaml.
 
+У `NewMessageBody.text` на сайте нет описания: оно дописано в
+`max-swagger.json`. Смысл `null` и пустой строки при редактировании задаёт
+`METHOD_FIELD_DESCRIPTIONS` для `EditMessage.text`.
+
 `avatar_url` и `full_avatar_url` по обеим спекам есть только у
 `UserWithPhoto`, но пользователь в апдейтах (`bot_started` и других) приходит
 с ними. В `max-swagger.json` они дописаны и в `User`, иначе adaptix молча

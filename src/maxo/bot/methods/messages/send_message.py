@@ -63,7 +63,7 @@ class SendMessage(MaxoMethod[SendMessageResult]):
         format: Разметка текста сообщения. Подробнее - в разделе [Форматирование](https://dev.max.ru/docs-api/use-cases/sending-messages/text-formatting)
         link: Ссылка на сообщение в чате или пост в канале. Ссылки на комментарии к постам в каналах не поддержаны
         notify: Если `false`, участники чата не получат push-уведомления. Для каналов необходимо отправлять запрос с `notify = true` или без этого поля, т.к. каналы не подразумевают отправку постов без push-уведомлений
-        text:
+        text: Текст сообщения, до 4000 символов
         user_id: Если вы хотите отправить сообщение пользователю, укажите ID этого пользователя
 
     Источник: https://dev.max.ru/docs-api/methods/POST/messages
@@ -84,6 +84,7 @@ class SendMessage(MaxoMethod[SendMessageResult]):
     link: Body[NewMessageLink | None] = None
     """Ссылка на сообщение в чате или пост в канале. Ссылки на комментарии к постам в каналах не поддержаны"""
     text: Body[str | None] = None
+    """Текст сообщения, до 4000 символов"""
     format: Body[Omittable[TextFormat | None]] = Omitted()
     """Разметка текста сообщения. Подробнее - в разделе [Форматирование](https://dev.max.ru/docs-api/use-cases/sending-messages/text-formatting)"""
     notify: Body[Omittable[bool]] = Omitted()

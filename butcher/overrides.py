@@ -103,6 +103,10 @@ METHOD_FIELD_DESCRIPTIONS: dict[tuple[str, str], str] = {
         "SendMessage",
         "attachments",
     ): "Вложения отправляемого сообщения. Пустое значение означает, что вложений нет",
+    ("EditMessage", "text"): (
+        "Новый текст сообщения, до 4000 символов. `null` оставляет текст без "
+        "изменений, пустая строка удаляет его"
+    ),
 }
 
 DEPRECATED_METHODS: dict[str, str] = {
