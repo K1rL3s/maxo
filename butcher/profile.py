@@ -354,7 +354,11 @@ class _Profile:
         return alias.description if alias is not None else None
 
     def _field_type(self, ir_field: IRField) -> IRType:
-        return DATETIME if self._is_timestamp(ir_field) else ir_field.type
+        if not self._is_timestamp(ir_field):
+            return ir_field.type
+        if isinstance(ir_field.type, OptionalType):
+            return OptionalType(DATETIME)
+        return DATETIME
 
     @staticmethod
     def _parameter_type(ir_type: IRType, description: str | None) -> IRType:

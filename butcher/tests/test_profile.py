@@ -444,3 +444,20 @@ def test_field_without_description_takes_inline_alias_description(
     assert params["to"].description == "Описание алиаса"
     assert params["big"].description == "Описание алиаса"
     assert params["from_"].description == "Время, начиная с которого нужны сообщения"
+
+
+def test_nullable_timestamp_keeps_none(tmp_path: Path) -> None:
+    spec = copy.deepcopy(SPEC)
+    spec["components"]["schemas"]["Message"]["properties"]["value"] = {
+        "type": "integer",
+        "format": "int64",
+        "nullable": True,
+        "description": "Unix timestamp в миллисекундах",
+    }
+
+    document = _build_document(tmp_path, spec)
+    value = next(
+        item for item in _model(document, "Message").fields if item.name == "value"
+    )
+
+    assert value.annotation == "datetime | None"
