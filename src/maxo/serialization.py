@@ -3,7 +3,7 @@ import typing
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from adaptix import Chain, P, Retort, dumper, loader
+from adaptix import Chain, P, Retort, dumper, loader, name_mapping
 from adaptix.type_tools import exec_type_checking
 from unihttp.serializers.adaptix.marker_tools import for_marker
 from unihttp.serializers.adaptix.serialize import DEFAULT_RETORT
@@ -82,6 +82,7 @@ from maxo.types import (
     StrikethroughMarkup,
     StrongMarkup,
     UnderlineMarkup,
+    UploadMediaResult,
     UserAddedToChat,
     UserMentionMarkup,
     UserRemovedFromChat,
@@ -242,6 +243,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
                 chain=Chain.FIRST,
             ),
             loader(P[datetime], _load_datetime),
+            name_mapping(UploadMediaResult, map={"file_id": "fileId"}),
         ],
     )
 

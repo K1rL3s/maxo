@@ -36,6 +36,7 @@ from maxo.types import (
     MessageCreated,
     NewMessageBody,
     UpdateList,
+    UploadMediaResult,
     User,
     VideoAttachmentDetails,
     VideoThumbnail,
@@ -436,3 +437,11 @@ def test_retort_keeps_avatar_of_user_in_update() -> None:
 
     assert update.user.unsafe_avatar_url == "https://i.oneme.ru/small"
     assert update.user.unsafe_full_avatar_url == "https://i.oneme.ru/full"
+
+
+def test_retort_loads_file_id_of_upload_result() -> None:
+    retort = create_retort(warming_up=False)
+
+    result = retort.load({"fileId": 3343344796, "token": "tok"}, UploadMediaResult)
+
+    assert result.file_id == 3343344796
