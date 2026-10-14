@@ -406,3 +406,25 @@ async def test_clear_subscriptions_propagates_get_subscriptions_error(bot: Bot) 
         await bot.clear_subscriptions()
 
     unsubscribe.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    ("method_name", "kwargs"),
+    [
+        ("add_members", {"chat_id": 1, "user_ids": [2]}),
+        ("get_chat_by_link", {"chat_link": "channel"}),
+        ("get_chats", {}),
+    ],
+)
+async def test_deprecated_method_warns_at_caller(
+    bot: Bot,
+    method_name: str,
+    kwargs: dict[str, object],
+) -> None:
+    with (
+        patch.object(Bot, "call_method", AsyncMock()),
+        pytest.warns(DeprecationWarning, match="MAX") as record,
+    ):
+        await getattr(bot, method_name)(**kwargs)
+
+    assert record[0].filename == __file__

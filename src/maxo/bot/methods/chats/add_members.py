@@ -1,8 +1,11 @@
+from typing_extensions import deprecated
+
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.methods.markers import Body, Path
 from maxo.types.modify_members_result import ModifyMembersResult
 
 
+@deprecated("MAX удалил POST /chats/{chatId}/members 30 сентября 2026", stacklevel=2)
 class AddMembers(MaxoMethod[ModifyMembersResult]):
     """
     Добавление участников в групповой чат

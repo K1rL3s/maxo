@@ -22,7 +22,9 @@
   `upload/upload_media.py`.
 
 Их реэкспорт в сгенерированные `__init__.py` держат `TYPES_EXTRA_EXPORTS` и
-`METHODS_EXTRA_EXPORTS` в `butcher/overrides.py`.
+`METHODS_EXTRA_EXPORTS` в `butcher/overrides.py`. `GetChats` и `GetChatByLink`
+помечены `@deprecated` прямо в файле, а в `METHODS_EXTRA_EXPORTS` - флагом
+`deprecated=True`.
 
 ## `factory()` - фабричные конструкторы
 

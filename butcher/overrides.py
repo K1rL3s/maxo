@@ -105,7 +105,9 @@ METHOD_FIELD_DESCRIPTIONS: dict[tuple[str, str], str] = {
     ): "Вложения отправляемого сообщения. Пустое значение означает, что вложений нет",
 }
 
-DEPRECATED_METHODS: dict[str, str] = {}
+DEPRECATED_METHODS: dict[str, str] = {
+    "AddMembers": "MAX удалил POST /chats/{chatId}/members 30 сентября 2026",
+}
 
 
 @dataclass(slots=True, frozen=True)
@@ -378,8 +380,12 @@ METHODS_EXTRA_EXPORTS: tuple[ExtraExport, ...] = (
     ExtraExport(module="bots.edit_bot_info", names=("EditBotInfo",)),
     ExtraExport(module="chats.delete_admin", names=("DeleteAdmin",)),
     ExtraExport(module="chats.delete_chat", names=("DeleteChat",)),
-    ExtraExport(module="chats.get_chat_by_link", names=("GetChatByLink",)),
-    ExtraExport(module="chats.get_chats", names=("GetChats",)),
+    ExtraExport(
+        module="chats.get_chat_by_link",
+        names=("GetChatByLink",),
+        deprecated=True,
+    ),
+    ExtraExport(module="chats.get_chats", names=("GetChats",), deprecated=True),
     ExtraExport(module="chats.set_admins", names=("SetAdmins",)),
     ExtraExport(module="upload.upload_media", names=("UploadMedia",)),
 )

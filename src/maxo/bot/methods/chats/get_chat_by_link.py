@@ -1,8 +1,11 @@
+from typing_extensions import deprecated
+
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.methods.markers import Path
 from maxo.types.chat import Chat
 
 
+@deprecated("GET /chats/{chatLink} не работает в API MAX", stacklevel=2)
 class GetChatByLink(MaxoMethod[Chat]):
     """
     Получение информации о канале по его ссылке

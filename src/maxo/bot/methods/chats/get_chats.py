@@ -1,9 +1,12 @@
+from typing_extensions import deprecated
+
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.methods.markers import Query
 from maxo.omit import Omittable, Omitted
 from maxo.types.chat_list import ChatList
 
 
+@deprecated("MAX не поддерживает GET /chats с июня 2026", stacklevel=2)
 class GetChats(MaxoMethod[ChatList]):
     """
     Получение списка всех групповых чатов и каналов для бота

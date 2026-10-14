@@ -137,6 +137,15 @@ Long polling / webhook -> Dispatcher -> Router tree
   после десериализации.
 - `Bot` привязывает методы через `unihttp.bind_method`; ручные
   passthrough-методы не пиши.
+- Метод, который MAX убрал или перестал поддерживать, помечается
+  `@deprecated(..., stacklevel=2)` из `typing_extensions` на классе. В unihttp
+  своей пометки нет, но `bind_method` создаёт экземпляр метода при каждом
+  вызове, поэтому `DeprecationWarning` срабатывает и на `bot.<метод>()`, а
+  `stacklevel=2` указывает на строку пользователя. Статически mypy и IDE
+  подсвечивают импорт класса, но не вызов через `Bot`. Сгенерированному
+  методу пометку ставит butcher (`DEPRECATED_METHODS`). Импорты устаревших
+  символов внутри maxo и в тестах - с `# type: ignore[deprecated]`: в mypy
+  включён код `deprecated`.
 - `MaxApiClient` добавляет российский trusted CA, `Authorization`,
   `User-Agent`, маппинг ошибок API и превращает HTTP 200 с `"success": false`
   или с `error_code` в 400. Исключение - `AddMembers`: он отдаёт частичный результат, и это
