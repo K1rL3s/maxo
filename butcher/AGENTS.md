@@ -149,6 +149,13 @@ Docstring'и (`render/docs.py`) печатаются как в спеке, кр�
   тип, принудительный `Omittable`, хвостовой комментарий. Ссылку на другую
   схему меняет `ref=...`, а не только `annotation`; `ref` сохраняет
   `nullable` поля, `annotation` заменяет тип целиком.
+- `DEPRECATED_METHODS` - сгенерированный метод, который MAX убрал, и текст
+  предупреждения: класс получает `@deprecated(..., stacklevel=2)`. Сайт
+  сообщает об удалении только прозой и вендорским полем
+  `disable-notification`, флага `deprecated` у операций нет ни в одной
+  публикации. Ручной устаревший метод помечается `ExtraExport(...,
+  deprecated=True)`. Импорт устаревших методов в `maxo/bot/methods/__init__.py`
+  butcher пишет с `# type: ignore[deprecated]`.
 
 ## Ручной слой
 

@@ -159,6 +159,7 @@ class Method:
     doc_link: str
     field_groups: tuple[tuple[Field, ...], ...]
     imports: frozenset[Import]
+    deprecated: str | None
 
     @property
     def fields(self) -> tuple[Field, ...]:
@@ -591,6 +592,9 @@ class _Profile:
         self._add_field_helpers(fields, imports)
         for marker in {f.marker for f in fields if f.marker}:
             imports.add(Import(MARKERS_MODULE, marker))
+        deprecated = overrides.DEPRECATED_METHODS.get(operation.class_name)
+        if deprecated is not None:
+            imports.add(Import("typing_extensions", "deprecated"))
         return Method(
             name=operation.class_name,
             tag=operation.tag,
@@ -602,6 +606,7 @@ class _Profile:
             doc_link=_doc_link(operation),
             field_groups=_method_field_groups(fields),
             imports=frozenset(imports),
+            deprecated=deprecated,
         )
 
     def _method_field_type(

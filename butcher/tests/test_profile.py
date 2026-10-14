@@ -461,3 +461,15 @@ def test_nullable_timestamp_keeps_none(tmp_path: Path) -> None:
     )
 
     assert value.annotation == "datetime | None"
+
+
+def test_deprecated_method_override(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setitem(overrides.DEPRECATED_METHODS, "GetChat", "Метод удалён")
+
+    document = _build_document(tmp_path, SPEC)
+
+    assert _method(document, "GetChat").deprecated == "Метод удалён"
+    assert _method(document, "SendMessage").deprecated is None

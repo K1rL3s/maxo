@@ -105,6 +105,8 @@ METHOD_FIELD_DESCRIPTIONS: dict[tuple[str, str], str] = {
     ): "Вложения отправляемого сообщения. Пустое значение означает, что вложений нет",
 }
 
+DEPRECATED_METHODS: dict[str, str] = {}
+
 
 @dataclass(slots=True, frozen=True)
 class FieldOverride:
@@ -343,6 +345,7 @@ FACADE_MODULES: dict[str, str] = {
 class ExtraExport:
     module: str
     names: tuple[str, ...] = field(default_factory=tuple)
+    deprecated: bool = False
 
 
 #: Алиасы уровня модуля внутри сгенерированного типа: ``Имя: TypeAlias = <Класс>``.
