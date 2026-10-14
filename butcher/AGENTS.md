@@ -211,7 +211,7 @@ aiogram-алиасов, сужений с `# type: ignore` и полей вне 
 
    Набор расхождений, включая `Only in`, совпадает с набором до обновления плюс
    осознанный новый ручной слой. Дрейф, где генератор точнее дерева
-   (`Chat.participants`, `User.name`), в рамках обновления не чинится.
+   (`Chat.participants`), в рамках обновления не чинится.
 6. `just butcher-test` (если менялся `butcher/`), `just lint`, `just mypy`,
    `just test`, `PYTHONPATH=src uv run python -c "import maxo"` (ловит циклы
    импортов).

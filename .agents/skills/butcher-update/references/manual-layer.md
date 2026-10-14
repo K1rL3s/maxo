@@ -15,11 +15,13 @@
 - `src/maxo/types/base.py` - `MaxoType`, `BaseMaxoType`, `MaxUpdate`,
   `BaseUpdate`.
 - `src/maxo/types/facades/base.py` - `BaseMethodsFacade`.
-- `src/maxo/types/error_event.py`, `update_context.py`, `upload_media_result.py`.
+- `src/maxo/types/error_event.py`, `update_context.py`, `upload_media_result.py`,
+  `clear_subscriptions_result.py`.
 - `src/maxo/bot/methods/base.py`, `markers.py`.
 - Методы вне свагера: `bots/edit_bot_info.py`, `chats/delete_chat.py`,
   `chats/get_chat_by_link.py`, `chats/get_chats.py`, `chats/set_admins.py`,
   `upload/upload_media.py`.
+- `chats/delete_admin.py` - алиас `DeleteAdmin = DeleteAdmins`.
 
 Их реэкспорт в сгенерированные `__init__.py` держат `TYPES_EXTRA_EXPORTS` и
 `METHODS_EXTRA_EXPORTS` в `butcher/overrides.py`. `EditBotInfo`, `DeleteChat`,
@@ -154,8 +156,6 @@ dev.max.ru, `GET /chats` там объявлен неподдерживаемы�
 
 - `Chat.participants` - в спеке `additionalProperties: integer`, генератор даёт
   `dict[str, int]`, в дереве остался `dict[str, Any]`.
-- `User.name` - в спеке лежит в `required`, генератор даёт `str | None = None`,
-  а в дереве `Omittable[str | None]`.
 
 **Вердикт: в рамках обновления контракта такой дрейф не чинится.** Если файл не
 попал в дельту двух генераций - не трогай его, даже если видишь расхождение.
