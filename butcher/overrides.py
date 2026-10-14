@@ -377,9 +377,9 @@ TYPES_EXTRA_EXPORTS: tuple[ExtraExport, ...] = (
 
 #: Что дописать в `maxo/bot/methods/__init__.py` - ручные методы и алиасы.
 METHODS_EXTRA_EXPORTS: tuple[ExtraExport, ...] = (
-    ExtraExport(module="bots.edit_bot_info", names=("EditBotInfo",)),
+    ExtraExport(module="bots.edit_bot_info", names=("EditBotInfo",), deprecated=True),
     ExtraExport(module="chats.delete_admin", names=("DeleteAdmin",)),
-    ExtraExport(module="chats.delete_chat", names=("DeleteChat",)),
+    ExtraExport(module="chats.delete_chat", names=("DeleteChat",), deprecated=True),
     ExtraExport(
         module="chats.get_chat_by_link",
         names=("GetChatByLink",),

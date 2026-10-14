@@ -412,6 +412,8 @@ async def test_clear_subscriptions_propagates_get_subscriptions_error(bot: Bot) 
     ("method_name", "kwargs"),
     [
         ("add_members", {"chat_id": 1, "user_ids": [2]}),
+        ("delete_chat", {"chat_id": 1}),
+        ("edit_bot_info", {"first_name": "Bot"}),
         ("get_chat_by_link", {"chat_link": "channel"}),
         ("get_chats", {}),
     ],

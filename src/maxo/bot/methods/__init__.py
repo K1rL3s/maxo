@@ -1,10 +1,10 @@
-from .bots.edit_bot_info import EditBotInfo
+from .bots.edit_bot_info import EditBotInfo  # type: ignore[deprecated]
 from .bots.edit_my_commands import EditMyCommands
 from .bots.get_my_info import GetMyInfo
 from .chats.add_members import AddMembers  # type: ignore[deprecated]
 from .chats.delete_admin import DeleteAdmin
 from .chats.delete_admins import DeleteAdmins
-from .chats.delete_chat import DeleteChat
+from .chats.delete_chat import DeleteChat  # type: ignore[deprecated]
 from .chats.edit_chat import EditChat
 from .chats.get_admins import GetAdmins
 from .chats.get_chat import GetChat

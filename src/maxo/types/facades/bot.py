@@ -1,3 +1,5 @@
+from typing_extensions import deprecated
+
 from maxo.omit import Omittable, Omitted
 from maxo.types.bot_command import BotCommand
 from maxo.types.bot_info import BotInfo
@@ -11,6 +13,7 @@ class BotMethodsFacade(BaseMethodsFacade):
     async def get_my_info(self) -> BotInfo:
         return await self.bot.get_my_info()
 
+    @deprecated("PATCH /me нет в API MAX, команды задаёт EditMyCommands")
     async def edit_bot_info(
         self,
         first_name: Omittable[str | None] = Omitted(),

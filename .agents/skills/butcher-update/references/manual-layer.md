@@ -22,9 +22,10 @@
   `upload/upload_media.py`.
 
 Их реэкспорт в сгенерированные `__init__.py` держат `TYPES_EXTRA_EXPORTS` и
-`METHODS_EXTRA_EXPORTS` в `butcher/overrides.py`. `GetChats` и `GetChatByLink`
-помечены `@deprecated` прямо в файле, а в `METHODS_EXTRA_EXPORTS` - флагом
-`deprecated=True`.
+`METHODS_EXTRA_EXPORTS` в `butcher/overrides.py`. `EditBotInfo`, `DeleteChat`,
+`GetChats` и `GetChatByLink` помечены `@deprecated` прямо в файле, а в
+`METHODS_EXTRA_EXPORTS` - флагом `deprecated=True`: их нет в документации
+dev.max.ru, `GET /chats` там объявлен неподдерживаемым.
 
 ## `factory()` - фабричные конструкторы
 
