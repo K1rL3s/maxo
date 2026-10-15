@@ -3,7 +3,6 @@ from typing import cast
 import pytest
 
 from maxo.enums import ChatType
-from maxo.errors import UnknownChatTypeError
 from maxo.omit import Omittable, Omitted
 from maxo.utils.helpers.calculating import calculate_chat_id_and_user_id
 
@@ -44,7 +43,7 @@ def test_calculate_chat_id_and_user_id(
 
 
 def test_calculate_chat_id_and_user_id_unknown_chat_type() -> None:
-    with pytest.raises(UnknownChatTypeError, match="Неизвестный тип чата: unknown"):
+    with pytest.raises(AssertionError, match="Неизвестный тип чата: unknown"):
         calculate_chat_id_and_user_id(
             chat_type=cast(ChatType, "unknown"),
             chat_id=123,

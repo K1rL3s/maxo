@@ -1,5 +1,4 @@
 from maxo.enums import ChatType
-from maxo.errors import UnknownChatTypeError
 from maxo.omit import Omittable, Omitted, is_defined
 
 
@@ -23,4 +22,5 @@ def calculate_chat_id_and_user_id(
         return chat_id if is_defined(chat_id) else Omitted(), Omitted()
     # ChatType.PRIVATE/GROUP/SUPERGROUP - алиасы значений выше,
     # поэтому сюда исполнение не доходит.
-    raise UnknownChatTypeError(chat_type)
+    msg = f"Неизвестный тип чата: {chat_type}"
+    raise AssertionError(msg)
