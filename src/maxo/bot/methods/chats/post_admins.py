@@ -57,7 +57,7 @@ class PostAdmins(MaxoMethod[SimpleQueryResult]):
 
     Args:
         admins: Список пользователей и ботов, которые получат права администратора группового чата или канала
-        chat_id: ID группового чата или канала
+        chat_id: ID группового чата или канала. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         marker: Указатель на следующую страницу данных
 
     Источник: https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members/admins
@@ -67,7 +67,7 @@ class PostAdmins(MaxoMethod[SimpleQueryResult]):
     __method__ = "post"
 
     chat_id: Path[int]
-    """ID группового чата или канала"""
+    """ID группового чата или канала. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
 
     admins: Body[list[ChatAdmin]]
     """Список пользователей и ботов, которые получат права администратора группового чата или канала"""

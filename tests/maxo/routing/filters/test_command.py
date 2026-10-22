@@ -4,9 +4,16 @@ from typing import Any, cast
 import pytest
 
 from maxo import Bot, Ctx
-from maxo.enums import ChatType
+from maxo.enums import ChatType, MessageLinkType
 from maxo.routing.filters.command import Command, CommandException, CommandObject
-from maxo.types import BotCommand, Message, MessageBody, MessageCreated, Recipient
+from maxo.types import (
+    BotCommand,
+    LinkedMessage,
+    Message,
+    MessageBody,
+    MessageCreated,
+    Recipient,
+)
 from tests.constants import NOW
 
 
@@ -134,3 +141,53 @@ async def test_command_without_bot_rejects_only_mention() -> None:
 
     assert await command_filter(make_message_update("/start"), Ctx({})) is True
     assert await command_filter(make_message_update("/start@maxobot"), Ctx({})) is False
+
+
+def make_linked_update(link_type: MessageLinkType, text: str) -> MessageCreated:
+    update = make_message_update(None)
+    update.message.link = LinkedMessage(
+        type=link_type,
+        message=MessageBody(mid="linked", seq=2, text=text),
+    )
+    return update
+
+
+async def test_command_reads_text_of_forwarded_message() -> None:
+    ctx = Ctx({"bot": make_bot()})
+    update = make_linked_update(MessageLinkType.FORWARD, "/ban 10")
+
+    assert await Command("ban")(update, ctx) is True
+    assert ctx["command"].args == "10"
+
+
+async def test_command_ignores_text_of_replied_message() -> None:
+    ctx = Ctx({"bot": make_bot()})
+    update = make_linked_update(MessageLinkType.REPLY, "/ban 10")
+
+    assert await Command("ban")(update, ctx) is False
+    assert "command" not in ctx
+
+
+async def test_command_accepts_leading_bot_mention() -> None:
+    ctx = Ctx({"bot": make_bot()})
+
+    assert await Command("start")(make_message_update("@maxobot /start payload"), ctx)
+    assert ctx["command"] == CommandObject(
+        prefix="/",
+        command="start",
+        mention="maxobot",
+        args="payload",
+    )
+
+
+@pytest.mark.parametrize("text", ["@otherbot /start", "@maxobot", "@maxobot start"])
+async def test_command_rejects_leading_mention_mismatch(text: str) -> None:
+    ctx = Ctx({"bot": make_bot()})
+
+    assert await Command("start")(make_message_update(text), ctx) is False
+
+
+async def test_command_with_at_prefix_skips_leading_mention() -> None:
+    command = await Command("start", prefix="@").parse_command("@start now", None)
+
+    assert command == CommandObject(prefix="@", command="start", args="now")

@@ -103,6 +103,14 @@ METHOD_FIELD_DESCRIPTIONS: dict[tuple[str, str], str] = {
         "SendMessage",
         "attachments",
     ): "Вложения отправляемого сообщения. Пустое значение означает, что вложений нет",
+    ("EditMessage", "text"): (
+        "Новый текст сообщения, до 4000 символов. `null` оставляет текст без "
+        "изменений, пустая строка удаляет его"
+    ),
+}
+
+DEPRECATED_METHODS: dict[str, str] = {
+    "AddMembers": "MAX удалил POST /chats/{chatId}/members 30 сентября 2026",
 }
 
 
@@ -154,6 +162,7 @@ MODEL_FIELD_OVERRIDES: dict[tuple[str, str], FieldOverride] = {
     # required. Сужение жило в src ручной правкой - переносим в оверрайды,
     # иначе следующая генерация снесёт его вместе с `unsafe_name`.
     ("User", "name"): FieldOverride(omittable=True),
+    ("VideoAttachmentDetails", "thumbnail"): FieldOverride(ref="VideoThumbnail"),
 }
 
 
@@ -342,6 +351,7 @@ FACADE_MODULES: dict[str, str] = {
 class ExtraExport:
     module: str
     names: tuple[str, ...] = field(default_factory=tuple)
+    deprecated: bool = False
 
 
 #: Алиасы уровня модуля внутри сгенерированного типа: ``Имя: TypeAlias = <Класс>``.
@@ -371,11 +381,15 @@ TYPES_EXTRA_EXPORTS: tuple[ExtraExport, ...] = (
 
 #: Что дописать в `maxo/bot/methods/__init__.py` - ручные методы и алиасы.
 METHODS_EXTRA_EXPORTS: tuple[ExtraExport, ...] = (
-    ExtraExport(module="bots.edit_bot_info", names=("EditBotInfo",)),
+    ExtraExport(module="bots.edit_bot_info", names=("EditBotInfo",), deprecated=True),
     ExtraExport(module="chats.delete_admin", names=("DeleteAdmin",)),
-    ExtraExport(module="chats.delete_chat", names=("DeleteChat",)),
-    ExtraExport(module="chats.get_chat_by_link", names=("GetChatByLink",)),
-    ExtraExport(module="chats.get_chats", names=("GetChats",)),
+    ExtraExport(module="chats.delete_chat", names=("DeleteChat",), deprecated=True),
+    ExtraExport(
+        module="chats.get_chat_by_link",
+        names=("GetChatByLink",),
+        deprecated=True,
+    ),
+    ExtraExport(module="chats.get_chats", names=("GetChats",), deprecated=True),
     ExtraExport(module="chats.set_admins", names=("SetAdmins",)),
     ExtraExport(module="upload.upload_media", names=("UploadMedia",)),
 )

@@ -18,7 +18,7 @@ class GetPinnedMessage(MaxoMethod[GetPinnedMessageResult]):
     ```
 
     Args:
-        chat_id: ID чата
+        chat_id: ID чата. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
 
     Источник: https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/pin
     """
@@ -27,4 +27,4 @@ class GetPinnedMessage(MaxoMethod[GetPinnedMessageResult]):
     __method__ = "get"
 
     chat_id: Path[int]
-    """ID чата"""
+    """ID чата. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""

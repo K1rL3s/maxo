@@ -63,7 +63,6 @@ from maxo.types import (
     NewMessageLink,
     OpenAppButton,
     PhotoAttachment,
-    PhotoAttachmentPayload,
     PhotoAttachmentRequest,
     PhotoAttachmentRequestPayload,
     PhotoToken,
@@ -136,6 +135,10 @@ def test_user_unsafe_accessors_raise_for_omitted_fields() -> None:
     )
 
     assert not is_defined(user.last_activity_time)
+    with pytest.raises(AttributeIsEmptyError):
+        _ = user.unsafe_avatar_url
+    with pytest.raises(AttributeIsEmptyError):
+        _ = user.unsafe_full_avatar_url
     with pytest.raises(AttributeIsEmptyError):
         _ = user.unsafe_last_activity_time
     with pytest.raises(AttributeIsEmptyError):
@@ -677,11 +680,7 @@ def test_video_urls_and_details_accessors() -> None:
         height=2,
         token=TOKEN,
         width=3,
-        thumbnail=PhotoAttachment.factory(
-            photo_id=1,
-            token=TOKEN,
-            url="thumbnail",
-        ).payload,
+        thumbnail=VideoThumbnail(url="thumbnail"),
         urls=urls,
     )
 
@@ -1021,11 +1020,7 @@ def test_media_and_message_models() -> None:
         height=1080,
         token=DETAILS_ID,
         width=1920,
-        thumbnail=PhotoAttachmentPayload(
-            photo_id=1,
-            token=PHOTO_ATTACHMENT_ID,
-            url="https://example.com/video.png",
-        ),
+        thumbnail=VideoThumbnail(url="https://example.com/video.png"),
         urls=VideoUrls(mp4_720="https://example.com/720.mp4"),
     )
     video_urls = VideoUrls(mp4_720="https://example.com/720.mp4")
@@ -1542,3 +1537,13 @@ def test_bot_admin_permissions_changed_unsafe_permissions() -> None:
     for missing in (make(), make(permissions=None)):
         with pytest.raises(AttributeIsEmptyError):
             _ = missing.unsafe_permissions
+
+
+def test_linked_message_generated_url_is_none_for_inaccessible_chat() -> None:
+    linked = LinkedMessage(
+        type=MessageLinkType.FORWARD,
+        message=MessageBody(mid="mid", seq=5, text="forwarded"),
+        chat_id=0,
+    )
+
+    assert linked.generated_url is None

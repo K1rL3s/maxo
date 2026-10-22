@@ -1,1049 +1,322 @@
 # AGENTS.md - правила разработки maxo для AI-агентов
 
-Этот файл является единым источником правды для AI-агентов, работающих с
-репозиторием `maxo`. Все инструкции, комментарии к разработке и
-пользовательская документация для агентов в этом проекте пишутся на русском
-языке.
+`maxo` - асинхронный Python-фреймворк для ботов мессенджера MAX
+(`https://max.ru`), по API и привычкам близкий к `aiogram`. Версия проекта и
+поддерживаемые Python - в `pyproject.toml`.
 
-`maxo` - асинхронный Python-фреймворк для разработки ботов российского
-мессенджера MAX (`https://max.ru`). Текущая версия проекта: `0.9.1`.
-Поддерживаемые версии Python: `3.12`, `3.13`, `3.14`.
+Инструкции для агентов, docstring'и публичного API и пользовательская
+документация пишутся на русском языке.
 
-## Единый источник инструкций
+## Источник инструкций
 
-`AGENTS.md` - базовый и обязательный источник правил для всех AI-агентов.
-`CLAUDE.md` должен оставаться симлинком на `./AGENTS.md`.
+`AGENTS.md` - единственный обязательный источник правил для всех агентов;
+`CLAUDE.md` рядом с ним - симлинк `./AGENTS.md`. Правила, нужные Codex, Cursor,
+Copilot и Gemini, держи здесь, а не в Claude-only skills. Файлы под отдельный
+инструмент - только тонкий слой поверх `AGENTS.md`. Исключение -
+`.agents/skills/butcher-update/references/manual-layer.md`: общий для всех
+инструментов справочник ручного слоя, на него ссылается `butcher/AGENTS.md`.
 
-Не выноси обязательные правила в Claude-only skills или другие инструменты,
-которые не читают Codex, Cursor, Copilot, Gemini и похожие агенты. Если
-инструкции разрастутся, добавляй вложенные `AGENTS.md` ближе к области
-ответственности - так уже сделано для кодогенерации (`butcher/AGENTS.md`);
-по тому же принципу можно завести `src/maxo/bot/AGENTS.md`, `tests/AGENTS.md`
-или `docs/AGENTS.md`.
+Разросшуюся область выноси во вложенный `AGENTS.md` рядом с кодом (так сделано
+для `butcher/AGENTS.md`) с симлинком `CLAUDE.md -> ./AGENTS.md`. Вложенный файл
+дополняет корневой, общие правила действуют и в подкаталоге.
 
-Вложенный `AGENTS.md` дополняет корневой, а не заменяет: общие правила проекта
-действуют и в подкаталоге. Рядом с ним держи симлинк `CLAUDE.md -> ./AGENTS.md`,
-как в корне.
+## Команды
 
-Специфичные файлы для отдельных инструментов допустимы только как тонкий слой
-поверх `AGENTS.md`. В них нельзя держать единственную копию знаний о проекте.
-
-## Рабочие команды
-
-Проект использует `uv`. Сначала синхронизируй окружение:
+Проект на `uv`, команды собраны в `justfile`; рецепты сами зовут `uv run`.
 
 ```bash
-uv sync --all-groups
-```
-
-Для CI-паритета используй прямые команды через `uv`:
-
-```bash
-uv run ruff check --no-fix .
-uv run mypy --config-file pyproject.toml
-uv run pytest tests/ --cov=src --cov-report=term
-uv run nox -s test
-```
-
-Для точечного запуска:
-
-```bash
-uv run pytest tests/path/test_file.py::test_name -v
-uv run ruff check --no-fix src/maxo/path.py tests/path/test_file.py
-```
-
-В дереве есть  `justfile`, и CI запускает линтеры и тесты именно через него.
-Все рецепты сами вызывают `uv run`, поэтому активировать venv не нужно:
-
-```bash
-just lint       # ruff + black + codespell + slotscheck + bandit
+uv sync --all-groups   # окружение со всеми extras, иначе падают тесты интеграций
+just lint              # ruff + black + codespell + slotscheck + bandit
 just mypy
-just test
-just test-all
-just all
-just build         # uv build
-just check-dist    # сборка + twine check --strict + check_dist.py
-just butcher       # генерация типов/enum'ов/методов по max-swagger.json и .yaml
-just butcher-test  # тесты самого генератора
+just test              # принимает аргументы pytest: just test -k dialogs
+uv run pytest tests/path/test_file.py::test_name -v
 ```
 
-Полезно помнить:
+- В `pyproject.toml` у `ruff` стоит `fix = true`, а рецепты `just ruff` и
+  `just black` правят файлы. Для проверки без правок:
+  `uv run ruff check --no-fix .` и `uv run black --check .`. По той же причине
+  `lint.yml` зовёт линтеры через `uv run`, а не через `just`: иначе CI чинил бы
+  найденное и зеленел.
+- `uv.lock` в `.gitignore`; не коммить его без решения мейнтейнера.
+- Версия `uv` закреплена в четырёх местах, меняй все сразу:
+  `[tool.uv] required-version` (источник правды, другой `uv` откажется
+  работать), `build-system.requires` (`uv_build`), вход `version` у
+  `astral-sh/setup-uv` в каждом workflow и `pip install uv==...` в
+  `.readthedocs.yml` (RTD ставит `uv` через `pip`, без пина приедет свежий и
+  сборка документации упадёт).
 
-- `pyproject.toml` задает `ruff` c `fix = true`, поэтому для проверки без
-  изменений используй `--no-fix`.
-- Рецепты `just ruff` и `just black` меняют файлы (`ruff check --fix .`,
-  `black .`). Поэтому `lint.yml` зовет линтеры напрямую через `uv run`, а не
-  через just: иначе CI чинил бы найденное и зеленел. Для проверки без правок
-  локально - `uv run ruff check --no-fix .` и `uv run black --check .`.
-- `just test` принимает дополнительные аргументы pytest, например
-  `just test --cov-report=xml` (так делает CI) или `just test -k dialogs`.
-- `pytest` в проекте работает с `asyncio_mode = auto`.
-- CI проверяет lint на Python `3.14` и тесты на Python `3.12`, `3.13`, `3.14`
-  с разрешением зависимостей `lowest-direct` и `highest`.
-- `uv.lock` игнорируется в этом репозитории. Не добавляй его в коммит без
-  отдельного решения мейнтейнера.
-- Версия `uv` закреплена в четырех местах и должна меняться во всех сразу:
-  `[tool.uv] required-version`, `build-system.requires` (`uv_build`), вход
-  `version` у `astral-sh/setup-uv` в каждом workflow и `pip install uv==...`
-  в `.readthedocs.yml`. `required-version` - единственный источник правды: любой
-  другой `uv` откажется работать, а расхождение с пином валит сборку на первой
-  же команде `uv`. Read the Docs ставит `uv` обычным `pip`, поэтому пин там
-  нужен явный: без него приедет свежий `uv` и билд документации упадет.
+## Карта пакета
 
-## Архитектура проекта
+| Путь                     | Что там                                                                     |
+|--------------------------|-----------------------------------------------------------------------------|
+| `src/maxo/bot/`          | `Bot`, `MaxApiClient`, методы Bot API на `unihttp`, `warming_up.py`.         |
+| `src/maxo/types/`, `enums/` | Типы и enum MAX Bot API, в основном сгенерированы butcher.               |
+| `src/maxo/routing/`      | `Dispatcher`, `Router`, observers, filters, middlewares, signals, flags.     |
+| `src/maxo/fsm/`          | `State`, `StatesGroup`, `FSMContext`, storage, isolation, key builders.      |
+| `src/maxo/dialogs/`      | Порт `aiogram_dialog`: `Dialog`, `Window`, widgets, managers, test tools.    |
+| `src/maxo/transport/`    | Long polling и webhook (engines, adapters, routing, security).               |
+| `src/maxo/errors/`       | Общие и API-исключения.                                                     |
+| `src/maxo/integrations/` | `dishka`, `magic_filter`.                                                   |
+| `src/maxo/utils/`        | Builders, upload, formatting, deeplink/link.                                |
+| `butcher/`               | Кодогенерация по свагеру, свой `AGENTS.md`.                                 |
 
-Ключевые директории:
+`maxo.dialogs` и `maxo.transport.webhook` портированы из `aiogram_dialog` и
+`aiogram-webhook`: при правках держи совместимость их паттернов.
 
-| Путь                     | Назначение                                                                                                                        |
-|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| `src/maxo/bot/`          | `Bot`, `MaxApiClient`, состояния бота, declarative Bot API methods на `unihttp`.                                                  |
-| `src/maxo/types/`        | Типы MAX Bot API. Многие файлы сгенерированы по документации API.                                                                 |
-| `src/maxo/enums/`        | Enum MAX Bot API. Многие файлы сгенерированы по документации API.                                                                 |
-| `src/maxo/routing/`      | `Dispatcher`, `Router`, observers, handlers, filters, middlewares и signals.                                                      |
-| `src/maxo/fsm/`          | FSM: `State`, `StatesGroup`, `FSMContext`, storage, isolation, key builders.                                                      |
-| `src/maxo/dialogs/`      | Диалоги, портированные из `aiogram_dialog`: `Dialog`, `Window`, widgets, managers, preview, test tools.                           |
-| `src/maxo/transport/`    | Long polling и webhook engine/adapters/routing/security.                                                                          |
-| `src/maxo/errors/`       | Исключения публичного API и ошибки MAX Bot API.                                                                                   |
-| `src/maxo/integrations/` | Интеграции `dishka` и `magic_filter`.                                                                                             |
-| `src/maxo/utils/`        | Builders, upload helpers, formatting, deeplink/link helpers.                                                                      |
-| `docs/`                  | Sphinx-документация на русском языке.                                                                                             |
-| `examples/`              | Рабочие примеры использования публичного API.                                                                                     |
-| `tests/`                 | Pytest-тесты по подсистемам.                                                                                                      |
+## Неочевидные механизмы
 
-Общая модель системы:
+### Типы
+
+- `_MaxoTypeMetaClass` (`types/base.py`) сам оборачивает каждого наследника
+  `MaxoType` в `@dataclass(slots=True, kw_only=True)`. Явный `__slots__` в
+  классе отключает это.
+- `MaxoType` наследует `BaseMethodsFacade` (`types/facades/base.py`), и
+  метакласс конфликтует с `ABCMeta`: ни `MaxoType`, ни фасады не могут быть
+  `ABC`/`Protocol`. Поэтому `@abstractmethod` на фасадах декоративный, а поля
+  вроде `message` объявлены раздвоённо через `if TYPE_CHECKING`. Это
+  технический долг до отвязки `MaxoType` от фасада.
+- `maxo/types/facades/__init__.py` пуст намеренно: реэкспорт фасадов
+  зацикливает импорт через `types/base.py`. Фасад импортируй из конкретного
+  модуля: `from maxo.types.facades.chat import ChatMethodsFacade`.
+- Loader из `serialization.py` привязывает `Bot` ко всем загруженным типам,
+  поэтому update умеет отвечать сам: `await message.send_message(...)`. Вручную
+  бот привязывается через `as_(bot)`.
+- `Omitted()` - поле не отправляется, `None` в теле - уходит `null`, `None` в
+  `Query[...]` превращается в `Omitted()` (`_omit_none_query_values`). Optional
+  wire-поле - `Omittable[T] = Omitted()`, поле, которое приходит `null`, -
+  `Omittable[T | None]`. Для каждого `Omittable`-поля есть `unsafe_<поле>`,
+  кидающий `AttributeIsEmptyError` (образец - `unsafe_sender`).
+- Полиморфные типы (updates, attachments, markup, buttons) регистрируются в
+  `TAG_PROVIDERS` в `serialization.py`. Union-алиас генерируется, регистрация -
+  ручная; без неё `LoadError` в рантайме. Порядок - в `butcher/AGENTS.md`.
+- `serialization.py` ещё дампит query (bool -> `"true"`/`"false"`, списки
+  через запятую, `datetime` в миллисекунды), грузит таймстемпы в `datetime` с
+  `UTC` и подставляет `BotDefaults` (`text_format`, `disable_link_preview`).
+  Дефолты получают только методы из ручных алиасов `TypesWithFormat` и
+  `TypesWithLinkPreview`: новый метод с `format` или `disable_link_preview`
+  добавляй туда.
+- `bot/warming_up.py` заранее строит сериализаторы adaptix для всех типов и
+  методов; новый тип или метод добавляй и туда.
+
+### Роутинг
 
 ```text
-Long polling / webhook
-  -> Dispatcher
-  -> Router tree
-  -> outer middleware
-  -> filters
-  -> inner middleware
-  -> handler
+Long polling / webhook -> Dispatcher -> Router tree
+  -> outer middleware -> filters -> inner middleware -> handler
 ```
 
-Ключевые паттерны:
-
-- `Dispatcher` - корневой `Router`.
-- `Router.include(...)` задает порядок обхода дочерних роутеров.
-- Первый обработавший обычный update останавливает дальнейший поиск.
-- Сигналы `before_startup`, `after_startup`, `before_shutdown`,
-  `after_shutdown` обрабатываются как lifecycle hooks, а не как обычные update.
-- `message`, `callback_query`, `edited_message` - алиасы для совместимости с
-  привычками из aiogram.
-- Facade и update-модели умеют отвечать через mixins после привязки бота.
-- Флаги-маркеры хендлеров живут в `maxo.routing.flags`, инстанс `flags`
-  экспортируется из top-level `maxo`.
-- Для webhook используй `collect_used_updates(dispatcher)`, чтобы подписывать
-  только реально используемые update types.
-- Long polling находится в `maxo.transport.long_polling`. В docs и examples
-  запускай его через `Dispatcher.run_polling` (свой event loop) или
-  `Dispatcher.start_polling` (уже в асинхронном контексте). Класс `LongPolling`
-  показывай только там, где нужен свой `backoff_config`.
-- Поллинг не перехватывает `SIGINT` и `SIGTERM`, но глушит `KeyboardInterrupt`:
-  остановкой процесса управляет приложение, а не фреймворк.
-  Не добавляй такой перехват без отдельного решения мейнтейнера.
-- Webhook находится в `maxo.transport.webhook`: engines, adapters, routing,
-  security и per-bot config.
-
-## Неочевидные паттерны и архитектурные решения
-
-Эта секция описывает внутренние механизмы, которые нельзя понять, читая один
-файл. Знание этих паттернов критично для правильной работы с проектом.
-
-### Система типов MaxoType
-
-**Метакласс автоматически применяет `@dataclass`**
-
-`src/maxo/types/base.py` содержит `_MaxoTypeMetaClass`, который автоматически
-превращает все классы, наследующие `MaxoType`, в dataclass:
-
-```python
-class Message(MaxoType):
-    body: MessageBody  # автоматически становится kw_only полем
-    recipient: Recipient
-```
-
-Эквивалентно:
-```python
-@dataclass(slots=True, frozen=False, kw_only=True)
-class Message:
-    ...
-```
-
-**Важно**: Если явно указать `__slots__`, метакласс не применит `@dataclass`.
-
-**Автопривязка бота через BaseMethodsFacade**
-
-Все `MaxoType` получают метод `as_(bot)` для привязки бота. В
-`serialization.py` есть специальный loader, который автоматически привязывает
-бот ко всем загруженным типам через `retort.extend(loader(...))`.
-
-Это позволяет:
-```python
-message = update.message
-await message.send_message(text="Reply")  # вместо bot.send_message(...)
-```
-
-**Паттерн `unsafe_*` для Omittable полей**
-
-Для всех `Omittable[T]` полей должен быть `unsafe_*` property:
-
-```python
-class Message(MaxoType):
-    sender: Omittable[User] = Omitted()
-
-    @property
-    def unsafe_sender(self) -> User:
-        if is_defined(self.sender):
-            return self.sender
-        raise AttributeIsEmptyError(obj=self, attr="sender")
-```
-
-Используй `unsafe_*`, когда уверен, что поле присутствует. Это защищает от
-`None`/`Omitted()` на уровне типов.
-
-### Сериализация и полиморфизм
-
-**TAG_PROVIDERS для union-типов**
-
-`src/maxo/serialization.py` содержит `TAG_PROVIDERS` - список провайдеров для
-полиморфной (де)сериализации:
-
-```python
-TAG_PROVIDERS = concat_provider(
-    has_tag_provider(MessageCreated, "update_type", UpdateType.MESSAGE_CREATED),
-    has_tag_provider(PhotoAttachment, "type", AttachmentType.IMAGE),
-    # ...
-)
-```
-
-При добавлении нового варианта в union-тип (новый update, attachment, button):
-
-1. Создай класс, наследующий базовый тип
-2. Добавь `has_tag_provider` в `TAG_PROVIDERS` с уникальным тегом
-3. Обнови union-тип (например, `Updates = MessageCreated | BotStarted | ...`)
-
-**Warming up retort**
-
-`src/maxo/bot/warming_up.py` предзагружает все типы в retort при создании
-бота, чтобы первый запрос не тратил время на генерацию сериализаторов. Adaptix
-генерирует код на лету - warming_up делает это заранее.
-
-**Различие `Omitted()` vs `None`**
-
-- `Omitted()` - не отправлять поле в JSON
-- `None` - отправить `{"field": null}`
-- `Omittable[T] = Omitted()` для optional query/body параметров
-- `Omittable[T | None]` для полей, которые могут быть `null`
-
-### Observer Pattern и роутинг
-
-**Иерархия фильтров**
-
-В routing есть несколько уровней фильтров:
-
-1. Фильтр на уровне observer'а (применяется ко всем handler'ам)
-2. Фильтр на уровне каждого handler'а
-3. Outer middleware (до фильтров)
-4. Inner middleware (после фильтров, перед handler'ом)
-
-**UNHANDLED vs SkipHandler**
-
-- `UNHANDLED` - возвращается, если ни один handler не подошел. Update
-  передается дочерним роутерам через `Router.include()`.
-- `SkipHandler` (exception) - пропускает текущий handler, но продолжает искать
-  следующий handler в том же observer'е. Update не идет к дочерним роутерам.
-
-**Observer State Pattern**
-
-После вызова startup-сигналов observer переходит в состояние, запрещающее
-добавление новых handler'ов и фильтров. Это защита от изменения роутинга во
-время работы бота.
-
-**Алиасы для aiogram-совместимости**
-
-```python
-router.message = router.message_created  # алиас
-router.callback_query = router.message_callback  # алиас
-```
-
-Используй явные имена (`message_created`) в новом коде. Алиасы нужны для
-миграции с aiogram.
-
-### Исключения, алиасы и канонические импорты
-
-- Канонические update-типы находятся в `maxo.types`.
-- Общие и API-исключения находятся в `maxo.errors`, dialog-исключения - в
-  `maxo.dialogs.api.exceptions`, а управляющие исключения routing - в
-  `maxo.routing.sentinels`.
-
-**Конфликт метаклассов: фасады не могут быть ABC**
-
-`BaseMethodsFacade` (`src/maxo/types/facades/base.py`) - корень цепочки фасадов и
-одновременно подмешан в `MaxoType`. Наследоваться от `ABC`/`Protocol` он не
-может: `_MaxoTypeMetaClass` конфликтует с `ABCMeta`. Поэтому `@abstractmethod`
-на фасадах декоративный, а поля вроде `message` объявлены раздвоённо через
-`if TYPE_CHECKING`.
-
-Это технический долг. `MaxoType` наследует `BaseMethodsFacade` временно -
-когда наследование уберут, фасады станут настоящими ABC. Не пытайся
-использовать ABC с MaxoType сейчас - будут ошибки инициализации.
-
-**`maxo/types/facades/__init__.py` пустой намеренно**
-
-Реэкспорт всех фасадов оттуда зацикливает импорт: `maxo/types/base.py`
-(первый модуль, который тянет весь пакет `types` при `import maxo`)
-импортирует `maxo.types.facades.base`, а если `facades/__init__.py` при этом
-eagerly импортирует, например, `facades.attachments` -> `maxo.types.attachments`
--> `maxo.types.audio_attachment` -> `maxo.types.attachment` - тот модуль ещё не
-доинициализирован (мы в него уже входим через `types/base.py`). Поэтому импорт
-фасадов всегда идёт из конкретного файла (`from maxo.types.facades.chat import
-ChatMethodsFacade`), а не из пакета. Butcher генерирует такие импорты сам через
-`FACADE_MODULES` в `butcher/overrides.py`.
-
-### Bot API и unihttp
-
-**Marker-based declarative API**
-
-Bot API методы используют marker-типы для декларативного указания, куда идут
-параметры:
-
-```python
-class SendMessage(MaxoMethod[SendMessageResult]):
-    __url__ = "messages"
-    __method__ = "post"
-
-    chat_id: Query[Omittable[int]] = Omitted()  # -> query string
-    text: Body[str | None] = None  # -> JSON body
-```
-
-`bind_method` из `unihttp` анализирует маркеры и автоматически создает метод:
-
-```python
-send_message = bind_method(SendMessage)  # в Bot классе
-```
-
-**Generic-параметр = тип результата**
-
-`MaxoMethod[SendMessageResult]` указывает, что метод вернет
-`SendMessageResult` после десериализации ответа API.
-
-**Патчинг success=false**
-
-`src/maxo/bot/api_client.py` содержит специальную логику:
-
-```python
-if response.ok and response.data.get("success", None) is False:
-    if isinstance(method, AddMembers):
-        return  # Особый случай
-    response.status_code = 400
-```
-
-MAX API иногда возвращает HTTP 200 с `"success": false`. Для большинства
-методов это патчится на 400, но для `AddMembers` остается как есть, т.к. там
-детальная информация в результате.
-
-### FSM и изоляция
-
-**DefaultKeyBuilder с destiny**
-
-Для dialogs **обязательно** использовать `DefaultKeyBuilder(with_destiny=True)`:
-
-```python
-# Правильно для dialogs
-isolation = SimpleEventIsolation(DefaultKeyBuilder(with_destiny=True))
-
-# Неправильно - будут коллизии ключей в multiple stacks
-isolation = SimpleEventIsolation(DefaultKeyBuilder())
-```
-
-`destiny` - дополнительный параметр для изоляции стейта. Dialogs используют
-его для работы с несколькими стеками диалогов одновременно.
-
-**Ключи FSM формата: `{bot_id}:{chat_id}:{user_id}:{destiny}`**
-
-При `with_destiny=False` попытка использовать `destiny != "default"` вызовет
-`ValueError` - это защита от случайных коллизий.
-
-### Dialogs и widgets
-
-**Dialog наследует Router, но запрещает include()**
-
-```python
-class Dialog(Router, DialogProtocol):
-    def include(self, *routers: BaseRouter) -> None:
-        raise TypeError("Dialog cannot include routers")
-```
-
-Dialog использует observers от Router, но управляет ими самостоятельно. У
-диалога автоматически настраиваются фильтры через `IntentFilter` для
-перехвата только своих update'ов.
-
-**Intent ID в callback payload**
-
-Когда widget создает callback button, в payload добавляется intent_id:
-
-```python
-payload = f"{intent_id}:{widget_id}:{data}"
-```
-
-При обработке callback intent_id извлекается и используется для загрузки
-правильного контекста. Это позволяет работать с multiple stacks - одна кнопка
-может открывать диалог в новом стеке.
-
-**ManagedWidget pattern**
-
-`manager.find(widget_id)` возвращает `ManagedWidget`, а не сам виджет:
-
-```python
-class ManagedWidget(Generic[W]):
-    def __init__(self, widget: W, manager: DialogManager):
-        self.widget = widget
-        self.manager = manager
-
-    def __getattr__(self, item: str):
-        return getattr(self.widget, item)  # проксирует атрибуты
-```
-
-Это позволяет виджету иметь доступ к `manager` без явной передачи. Виджеты
-определяют метод `managed(self, manager)` для создания специфичного
-managed-варианта с дополнительными методами.
-
-**Stack ограничен 100 вложенными диалогами**
-
-`src/maxo/dialogs/api/entities/stack.py` защищает от бесконечной рекурсии.
-Если попытаться открыть 101-й диалог в одном стеке, будет ошибка.
-
-**ID генерация на основе timestamp + random**
-
-```python
-def new_int_id() -> int:
-    return int(time.time() * 1000) % 100_000_000 + random.randint(0, 99) * 100_000_000
-```
-
-ID конвертируются в короткую base62-подобную строку для использования в
-callback payload. Это позволяет уместить ID в ограничения MAX API на длину
-payload.
-
-**Известное ограничение:** ID могут совпасть, если диалоги запущены в одну
-миллисекунду. Формат сохранен ради короткого callback payload; не добавляй
-локальные обходы коллизии без отдельного изменения публичного контракта.
-
-### Webhook и collect_used_updates
-
-**Подписка только на используемые update'ы**
-
-MAX API требует явную подписку на типы update'ов для webhook.
-`collect_used_updates(dispatcher)` рекурсивно обходит все роутеры и собирает
-типы update'ов, на которые есть handlers:
-
-```python
-used_types = collect_used_updates(dp)
-# Результат: [UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK, ...]
-```
-
-Это оптимизация - webhook не получает лишние update'ы, на которые нет
-handlers.
-
-### Частые ошибки и gotchas
-
-**❌ Нельзя**: Использовать ABC с MaxoType
-
-```python
-# Ошибка - конфликт метаклассов
-class MyType(MaxoType, ABC):
-    pass
-```
-
-**❌ Нельзя**: Добавлять handlers после startup
-
-```python
-async def startup():
-    router.message_created(handler)  # TypeError - observer в финальном состоянии
-```
-
-**❌ Нельзя**: Использовать dialogs без `with_destiny=True`
-
-```python
-# Будут коллизии ключей FSM
-isolation = SimpleEventIsolation(DefaultKeyBuilder())  # неправильно для dialogs
-setup_dialogs(dp, events_isolation=isolation)
-```
-
-**❌ Нельзя**: Вручную редактировать сгенерированные типы без синхронизации
-
-При изменении контракта Bot API нужно синхронизировать: методы, типы, enum,
-сериализацию, тесты, документацию.
-
-**❌ Нельзя**: Путать `Omitted()` и `None`
-
-```python
-# Разное поведение:
-SendMessage(text=Omitted())  # поле не отправляется
-SendMessage(text=None)  # отправляется {"text": null}
-```
-
-**✅ Можно**: Вызывать методы на update'ах после привязки бота
-
-```python
-message = update.message.as_(bot)
-await message.send_message(text="Reply")  # работает через BaseMethodsFacade
-```
-
-**✅ Можно**: Использовать `unsafe_*` для гарантированно присутствующих полей
-
-```python
-# Если уверен, что sender есть:
-user = message.unsafe_sender  # User, не Omittable[User]
-```
-
-**✅ Можно**: Расширять TAG_PROVIDERS для новых полиморфных типов
-
-```python
-# В serialization.py добавь:
-TAG_PROVIDERS = concat_provider(
-    existing_providers,
-    has_tag_provider(MyNewType, "type", MyEnum.VALUE),
-)
-```
+- `Dispatcher` - корневой `Router`; `Router.include(...)` задаёт порядок обхода.
+  Первый обработавший update останавливает поиск.
+- Фильтры бывают на observer'е (для всех его handler'ов) и на handler'е.
+- `UNHANDLED` - ни один handler не подошёл, update идёт в дочерние роутеры.
+  `SkipHandler` - пропустить текущий handler и искать дальше в том же
+  observer'е, к дочерним роутерам update не идёт.
+- После startup-сигналов observers замораживаются: handler или фильтр,
+  добавленный позже, даёт ошибку.
+- `before_startup`, `after_startup`, `before_shutdown`, `after_shutdown` -
+  lifecycle hooks, а не обычные update.
+- `message`, `callback_query`, `edited_message` - алиасы `message_created`,
+  `message_callback`, `message_edited` для портирования с aiogram. В новом коде
+  и docs пиши явные имена.
+- Флаги-маркеры хендлеров - `maxo.routing.flags`, инстанс `flags`
+  экспортируется из `maxo`.
+- Webhook подписывается только на используемые update:
+  `collect_used_updates(dispatcher)` обходит роутеры динамически.
+- Long polling (`maxo.transport.long_polling`) в docs и examples запускай через
+  `Dispatcher.run_polling` (свой event loop) или `Dispatcher.start_polling` (уже
+  в async-контексте); класс `LongPolling` - только ради `backoff_config`.
+- Поллинг не перехватывает `SIGINT`/`SIGTERM`, но глушит `KeyboardInterrupt`:
+  остановкой процесса управляет приложение. Перехват сигналов не добавляй без
+  решения мейнтейнера.
+
+### Bot API
+
+- Метод - класс `MaxoMethod[Result]` с `__url__`, `__method__` и маркерами
+  полей из `maxo.bot.methods.markers` (`Path`, `Query`, `Header`, `Body`,
+  `Form`, `File`); маркеры совпадают с wire-контрактом. `Result` - тип ответа
+  после десериализации.
+- `Bot` привязывает методы через `unihttp.bind_method`; ручные
+  passthrough-методы не пиши.
+- Метод, который MAX убрал или перестал поддерживать, помечается
+  `@deprecated(..., stacklevel=2)` из `typing_extensions` на классе. В unihttp
+  своей пометки нет, но `bind_method` создаёт экземпляр метода при каждом
+  вызове, поэтому `DeprecationWarning` срабатывает и на `bot.<метод>()`, а
+  `stacklevel=2` указывает на строку пользователя. Статически mypy и IDE
+  подсвечивают импорт класса, но не вызов через `Bot`. Сгенерированному
+  методу пометку ставит butcher (`DEPRECATED_METHODS`). Импорты устаревших
+  символов внутри maxo и в тестах - с `# type: ignore[deprecated]`: в mypy
+  включён код `deprecated`.
+- `MaxApiClient` добавляет российский trusted CA, `Authorization`,
+  `User-Agent`, маппинг ошибок API и превращает HTTP 200 с `"success": false`
+  или с `error_code` в 400. Исключение - `AddMembers`: он отдаёт частичный результат, и это
+  поведение не меняй без отдельного теста и документации.
+- `Bot.download` принимает URL или `AttachmentPayload` и пишет в файл либо
+  возвращает `BinaryIO`.
+
+### FSM и dialogs
+
+- FSM включена в `Dispatcher` по умолчанию: `MemoryStorage`,
+  `SimpleEventIsolation`, `DefaultKeyBuilder`. Для нескольких процессов -
+  Redis storage/isolation.
+- Ключ FSM: `{bot_id}:{chat_id}:{user_id}:{destiny}`. Dialogs держат несколько
+  стеков через `destiny`, поэтому им нужен
+  `DefaultKeyBuilder(with_destiny=True)`; без него `destiny != "default"` даёт
+  `ValueError`. `setup_dialogs` ставит такую изоляцию сам, при кастомной FSM
+  проверяй совместимость ключей.
+- `setup_dialogs(dp)` вызывается после подключения диалогов к роутерам.
+- `Dialog` наследует `Router`, но `include()` у него кидает `TypeError`; свои
+  update диалог ловит через `IntentFilter`.
+- Callback payload виджета - `{intent_id}:{widget_id}:{data}`, по `intent_id`
+  грузится нужный контекст. Widget `id` в окне и диалоге стабильны и уникальны.
+- `manager.find(widget_id)` возвращает `ManagedWidget`, проксирующий атрибуты
+  виджета и знающий `manager`; виджет расширяет его через `managed(manager)`.
+- Стек - не больше 100 диалогов (`_STACK_LIMIT`).
+- `new_int_id()` (время в мс + random) кодируется в короткую строку, чтобы
+  уложиться в лимит длины payload. ID двух диалогов, запущенных в одну
+  миллисекунду, могут совпасть - известное ограничение; формат держит короткий
+  payload, обходы коллизии требуют изменения публичного контракта.
 
 ## Публичный API
 
-- Top-level `maxo` экспортирует только самые частые объекты:
-  `Bot`, `Dispatcher`, `Router`, `Ctx`, `BaseMiddleware`, `__version__`,
-  хелперы разметки `html` и `md`, а также модули `enums`, `methods`, `types`.
-  Набор повторяет корень `aiogram`, чтобы упростить портирование ботов.
-- Не расширяй top-level `maxo` без причины. Менее частые объекты должны
-  импортироваться из своих публичных модулей.
-- `maxo.methods` - тонкий реэкспорт `maxo.bot.methods` с явным списком имен.
-  При добавлении метода Bot API обнови оба `__all__`; расхождение ловит
+- Top-level `maxo` повторяет корень `aiogram`: `Bot`, `Dispatcher`, `Router`,
+  `Ctx`, `BaseMiddleware`, `flags`, `html`, `md`, модули `enums`, `methods`,
+  `types` и `__version__`. Не расширяй его без причины, остальное импортируется
+  из своих модулей.
+- Канонические места: update-типы - `maxo.types`; общие и API-исключения -
+  `maxo.errors`; dialog-исключения - `maxo.dialogs.api.exceptions`;
+  управляющие исключения routing - `maxo.routing.sentinels`.
+- `maxo.methods` реэкспортирует `maxo.bot.methods`; `maxo.exceptions` и
+  `maxo.filters` - постоянные алиасы `maxo.errors` и `maxo.routing.filters` для
+  портирования с aiogram, без предупреждений и без планов на удаление (в отличие
+  от переездов внутри пакета, которые кидают `DeprecationWarning`). Новый символ
+  добавляй в `__all__` обоих модулей пары; расхождение ловит
   `tests/maxo/test_public_api.py`.
-- `maxo.exceptions` и `maxo.filters` - постоянные алиасы `maxo.errors` и
-  `maxo.routing.filters` для портирования ботов с `aiogram`. Они не
-  предупреждают при импорте и не планируются к удалению. Не путай их с
-  переездами внутри пакета - те кидают `DeprecationWarning` и будут удалены.
-  При добавлении фильтра или ошибки обновляй `__all__` в обоих модулях пары;
-  расхождение ловит `tests/maxo/test_public_api.py`.
-- Документация и примеры должны импортировать из публичных модулей, а не из
-  `maxo._internal`.
-- При добавлении публичного символа обновляй ближайший `__init__.py` и
-  `__all__`, если модуль использует явный публичный экспорт.
+- Новый публичный символ - в ближайший `__init__.py` и его `__all__`.
+- Docs и examples импортируют из публичных модулей, не из `maxo._internal`.
 
-## Главные правила разработки
+## Правила кода
 
-- Пиши инструкции для ИИ, docstrings публичного API и пользовательскую
-  документацию на русском языке.
-- Используй только короткое тире `-`. Не добавляй другие Unicode-варианты тире.
-- Не используй `from __future__ import annotations` в новых файлах.
-- Не добавляй `Co-Authored-By` в коммиты и текст PR.
-- Коммиты оформляй в стиле conventional commits, например `feat:`, `fix:`,
-  `docs:`, `chore:`. Русский текст в сообщении допустим.
-- Строки держи до 88 символов, используй двойные кавычки и отступ 4 пробела.
-- Строгая типизация обязательна: `mypy` работает в `strict = true` для
-  `src/maxo`, `tests` и `examples`.
-- Публичный код должен быть полностью аннотирован. В тестах аннотации тоже
-  проверяются `mypy`, хотя ruff-правила `ANN` для тестов отключены.
-- Не добавляй `Any`, `cast`, `type: ignore` и отключение lint-правил без
-  локального объяснения причины.
-- В `cast` передавай тип как есть, а не строкой: `cast(Retort, x)`, а не
-  `cast("Retort", x)`. Если тип импортирован только под `TYPE_CHECKING` и в
-  рантайме недоступен, тогда передавай его как строку.
-- Если `type: ignore` неизбежен, указывай конкретный код ошибки.
-- Для внутренних путей используй `pathlib.Path`, если работа идет с файлами.
-- Не добавляй top-level side effects, кроме декларативной регистрации,
-  ожидаемой текущими API.
-- Не прячь импорты внутрь функций без необходимости. Предпочитай обычные
-  импорты на уровне модуля.
-- Для новых data-моделей используй существующий стиль: `MaxoType` для
-  API-моделей, `@dataclass(slots=True)` там, где в подсистеме уже принят
-  dataclass-подход.
-- Не добавляй сетевые вызовы, чтение env-переменных, запуск процессов и
-  работу с файловой системой при импорте модулей.
-- Не коммить локальные артефакты: `__pycache__`, `.DS_Store`, `.pytest_cache`,
-  `.ruff_cache`, `.mypy_cache`, `coverage.xml`, `htmlcov/`, `docs/_build/`.
-- Не редактируй сгенерированные типы, enum и методы Bot API вручную как
-  изолированную правку. Если меняется контракт API, синхронизируй методы,
-  типы, сериализацию, тесты и документацию.
-
-## FSM и dialogs
-
-- FSM включена в `Dispatcher` по умолчанию. Без явных настроек используются
-  `MemoryStorage`, `SimpleEventIsolation`, `DefaultKeyBuilder`.
-- Для production и нескольких процессов используй Redis storage/isolation и
-  продуманную стратегию ключей.
-- `maxo.dialogs` живет поверх FSM и добавляет свои observers/middlewares через
-  `setup_dialogs(dp)`.
-- `setup_dialogs` должен применяться к `Dispatcher` после подключения диалогов
-  к роутеру.
-- Для dialogs нужна изоляция с `DefaultKeyBuilder(with_destiny=True)`. В
-  `setup_dialogs` это используется по умолчанию для dialog event isolation, но
-  при кастомной FSM-конфигурации проверяй совместимость ключей.
-- Все widget `id` внутри одного окна/диалога должны быть стабильными и
-  уникальными.
-
-## Bot API, `unihttp`, `adaptix`
-
-- Методы Bot API - классы `MaxoMethod[Result]` с `__url__`, `__method__` и
-  marker-полями из `maxo.bot.methods.markers`.
-- Path, query, header и body должны соответствовать wire-контракту MAX Bot API.
-- Generic-параметр `MaxoMethod[Result]` - тип результата после deserialization.
-- `Bot` привязывает методы через `unihttp.bind_method`. Не пиши ручные
-  passthrough-методы, если достаточно `bind_method`.
-- Различай `Omitted()` и `None`: `Omitted()` значит "не отправлять поле",
-  `None` значит отправить `null`, если это поддерживает API.
-- Для optional wire-полей используй `Omittable[T] = Omitted()`.
-- Для поля, которое может прийти как `null`, используй `Omittable[T | None]`.
-- Для unsafe-доступа к omitted/null полям следуй паттернам `unsafe_sender`,
-  `unsafe_url` и `AttributeIsEmptyError`.
-- Полиморфные типы update, attachments, markup и buttons регистрируются в
-  `src/maxo/serialization.py` через `TAG_PROVIDERS`. При добавлении нового
-  варианта обнови retort.
-- `serialization.py` также отвечает за query dumping, defaults из
-  `BotDefaults`, attachments `to_request()`, timestamps в `datetime` с `UTC` и
-  привязку `Bot` через `create_retort_with_bot`.
-- `MaxApiClient` добавляет российский trusted CA, `Authorization`, `User-Agent`,
-  обработку ошибок API и patch для `success=false`. Не ломай эти гарантии.
-- Особый случай `AddMembers` в обработке `success=false` не меняй без
-  отдельного теста и обновления документации.
-- `Bot.download` принимает URL или `AttachmentPayload`; сохраняет в файл или
-  возвращает `BinaryIO`.
-- Если меняется контракт MAX Bot API, синхронизируй метод, типы, enum,
-  update-модель, facade/mixin при пользовательском удобстве, сериализацию,
-  тесты и документацию.
+- Только короткое тире `-`, никаких других Unicode-тире.
+- Без `from __future__ import annotations` в новых файлах.
+- Строки до 88 символов, двойные кавычки, отступ 4 пробела. Формат задают
+  `ruff format` и `black` одновременно, дерево - неподвижная точка обоих. Если
+  они разошлись на новом коде, перепиши код, а не конфиги. Весь репозиторий
+  без отдельной задачи не переформатируй.
+- `mypy` в `strict` для `src/maxo`, `tests` и `examples`; публичный код
+  аннотирован полностью, в тестах аннотации тоже проверяются.
+- `Any`, `cast`, `type: ignore` и отключение lint-правил - только с локальным
+  объяснением причины; у `type: ignore` - конкретный код ошибки. В `cast` тип
+  передаётся объектом (`cast(Retort, x)`), строкой - только если он
+  импортирован под `TYPE_CHECKING`.
+- Импорты - на уровне модуля. При импорте модуля - никаких сетевых вызовов,
+  env, процессов, файловой системы и прочих side effects, кроме декларативной
+  регистрации.
+- Пути - `pathlib.Path`.
+- Новые модели: `MaxoType` для API, `@dataclass(slots=True)` там, где в
+  подсистеме принят dataclass.
+- `just lint` гоняет ещё `codespell`, `slotscheck` и `bandit`: учитывай их в
+  пользовательском тексте, `__slots__`, dataclass-моделях и security-коде.
 
 ## Кодогенерация: butcher
 
 `src/maxo/types`, `src/maxo/enums` и `src/maxo/bot/methods` генерируются из
-`max-swagger.json` и `max-swagger.yaml` в корне - это источник правды по
-контракту API. MAX публикует контракт дважды: json отдаёт `dev.max.ru`
-(русские описания), yaml лежит в репозитории `max-messenger/api-schema`
-(`nullable`, `deprecated` и то, чего на сайте ещё нет). Butcher генерирует по
-объединению обеих публикаций, поэтому обновлять нужно оба файла.
-Генератор живёт в `butcher/` и работает поверх PyPI-пакета
-`unihttp-openapi-generator==0.3.1` из dependency group `butcher`. Запуск -
-`just butcher`.
+`max-swagger.json` и `max-swagger.yaml` - источника правды по контракту MAX Bot
+API. Изменение контракта синхронизирует метод, типы, enum, сериализацию,
+фасады, тесты и документацию; изолированные ручные правки сгенерированных
+файлов не делай.
 
-**Правила генерации - в `butcher/AGENTS.md`.** Читай его перед любой правкой
-`butcher/`, перед синхронизацией со свагером и когда нужно понять, почему
-сгенерированный файл выглядит именно так.
+**Прочитай `butcher/AGENTS.md` перед правкой `butcher/`, сгенерированных
+файлов или свагеров.** Скилл `.agents/skills/butcher-update` - обёртка над ним,
+его `references/manual-layer.md` - перечень ручного слоя поверх генерации.
 
-## Зависимости и optional extras
+## Зависимости
 
-- Runtime-зависимости задаются в `pyproject.toml`; не добавляй новые
-  зависимости без необходимости и проверки минимальных версий.
-- Optional extras: `maxo[magic_filter]`, `maxo[dishka]`, `maxo[redis]`,
-  `maxo[fastapi]`, `maxo[preview]`.
-- Dev-группа подтягивает lint, tests, docs и основные extras. Для разработки
-  используй `uv sync --all-groups`, чтобы тесты optional-интеграций не падали
-  из-за отсутствующих зависимостей.
-- Для новых optional-интеграций обновляй `pyproject.toml`, документацию,
-  примеры и тесты импорта/поведения без обязательного внешнего сервиса.
+- Runtime-зависимость добавляй только по необходимости и с проверкой
+  минимальной версии: CI тестирует и `lowest-direct`.
+- Extras: `magic_filter`, `dishka`, `redis`, `fastapi`, `preview`. Новый extra -
+  это `pyproject.toml`, docs, examples и тесты, которые не требуют внешнего
+  сервиса.
 
 ## Тесты
 
-### Общие правила
-
-- Используй `pytest`, `pytest-asyncio` в `auto` mode и `unittest.mock`.
-- Для async-кода тесты тоже async. Не запускай event loop вручную без причины.
-- Новая функциональность требует узких тестов рядом с соответствующей
-  подсистемой: `tests/maxo`, `tests/maxo_dialog`, `tests/maxo_webhook`.
-- Для `maxo.dialogs` предпочитай test tools из `src/maxo/dialogs/test_tools`:
-  `BotClient`, `MockMessageManager`, memory storage и локаторы клавиатуры.
-- Для webhook используй существующие fixtures в `tests/maxo_webhook`.
-- Не добавляй тесты, которые требуют реального MAX API или сетевого доступа.
-- Тест должен фиксировать поведение, а не внутреннюю реализацию, если только
-  задача не касается внутреннего контракта.
-- Цель проекта - покрытие тестами на уровне 90%+. Текущее покрытие смотри через
-  `uv run pytest tests/ --cov=src --cov-report=term`.
-
-### Структура тестов и conftest.py
-
-Тесты организованы по подсистемам в зеркальной структуре к `src/`:
-
-```text
-tests/
-├── maxo/              # тесты для src/maxo (routing, fsm, bot)
-├── maxo_dialog/       # тесты для src/maxo/dialogs
-│   └── widgets/
-│       ├── conftest.py          # фикстура mock_manager
-│       ├── input/
-│       │   ├── conftest.py      # хелперы для input-виджетов
-│       │   ├── test_text.py
-│       │   ├── test_combined.py
-│       │   └── test_base.py
-│       └── kbd/
-└── maxo_webhook/      # тесты для src/maxo/transport/webhook
-```
-
-**Правила использования conftest.py:**
-
-- Создавай `conftest.py` рядом с группой связанных тестов для shared fixtures
-- Выноси дублирующиеся хелперы (создание сообщений, моков) в ближайший conftest
-- Не дублируй код между тестовыми файлами - используй относительные импорты
-  из conftest: `from .conftest import create_text_message`
-- Каждая директория с тестами должна иметь `__init__.py` (требование ruff INP001)
-
-### Хелперы для тестирования dialogs
-
-**Фикстура mock_manager** (`tests/maxo_dialog/widgets/conftest.py`):
-
-```python
-@pytest.fixture
-def mock_manager() -> DialogManager:
-    manager = MagicMock()
-    context = Context(
-        dialog_data={},
-        start_data={},
-        widget_data={},
-        state=State(),
-        _stack_id="_stack_id",
-        _intent_id="_intent_id",
-    )
-    manager.current_context = Mock(side_effect=lambda: context)
-    manager.is_preview = MagicMock(return_value=False)
-    return manager
-```
-
-**Хелперы для создания сообщений** (`tests/maxo_dialog/widgets/input/conftest.py`):
-
-```python
-def create_text_message(text: str) -> MessageCreated:
-    """Создает текстовое сообщение для тестов."""
-    return MessageCreated(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
-        message=Message(
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
-            recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
-            body=MessageBody(mid="test_mid", seq=1, text=text),
-        ),
-    )
-
-def create_photo_message() -> MessageCreated:
-    """Создает сообщение с фото-вложением."""
-    photo = PhotoAttachment(
-        type=AttachmentType.IMAGE,
-        payload=PhotoAttachmentPayload(
-            photo_id=123,
-            token="test_token",  # noqa: S106
-            url="https://example.com/photo.jpg",
-        ),
-    )
-    return MessageCreated(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
-        message=Message(
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
-            recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
-            body=MessageBody(mid="test_mid", seq=1, text=None, attachments=[photo]),
-        ),
-    )
-
-def setup_mock_manager(
-    mock_manager: DialogManager,
-    event: MessageCreated | None = None,
-) -> None:
-    """Настраивает mock_manager для работы с фильтрами."""
-    mock_manager.middleware_data = {"ctx": {}}
-    if event:
-        mock_manager.event = event
-```
-
-### Паттерны тестирования widgets
-
-**Базовый тест widget:**
-
-```python
-async def test_text_input_basic(mock_manager: DialogManager) -> None:
-    on_success = AsyncMock()
-    text_input = TextInput(id="text", on_success=on_success)
-
-    message = create_text_message("Hello World")
-    result = await text_input.process_message(message, None, mock_manager)
-
-    assert result is True
-    on_success.assert_called_once()
-    assert text_input.get_value(mock_manager) == "Hello World"
-```
-
-**Тестирование с type factory:**
-
-```python
-async def test_text_input_with_type_factory(mock_manager: DialogManager) -> None:
-    on_success = AsyncMock()
-    text_input = TextInput(id="number", type_factory=int, on_success=on_success)
-
-    message = create_text_message("42")
-    result = await text_input.process_message(message, None, mock_manager)
-
-    assert result is True
-    call_args = on_success.call_args
-    assert call_args[0][3] == 42  # data parameter (converted value)
-```
-
-**Тестирование фильтров:**
-
-```python
-async def test_message_input_with_content_type(
-    mock_manager: DialogManager,
-) -> None:
-    message = create_photo_message()
-    setup_mock_manager(mock_manager, message)  # важно: передать event
-
-    handler = AsyncMock()
-    message_input = MessageInput(
-        func=handler,
-        content_types=AttachmentType.PHOTO,
-        id="input",
-    )
-
-    result = await message_input.process_message(message, None, mock_manager)
-
-    assert result is True
-    handler.assert_called_once()
-```
-
-**Тестирование managed widgets:**
-
-```python
-async def test_counter_managed(mock_manager: DialogManager) -> None:
-    counter = Counter(id="counter")
-    await counter.set_value(mock_manager, 5)
-
-    managed = counter.managed(mock_manager)
-    assert managed.get_value() == 5
-```
-
-### Edge cases для dialogs
-
-Всегда тестируй:
-
-- Пустые сообщения (`create_text_message("")`)
-- Сообщения без body (`body=None`)
-- Фильтры, возвращающие `False`
-- Обработчики ошибок (`on_error` callbacks)
-- Граничные значения для pagination (`page=0`, `page > max`)
-- Пустые списки items в `ListGroup`
-
-### Тестирование с AsyncMock
-
-Для async callbacks используй `AsyncMock`:
-
-```python
-on_success = AsyncMock()
-on_error = AsyncMock()
-filter_func = AsyncMock(return_value=True)
-
-# Проверка вызовов
-on_success.assert_called_once()
-on_success.assert_not_called()
-assert filter_func.call_count == 2
-
-# Проверка аргументов
-call_args = on_success.call_args
-assert call_args[0][3] == expected_value  # позиционный аргумент
-```
-
-### Coverage и работа с непокрытым кодом
-
-Проверка текущего покрытия:
-
-```bash
-uv run pytest tests/ --cov=src --cov-report=term
-uv run pytest tests/ --cov=src --cov-report=html  # для детального отчета
-```
-
-При добавлении тестов для увеличения покрытия:
-
-1. Найди файлы с низким покрытием в coverage report
-2. Изучи непокрытые строки (coverage.xml или htmlcov/)
-3. Посмотри на существующие тесты в aiogram_dialog submodule для паттернов
-4. Создай тесты, покрывающие happy path и edge cases
-5. Используй shared helpers из conftest.py
-6. Проверь, что новые тесты увеличили покрытие
-
-### Специфичные проверки для подсистем
-
-**Для Bot API и сериализации:**
-
-- Request markers, dump defaults, `Omitted()`, `None`
-- Загрузка ответа/update
-- Polymorphic dispatch
-- Маппинг ошибок API
-
-**Для routing:**
-
-- Порядок обработки `Router.include`
-- Observers, middlewares
-- `UNHANDLED`, `SkipHandler`
-
-**Для FSM:**
-
-- State transitions
-- Data persistence
-- Key builder
-- Event isolation
-
-**Для dialogs:**
-
-- Старт, закрытие, переходы между окнами
-- Callback widgets
-- Dialog data
-- Фоновые менеджеры
-- Стабильность widget `id`
-
-**Для webhook:**
-
-- Положительный и отрицательный сценарии проверки секрета
-- Routing и adapter mapping
-- Mock/stub транспорта
-
-### Рефакторинг тестов
-
-При обнаружении дублирования:
-
-1. Создай `conftest.py` в директории с тестами
-2. Вынеси общие хелперы (create_*, setup_*)
-3. Обнови импорты в тестах: `from .conftest import helper_name`
-4. Убедись, что все тесты проходят после рефакторинга
-5. Запусти `uv run ruff check --fix tests/` для проверки стиля
+- `pytest` с `asyncio_mode = auto`, моки из `unittest.mock` (`AsyncMock` для
+  async). Тесты лежат зеркально подсистемам: `tests/maxo`, `tests/maxo_dialog`,
+  `tests/maxo_webhook`.
+- Без реального MAX API и сети. Тест фиксирует поведение, а не реализацию.
+- В каждой тестовой директории `__init__.py` (ruff `INP001`). Общие хелперы -
+  в ближайший `conftest.py`, импорт `from .conftest import ...`.
+- Готовые хелперы: `mock_manager` в `tests/maxo_dialog/widgets/conftest.py`,
+  `create_text_message`/`create_photo_message`/`setup_mock_manager` в
+  `tests/maxo_dialog/widgets/input/conftest.py`, test tools из
+  `maxo.dialogs.test_tools` (`BotClient`, `MockMessageManager`, memory storage,
+  локаторы клавиатуры), фикстуры `tests/maxo_webhook`. Фильтры виджетов читают
+  `manager.event` - передай его в `setup_mock_manager`.
+- Для dialogs проверяй края: пустой текст, сообщение без body, фильтр с
+  `False`, `on_error`, `page=0` и `page > max`, пустой `ListGroup`.
+- Изменения hooks и transport сверяй с `tests/maxo_webhook`; проверку секрета
+  webhook тестируй в положительном и отрицательном сценарии.
+- Цель покрытия - 90%+: `uv run pytest tests/ --cov=src --cov-report=term`.
 
 ## Документация и примеры
 
-- Документация находится в `docs/` и собирается Sphinx. Основной формат страниц
-  - `rst`, changelog - `docs/pages/changelog.md`.
-- Новые пользовательские возможности требуют обновления docs и, если уместно,
-  `examples/`.
-- Примеры должны импортировать только публичный API и быть совместимыми с
-  текущей версией `0.9.1`.
-- При изменении структуры docs обновляй `docs/index.rst` и соответствующие
-  `toctree`.
-- В README держи короткие актуальные примеры. Детальные объяснения отправляй в
-  `docs/pages/...`.
-- Все пользовательские инструкции и примеры для ИИ в этом репозитории пиши на
-  русском языке.
-- В новых docs чаще используй явные observers `message_created` и
-  `message_callback`; алиасы `message`, `callback_query`, `edited_message`
-  упоминай как совместимость.
-- Клавиатуры показывай через `maxo.utils.builders.KeyboardBuilder`.
-- `magic_filter` показывай через
-  `maxo.integrations.magic_filter.MagicFilter`.
-- Для webhook показывай `SimpleEngine`, `AiohttpWebAdapter` или
-  `FastApiWebAdapter`, `StaticRouting`, `Security`, `StaticSecretToken`,
-  `collect_used_updates`.
-- Локальная сборка документации:
+- Sphinx в `docs/`, страницы в `rst`, changelog - `docs/pages/changelog.md`.
+  Новые страницы - в `docs/index.rst` и нужный `toctree`. `docs/_build/` не
+  коммить.
+- Новая пользовательская возможность - обновить docs и, если уместно,
+  `examples/`. README - короткие примеры, подробности - в `docs/pages/`.
+- В примерах: явные observers (`message_created`, `message_callback`), алиасы -
+  только как совместимость; клавиатуры через
+  `maxo.utils.builders.KeyboardBuilder`; magic filter через
+  `maxo.integrations.magic_filter.MagicFilter`; webhook через `SimpleEngine`,
+  `AiohttpWebAdapter`/`FastApiWebAdapter`, `StaticRouting`, `Security`,
+  `StaticSecretToken`, `collect_used_updates`.
+- После правок `docs/conf.py`, `_static`, `_extra/llms.txt` или sitemap проверь
+  сборку: `uv run sphinx-build -b html docs docs/_build/html`.
 
-```bash
-uv run sphinx-build -b html docs docs/_build/html
-```
+## CI
 
-- При изменении docs не коммить `docs/_build/`; это локальный build output.
-- При изменении `docs/conf.py`, `_static`, `_extra/llms.txt` или sitemap
-  проверяй, что сборка Sphinx проходит.
-
-## CI и качество
-
-- `.github/workflows/lint.yml` запускает Python `3.14`, установку через
-  `uv sync --all-groups`, затем отдельными шагами через `uv run`:
-  `ruff check --no-fix .`, `black --check .`, `mypy --config-file pyproject.toml`,
-  `codespell src examples`, `slotscheck -m maxo`, `bandit -c pyproject.toml src -r`.
-- `.github/workflows/test.yml` запускает Python `3.12`, `3.13`, `3.14` с
-  dependency resolution `lowest-direct` и `highest`, затем
-  `just test --cov-report=xml`. Матрицу версий гоняет сам GitHub Actions,
-  поэтому `just test-all` (nox) в CI не используется.
-- Стратегию резолвинга в `test.yml` задает `UV_RESOLUTION` на уровне job, а не
-  флаг `uv sync --resolution`. Рецепты `just` зовут `uv run`, а тот без
-  переменной видит в `uv.lock` другой режим, перерезолвит зависимости до
-  `highest` и молча переустановит окружение: job `lowest-direct` тестировал бы
-  свежие версии. Локально минимальные версии проверяй так же:
+- `lint.yml` (Python 3.14): `ruff check --no-fix`, `black --check`, `mypy`,
+  `codespell src examples`, `slotscheck -m maxo`, `bandit -c pyproject.toml src
+  -r`. `test.yml`: Python 3.12-3.14 x резолвинг `lowest-direct`/`highest`,
+  `just test --cov-report=xml`; матрицу гоняет GitHub, `just test-all` (nox) в
+  CI не используется.
+- Резолвинг в `test.yml` задаёт `UV_RESOLUTION` на уровне job, а не
+  `uv sync --resolution`: `uv run` в рецептах без переменной перерезолвил бы до
+  `highest`, и job `lowest-direct` тестировал бы свежие версии. Локально:
   `UV_RESOLUTION=lowest-direct just test`.
-- Python в `lint.yml` и `test.yml` ставит сам `setup-uv` через вход
-  `python-version`. Отдельного `actions/setup-python` в workflow нет, и версия
-  Python из этого входа попадает в ключ кэша.
-- Кэш `uv` в workflow не настраивается: `enable-cache` по умолчанию `auto`,
-  то есть включен на GitHub-хостед раннерах, а дефолтный `cache-dependency-glob`
-  уже содержит `**/pyproject.toml` - единственный файл репозитория, который
-  в него попадает. Не добавляй эти входы обратно, они ничего не меняют.
-- В `test.yml` нужен `cache-suffix: ${{ matrix.dependency-resolution }}`.
-  Ключ `setup-uv` знает про `python-version`, но не про стратегию резолвинга,
-  и без суффикса шесть job матрицы дерутся за одну запись кэша.
-- `.github/workflows/build.yml` собирает `sdist` и `wheel`, проверяет метаданные
-  через `twine check --strict` и содержимое дистрибутива через `check_dist.py`.
-  Запускается на PR и push, а также вызывается из `publish.yml` через
-  `workflow_call`, чтобы публиковался ровно тот артефакт, который проверен.
-- `twine` закреплен в группе `dev` и зовется через `uv run`, а не `uvx`.
-  `uvx` тянул бы свежий `twine` на каждый прогон - в job, который решает, что
-  уедет на PyPI, версия проверяльщика не должна меняться сама. Из-за этого
-  `build.yml` синхронизирует окружение проекта, хотя больше ему это не нужно.
-- `check_dist.py` в корне - единственный источник правды по содержимому
-  дистрибутива: `py.typed`, `russiantrustedca.pem`, `dist-info/licenses/*`,
-  отсутствие локального мусора и импортируемость пакета из одного колеса.
-  Его зовут и CI, и `just check-dist`, поэтому локальная проверка не расходится
-  с CI. Скрипт на голой стандартной библиотеке и запускается через
-  `uv run --no-project`, окружение проекта ему не нужно.
-  `twine check --strict` эти отказы не ловит: на дистрибутиве без лицензий он
-  зеленый, так что убирать `check_dist.py` из проверок нельзя.
-- `.github/workflows/publish.yml` публикует на PyPI по `release: published`
-  через OIDC Trusted Publishing (environment `pypi`, `id-token: write`),
-  сверяет версию в имени артефакта с тегом и прикладывает дистрибутив к
-  GitHub Release. Долгоживущего токена PyPI в секретах нет и быть не должно.
-  Ручного триггера у него нет намеренно: `workflow_dispatch` шел бы мимо сверки
-  версии с тегом, то есть мимо единственной защиты от выкладки не той версии.
-- `.github/workflows/relator.yml` отправляет уведомления о новых issues и PR в
-  Telegram через action `reagento/relator`.
-- Все сторонние actions закреплены по полному SHA коммита с комментарием версии
-  рядом. Подвижный тег `vN` можно переназначить, и тогда в CI приедет чужой код;
-  `zizmor` ловит это правилом `unpinned-uses`. Обновляет пины dependabot, он же
-  правит комментарий с версией, поэтому вручную их трогать не нужно. Новый шаг
-  добавляй сразу с SHA, а `actions/checkout` - с `persist-credentials: false`,
-  иначе токен останется в рабочем дереве после чекаута.
-- `just lint` запускает `black`, `codespell`, `slotscheck` и `bandit` наравне с
-  `ruff`. Учитывай их при изменении пользовательского текста, `__slots__`,
-  dataclass-моделей и security-sensitive кода.
-- Форматирование задают `ruff format` и `black` одновременно, их области
-  совпадают. Дерево - неподвижная точка обоих; если они разошлись на новом
-  коде, перепиши код так, чтобы оба оставили его как есть, а не подстраивай
-  конфиги под один. Не переформатируй весь репозиторий без отдельной задачи.
-
-## Что важно помнить о текущем проекте
-
-- Проект на `uv`, не на `pip` как основном инструменте для разработки.
-- Используются `justfile` для локальных команд.
-- `pyproject.toml` содержит строгие правила `ruff` и `mypy`.
-- `src/maxo/types/` и `src/maxo/enums/` содержат много файлов, которые
-  фактически являются generated API surface. Генерирует их `just butcher` -
-  правила в `butcher/AGENTS.md`.
-- `src/maxo/bot/methods/` тоже относится к API surface и требует синхронизации
-  с типами, enum и сериализацией.
-- Движок кодогенерации `unihttp-openapi-generator==0.3.1` устанавливается из
-  PyPI через dependency group `butcher`.
-- `maxo.dialogs` и `maxo.transport.webhook` исторически портированы из
-  `aiogram_dialog` и `aiogram-webhook`, поэтому рядом с изменениями нужно
-  проверять совместимость паттернов.
-- Для hook- и transport-изменений обязательно смотреть на тесты в
-  `tests/maxo_webhook`.
-- `.agents/skills` и `.claude/skills` не используются как источник правил.
-  Обязательные инструкции держи в `AGENTS.md` или во вложенных `AGENTS.md`.
-
-## Перед PR
-
-- Проверь рабочее дерево и не перезаписывай чужие изменения.
-- Добавь тесты к измененному поведению.
-- Обнови docs/examples при изменении пользовательского API.
-- Если меняешь команды разработки, обновляй `justfile`,
-  `AGENTS.md` и при необходимости CI workflows вместе.
-- В PR-шаблоне честно отметь использование ИИ: код может быть написан ИИ, но
-  должен пройти полный контроль человека.
-- Не добавляй `Co-Authored-By`.
-- Сообщения коммитов могут быть на русском, но должны оставаться понятными и
-  следовать conventional commits.
+- Python ставит `setup-uv` входом `python-version`, отдельного
+  `actions/setup-python` нет. Кэш `uv` не настраивается: дефолты уже включают
+  его и смотрят на `pyproject.toml`. В `test.yml` нужен
+  `cache-suffix: ${{ matrix.dependency-resolution }}`, иначе шесть job делят
+  одну запись кэша.
+- `build.yml` собирает sdist и wheel, проверяет `twine check --strict` и
+  `check_dist.py`; его же через `workflow_call` зовёт `publish.yml`, так что
+  публикуется проверенный артефакт. `twine` закреплён в группе `dev` и зовётся
+  через `uv run`, не `uvx`, чтобы версия проверяльщика не менялась сама.
+- `check_dist.py` - единственный источник правды по содержимому дистрибутива
+  (`py.typed`, `russiantrustedca.pem`, лицензии, отсутствие мусора,
+  импортируемость из одного колеса). Его зовут CI и `just check-dist`; он на
+  голой stdlib и запускается через `uv run --no-project`. `twine check` этих
+  отказов не ловит, поэтому скрипт из проверок не убирай.
+- `publish.yml` публикует на PyPI по `release: published` через OIDC Trusted
+  Publishing (environment `pypi`), сверяет версию артефакта с тегом и
+  прикладывает дистрибутив к релизу. Токена PyPI в секретах нет и не должно
+  быть. `workflow_dispatch` нет намеренно: он обходил бы сверку версии с тегом.
+- `relator.yml` шлёт уведомления о новых issues и PR в Telegram.
+- Сторонние actions закреплены по полному SHA с комментарием версии (`zizmor`,
+  правило `unpinned-uses`); пины обновляет dependabot. Новый шаг добавляй сразу
+  с SHA, `actions/checkout` - с `persist-credentials: false`.
+- Меняешь команды разработки - обновляй вместе `justfile`, `AGENTS.md` и
+  workflows.
 
 ## Перед завершением задачи
 
-Минимальный чеклист:
-
-- Код соответствует текущим паттернам соседних файлов.
-- Публичный API, docs и examples синхронизированы.
-- Добавлены или обновлены тесты для измененного поведения.
-- Запущены релевантные проверки. Если проверка не запускалась, явно укажи
-  причину.
-- Не перезаписаны чужие изменения в рабочем дереве.
+- Рабочее дерево проверено, чужие изменения не перезаписаны; локальные
+  артефакты (`__pycache__`, `.DS_Store`, кэши линтеров, `coverage.xml`,
+  `htmlcov/`, `docs/_build/`) не попали в коммит.
+- Измененное поведение покрыто тестами; публичный API, docs и examples
+  синхронизированы.
+- Прогнаны релевантные проверки; если какая-то не запускалась - названа причина.
+- Коммиты - conventional commits (`feat:`, `fix:`, `docs:`, `chore:`), русский
+  текст допустим, без `Co-Authored-By`. В PR-шаблоне честно отмечено
+  использование ИИ: код может писать ИИ, но его полностью проверяет человек.

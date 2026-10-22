@@ -13,7 +13,7 @@ from unihttp.exceptions import NetworkError, RequestTimeoutError
 from unihttp.http import HTTPResponse
 
 from maxo.bot.api_client import MaxApiClient
-from maxo.bot.methods import AddMembers
+from maxo.bot.methods import AddMembers  # type: ignore[deprecated]
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.middlewares import AttachmentNotReadyRetryMiddleware
 from maxo.errors import (

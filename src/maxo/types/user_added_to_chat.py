@@ -11,7 +11,7 @@ class UserAddedToChat(MaxUpdate, ChatMethodsFacade):
     Вы получите это событие, как только пользователь будет добавлен в чат, где бот является администратором
 
     Args:
-        chat_id: ID чата, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
+        chat_id: ID чата, где произошло событие. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         inviter_id: Пользователь, который добавил нового пользователя в чат. Может быть `null`, если пользователь присоединился к чату по ссылке
         is_channel: Указывает, что пользователь добавлен в канал, а не в чат
         type:
@@ -21,7 +21,7 @@ class UserAddedToChat(MaxUpdate, ChatMethodsFacade):
     type = UpdateType.USER_ADDED
 
     chat_id: int
-    """ID чата, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
+    """ID чата, где произошло событие. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
     is_channel: bool
     """Указывает, что пользователь добавлен в канал, а не в чат"""
     user: User

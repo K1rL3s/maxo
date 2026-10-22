@@ -2,11 +2,14 @@ from collections import deque
 from collections.abc import AsyncIterator
 from typing import Self
 
+from typing_extensions import deprecated
+
 from maxo.bot.bot import Bot
 from maxo.omit import Omittable, Omitted
 from maxo.types.chat import Chat
 
 
+@deprecated("ChatsIterator ходит в GET /chats, который MAX не поддерживает с июня 2026")
 class ChatsIterator(AsyncIterator[Chat]):
     _marker: Omittable[int | None]
 

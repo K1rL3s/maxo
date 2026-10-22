@@ -18,7 +18,7 @@ class DeleteAdmins(MaxoMethod[SimpleQueryResult]):
     ```
 
     Args:
-        chat_id: ID группового чата или канала
+        chat_id: ID группового чата или канала. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         user_id: Идентификатор пользователя или бота, которого надо лишить прав администратора
 
     Источник: https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/members/admins/-userId-
@@ -28,6 +28,6 @@ class DeleteAdmins(MaxoMethod[SimpleQueryResult]):
     __method__ = "delete"
 
     chat_id: Path[int]
-    """ID группового чата или канала"""
+    """ID группового чата или канала. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
     user_id: Path[int]
     """Идентификатор пользователя или бота, которого надо лишить прав администратора"""

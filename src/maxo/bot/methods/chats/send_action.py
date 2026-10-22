@@ -22,7 +22,7 @@ class SendAction(MaxoMethod[SimpleQueryResult]):
 
     Args:
         action:
-        chat_id: ID чата
+        chat_id: ID чата. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
 
     Источник: https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/actions
     """
@@ -31,6 +31,6 @@ class SendAction(MaxoMethod[SimpleQueryResult]):
     __method__ = "post"
 
     chat_id: Path[int]
-    """ID чата"""
+    """ID чата. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
 
     action: Body[SenderAction]

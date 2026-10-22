@@ -3,7 +3,7 @@ from typing import Any, TypeVar, assert_never
 
 from adaptix import Retort
 
-from maxo.bot.methods import (
+from maxo.bot.methods import (  # type: ignore[deprecated]
     AddMembers,
     AnswerOnCallback,
     DeleteAdmins,
