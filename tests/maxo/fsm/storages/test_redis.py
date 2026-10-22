@@ -181,12 +181,6 @@ def test_redis_storage_from_url(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_redis_storage_declares_slots() -> None:
-    """Regression test for #293: RedisStorage diverged from MemoryStorage,
-    which declares __slots__, by not declaring its own -- silently falling
-    back to a per-instance __dict__. `slotscheck` doesn't catch this because
-    it only checks that a subclass doesn't *break* slots inherited from a
-    parent, not that a sibling implementation of the same interface opted in.
-    """
     redis = FakeRedis()
     storage = make_storage(redis)
 
