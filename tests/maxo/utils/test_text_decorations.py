@@ -229,3 +229,20 @@ class TestTextDecoration:
         result: str,
     ) -> None:
         assert decorator.unparse(text, entities) == result
+
+
+class TestMarkdownDecorationBlockquote:
+    @pytest.mark.parametrize(
+        ("value", "result"),
+        [
+            ("", "> "),
+            ("test", "> test"),
+            ("a\nb", "> a\n> b"),
+            ("a\n", "> a\n> "),
+            ("a\r\nb", "> a\n> b"),
+            ("a\rb", "> a\n> b"),
+            ("a\r", "> a\n> "),
+        ],
+    )
+    def test_blockquote(self, value: str, result: str) -> None:
+        assert markdown_decoration.blockquote(value) == result
