@@ -103,7 +103,8 @@ class TextDecoration(ABC):
     ) -> Generator[str, None, None]:
         if offset is None:
             offset = 0
-        length = length or len(text)
+        if length is None:
+            length = len(text)
 
         for index, entity in enumerate(entities):
             if entity.offset * 2 < offset:
