@@ -219,6 +219,30 @@ class TestTextDecoration:
                 (StrongMarkup(from_=0, length=8),),
                 "<b>👋🏾 Hi!</b>",
             ),
+            (
+                html_decoration,
+                "hello",
+                (StrongMarkup(from_=0, length=0),),
+                "<b></b>hello",
+            ),
+            (
+                markdown_decoration,
+                "hello",
+                (StrongMarkup(from_=0, length=0),),
+                "****hello",
+            ),
+            (
+                html_decoration,
+                "hello",
+                (StrongMarkup(from_=2, length=0),),
+                "he<b></b>llo",
+            ),
+            (
+                markdown_decoration,
+                "hello",
+                (StrongMarkup(from_=2, length=0),),
+                "he****llo",
+            ),
         ],
     )
     def test_unparse(
