@@ -798,7 +798,7 @@ def test_base_message_button_accessors() -> None:
 
 def test_button_accessors_raise_for_omitted_values() -> None:
     message_button = MessageButton()
-    open_app_button = OpenAppButton(text="Open", web_app="app")
+    open_app_button = OpenAppButton(text="Open")
 
     with pytest.raises(AttributeIsEmptyError):
         _ = message_button.unsafe_text
@@ -806,6 +806,8 @@ def test_button_accessors_raise_for_omitted_values() -> None:
         _ = open_app_button.unsafe_contact_id
     with pytest.raises(AttributeIsEmptyError):
         _ = open_app_button.unsafe_payload
+    with pytest.raises(AttributeIsEmptyError):
+        _ = open_app_button.unsafe_web_app
 
 
 def test_video_urls_and_user_with_photo_accessors() -> None:
@@ -1041,7 +1043,7 @@ def test_remaining_optional_branches() -> None:
         stat=MessageStat(views=1),
         url="https://example.com",
     )
-    open_app = OpenAppButton(text="open", web_app="app")
+    open_app = OpenAppButton(text="open")
     new_message = NewMessageBody(
         attachments=[],
         format=TextFormat.HTML,
@@ -1076,7 +1078,6 @@ def test_remaining_optional_branches() -> None:
         match=r"OpenAppButton.contact_id is empty \(<Omitted>\)",
     ):
         _ = open_app.unsafe_contact_id
-    assert open_app.unsafe_web_app == "app"
     assert new_message.unsafe_attachments == []
     assert new_message.unsafe_format == TextFormat.HTML
     with pytest.raises(
@@ -1166,7 +1167,7 @@ def test_missing_optional_fields_raise_for_unsafe_accessors() -> None:
         token=DETAILS_ID,
         width=1920,
     )
-    open_app = OpenAppButton(text="open", web_app="app")
+    open_app = OpenAppButton(text="open")
     share_payload = ShareAttachmentPayload()
     video_urls = VideoUrls()
     message = Message(
@@ -1233,6 +1234,8 @@ def test_missing_optional_fields_raise_for_unsafe_accessors() -> None:
         _ = open_app.unsafe_contact_id
     with pytest.raises(AttributeIsEmptyError):
         _ = open_app.unsafe_payload
+    with pytest.raises(AttributeIsEmptyError):
+        _ = open_app.unsafe_web_app
     with pytest.raises(AttributeIsEmptyError):
         _ = share_payload.unsafe_token
     with pytest.raises(AttributeIsEmptyError):

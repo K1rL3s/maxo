@@ -88,11 +88,11 @@ dev.max.ru, `GET /chats` там объявлен неподдерживаемы�
 наследует `MessageMethodsFacade`: поэтому общий API сообщения сохраняется, а
 `answer()` использует методы комментариев.
 
-`OpenAppButton.web_app` в json необязателен, но без него API отвечает 400
-`Field 'webApp' cannot be null`, а yaml поле требует. Поэтому
-`FieldOverride(omittable=False)` делает его обязательным. У обязательного поля
-генератор `unsafe_web_app` не создаёт, его держит ручной слой ради
-совместимости: свойство просто возвращает `web_app`.
+`OpenAppButton.web_app` в json необязателен, а yaml поле требует: без него
+API отвечает 400 `Field 'webApp' cannot be null`. Тип оставлен
+сгенерированным, `Omittable[str]`, иначе входящее сообщение с кнопкой без
+`web_app` не загружается. Обязательность держит запрос:
+`KeyboardBuilder.add_open_app(..., *, web_app)` и виджет `WebApp`.
 
 `VideoAttachmentDetails.thumbnail` в Swagger ссылается на
 `PhotoAttachmentPayload` с обязательными `photo_id` и `token`, а

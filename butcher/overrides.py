@@ -163,7 +163,6 @@ MODEL_FIELD_OVERRIDES: dict[tuple[str, str], FieldOverride] = {
     # иначе следующая генерация снесёт его вместе с `unsafe_name`.
     ("User", "name"): FieldOverride(omittable=True),
     ("VideoAttachmentDetails", "thumbnail"): FieldOverride(ref="VideoThumbnail"),
-    ("OpenAppButton", "web_app"): FieldOverride(omittable=False),
 }
 
 

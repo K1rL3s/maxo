@@ -35,6 +35,7 @@ from maxo.types import (
     Message,
     MessageCreated,
     NewMessageBody,
+    OpenAppButton,
     UpdateList,
     UploadMediaResult,
     User,
@@ -445,3 +446,37 @@ def test_retort_loads_file_id_of_upload_result() -> None:
     result = retort.load({"fileId": 3343344796, "token": "tok"}, UploadMediaResult)
 
     assert result.file_id == 3343344796
+
+
+def test_retort_loads_open_app_button_without_web_app() -> None:
+    retort = create_retort(warming_up=False)
+
+    message = retort.load(
+        {
+            "body": {
+                "seq": 1,
+                "mid": "msg-1",
+                "text": "app",
+                "attachments": [
+                    {
+                        "type": "inline_keyboard",
+                        "payload": {
+                            "buttons": [
+                                [{"type": "open_app", "text": "App", "contact_id": 5}],
+                            ],
+                        },
+                    },
+                ],
+            },
+            "recipient": {"chat_id": 1, "chat_type": "dialog"},
+            "timestamp": 1234567890,
+        },
+        Message,
+    )
+
+    keyboard = message.body.keyboard
+    assert keyboard is not None
+    button = keyboard.buttons[0][0]
+    assert isinstance(button, OpenAppButton)
+    assert button.contact_id == 5
+    assert is_omitted(button.web_app)
