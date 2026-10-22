@@ -524,3 +524,34 @@ class TestGetItemUnicode:
         """
         assert Bold(Italic("x"), "y").as_html() == "<b><i>x</i>y</b>"
         assert Bold(Italic("foo"), "bar").as_html() == "<b><i>foo</i>bar</b>"
+
+
+class TestGetItemNonTextNode:
+    def test_getitem_int_node_slice_across_boundary(self) -> None:
+        node = Text(123, "abc")
+        sliced = node[0:2]
+        text, _ = sliced.render()
+        assert text == "12"
+
+    def test_getitem_int_node_slice_tail(self) -> None:
+        node = Text(123, "abc")
+        sliced = node[1:3]
+        text, _ = sliced.render()
+        assert text == "23"
+
+    def test_getitem_int_node_slice_after(self) -> None:
+        node = Text(123, "abc")
+        sliced = node[3:6]
+        text, _ = sliced.render()
+        assert text == "abc"
+
+    def test_getitem_float_node(self) -> None:
+        node = Text(1.5, "x")
+        sliced = node[0:3]
+        text, _ = sliced.render()
+        assert text == "1.5"
+
+    def test_getitem_full_slice_keeps_original_node(self) -> None:
+        node = Text(123, "abc")
+        sliced = node[:]
+        assert sliced._body == (123, "abc")
