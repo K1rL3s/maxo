@@ -15,7 +15,7 @@ class MediaAttachmentPayload(AttachmentPayload):
     token: str
     """Используйте `token`, если вы пытаетесь повторно использовать одно и то же вложение в другом сообщении"""
 
-    id: Omittable[int] = Omitted()
+    id: Omittable[int | None] = Omitted()
     """ID медиафайла. Одинаковый у одного и того же видео или аудио в разных сообщениях"""
 
     @property

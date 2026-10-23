@@ -512,13 +512,14 @@ def test_retort_loads_video_type(
     [
         ("video", {"id": 16922062446427}, 16922062446427),
         ("audio", {"id": 16190153253039}, 16190153253039),
+        ("video", {"id": None}, None),
         ("video", {}, Omitted()),
     ],
 )
 def test_retort_loads_media_payload_id(
     attachment_type: str,
-    payload: dict[str, int],
-    expected: Omittable[int],
+    payload: dict[str, int | None],
+    expected: Omittable[int | None],
 ) -> None:
     retort = create_retort(warming_up=False)
 

@@ -139,8 +139,9 @@ API отвечает 400 `Field 'webApp' cannot be null`. Тип оставле�
 
 `MediaAttachmentPayload.id` нет ни в одной публикации, но MAX присылает его в
 payload входящих и отправленных видео и аудио, одинаковый для одного медиафайла
-в разных сообщениях. Поле дописано в `max-swagger.json` необязательным. У файла
-вместо него приходит `fileId` в camelCase, в `FileAttachmentPayload` его нет.
+в разных сообщениях. Поле дописано в `max-swagger.json` необязательным и
+`nullable`. У файла вместо него приходит `fileId` в camelCase, в
+`FileAttachmentPayload` его нет.
 
 ## Реестры и compat-слои, о которых легко не узнать
 
