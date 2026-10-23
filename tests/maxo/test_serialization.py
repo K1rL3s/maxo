@@ -26,6 +26,7 @@ from maxo.serialization import (
     create_retort_with_bot,
 )
 from maxo.types import (
+    AudioAttachment,
     BotAdminPermissionsChanged,
     BotStarted,
     CommentCreated,
@@ -504,3 +505,29 @@ def test_retort_loads_video_type(
     )
 
     assert video.video_type == expected
+
+
+@pytest.mark.parametrize(
+    ("attachment_type", "payload", "expected"),
+    [
+        ("video", {"id": 16922062446427}, 16922062446427),
+        ("audio", {"id": 16190153253039}, 16190153253039),
+        ("video", {}, Omitted()),
+    ],
+)
+def test_retort_loads_media_payload_id(
+    attachment_type: str,
+    payload: dict[str, int],
+    expected: Omittable[int],
+) -> None:
+    retort = create_retort(warming_up=False)
+
+    attachment = retort.load(
+        {
+            "type": attachment_type,
+            "payload": {"url": "url", "token": "token", **payload},
+        },
+        AudioAttachment | VideoAttachment,
+    )
+
+    assert attachment.payload.id == expected
