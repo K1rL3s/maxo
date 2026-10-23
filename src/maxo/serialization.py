@@ -52,6 +52,7 @@ from maxo.types import (
     DialogUnmuted,
     EmphasizedMarkup,
     FileAttachment,
+    FileAttachmentPayload,
     FileAttachmentRequest,
     HeadingMarkup,
     HighlightedMarkup,
@@ -244,6 +245,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
             ),
             loader(P[datetime], _load_datetime),
             name_mapping(UploadMediaResult, map={"file_id": "fileId"}),
+            name_mapping(FileAttachmentPayload, map={"file_id": "fileId"}),
         ],
     )
 
