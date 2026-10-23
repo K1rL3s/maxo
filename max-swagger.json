@@ -3137,6 +3137,7 @@
                             },
                             "video_type": {
                                 "description": "Тип видео: обычное видео или видеосообщение",
+                                "type": "string",
                                 "nullable": true,
                                 "allOf": [
                                     {
