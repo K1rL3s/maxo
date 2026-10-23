@@ -57,6 +57,7 @@ dev.max.ru, `GET /chats` там объявлен неподдерживаемы�
 | `Callback`         | `id`, `data`, `unsafe_data`                                                               |
 | `CallbackButton`   | `callback_data`                                                                            |
 | `Chat`             | `id`                                                                                       |
+| `FileAttachmentPayload` | `id` (алиас `file_id`, как `MediaAttachmentPayload.id`)                               |
 | `MarkupElement`    | `offset` (алиас `from_`) - на нём держатся `utils/formatting.py`, `utils/text_decorations.py` |
 | `Message`          | `message` (нужен `MessageMethodsFacade`, без него класс абстрактный)                        |
 | `MessageBody`      | `id`, `keyboard`, `reply_markup`, `photo`, `video`, `audio`, `file`, `sticker`, `contact`, `share`, `location`, `_unparse_entities`, `html_text`, `md_text`, `attachment_type`, `content_type` |
@@ -140,8 +141,11 @@ API отвечает 400 `Field 'webApp' cannot be null`. Тип оставле�
 `MediaAttachmentPayload.id` нет ни в одной публикации, но MAX присылает его в
 payload входящих и отправленных видео и аудио, одинаковый для одного медиафайла
 в разных сообщениях. Поле дописано в `max-swagger.json` необязательным и
-`nullable`. У файла вместо него приходит `fileId` в camelCase, в
-`FileAttachmentPayload` его нет.
+`nullable`. У файла вместо него приходит `fileId` в camelCase: в
+`max-swagger.json` у `FileAttachmentPayload` дописано свойство `fileId`, butcher
+генерирует из него `file_id`, а wire-имя задаёт
+`name_mapping(FileAttachmentPayload, map={"file_id": "fileId"})` в
+`serialization.py`, как у `UploadMediaResult`.
 
 ## Реестры и compat-слои, о которых легко не узнать
 

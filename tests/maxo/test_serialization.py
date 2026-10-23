@@ -33,6 +33,7 @@ from maxo.types import (
     CommentEdited,
     CommentMessage,
     CommentRemoved,
+    FileAttachment,
     Message,
     MessageCreated,
     NewMessageBody,
@@ -531,4 +532,32 @@ def test_retort_loads_media_payload_id(
         AudioAttachment | VideoAttachment,
     )
 
+    assert attachment.payload.id == expected
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        ({"fileId": 5399066140}, 5399066140),
+        ({"fileId": None}, None),
+        ({}, Omitted()),
+    ],
+)
+def test_retort_loads_file_payload_file_id(
+    payload: dict[str, int | None],
+    expected: Omittable[int | None],
+) -> None:
+    retort = create_retort(warming_up=False)
+
+    attachment = retort.load(
+        {
+            "type": "file",
+            "payload": {"url": "url", "token": "token", **payload},
+            "filename": "probe.txt",
+            "size": 6,
+        },
+        FileAttachment,
+    )
+
+    assert attachment.payload.file_id == expected
     assert attachment.payload.id == expected
