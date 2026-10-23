@@ -16,7 +16,7 @@ from maxo.bot.methods import (
     SendMessage,
 )
 from maxo.bot.methods.base import MaxoMethod
-from maxo.enums import ChatAdminPermission, TextFormat
+from maxo.enums import ChatAdminPermission, TextFormat, VideoType
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_omitted
 from maxo.serialization import (
@@ -39,6 +39,7 @@ from maxo.types import (
     UpdateList,
     UploadMediaResult,
     User,
+    VideoAttachment,
     VideoAttachmentDetails,
     VideoThumbnail,
 )
@@ -480,3 +481,26 @@ def test_retort_loads_open_app_button_without_web_app() -> None:
     assert isinstance(button, OpenAppButton)
     assert button.contact_id == 5
     assert is_omitted(button.web_app)
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ({"video_type": "video_message"}, VideoType.VIDEO_MESSAGE),
+        ({"video_type": "video"}, VideoType.VIDEO),
+        ({"video_type": None}, None),
+        ({}, Omitted()),
+    ],
+)
+def test_retort_loads_video_type(
+    raw: dict[str, str | None],
+    expected: Omittable[VideoType | None],
+) -> None:
+    retort = create_retort(warming_up=False)
+
+    video = retort.load(
+        {"type": "video", "payload": {"url": "url", "token": "token"}, **raw},
+        VideoAttachment,
+    )
+
+    assert video.video_type == expected

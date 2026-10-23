@@ -131,6 +131,12 @@ API отвечает 400 `Field 'webApp' cannot be null`. Тип оставле�
 с ними. В `max-swagger.json` они дописаны и в `User`, иначе adaptix молча
 отбрасывает аватар.
 
+`VideoAttachment.video_type` и enum `VideoType` (`video`, `video_message`) нет
+ни в одной публикации, но MAX присылает поле во входящих видео: его добавил
+официальный Go-клиент (max-messenger/max-bot-api-client-go#172). Поле и схема
+`VideoType` дописаны в `max-swagger.json`, поле - `nullable`, как соседние
+поля видео.
+
 ## Реестры и compat-слои, о которых легко не узнать
 
 Генерация их не трогает, но по ним расходится ручная регистрация новых

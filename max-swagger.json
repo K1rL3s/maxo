@@ -3134,12 +3134,29 @@
                                 "type": "integer",
                                 "nullable": true,
                                 "readOnly": false
+                            },
+                            "video_type": {
+                                "description": "Тип видео: обычное видео или видеосообщение",
+                                "nullable": true,
+                                "allOf": [
+                                    {
+                                        "$ref": "#/components/schemas/VideoType"
+                                    }
+                                ]
                             }
                         },
                         "required": [
                             "payload"
                         ]
                     }
+                ]
+            },
+            "VideoType": {
+                "description": "Тип видео:\n- `\"video\"` - обычное видео\n- `\"video_message\"` - видеосообщение",
+                "type": "string",
+                "enum": [
+                    "video",
+                    "video_message"
                 ]
             },
             "VideoThumbnail": {
