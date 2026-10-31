@@ -1,7 +1,9 @@
+from types import MethodType
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from maxo.bot.bot import Bot
 from maxo.enums import ChatType
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omitted
@@ -9,6 +11,7 @@ from maxo.types import (
     Message,
     MessageBody,
     MessageCallback,
+    NewMessageBody,
     Recipient,
     SendMessageResult,
     SimpleQueryResult,
@@ -29,6 +32,7 @@ def bot() -> MagicMock:
     bot.send_message = AsyncMock(return_value=SendMessageResult(message=sent))
     bot.edit_message = AsyncMock(return_value=SimpleQueryResult(success=True))
     bot.delete_message = AsyncMock(return_value=SimpleQueryResult(success=True))
+    bot.build_attachments = MethodType(Bot.build_attachments, bot)
     bot.answer_on_callback = AsyncMock(return_value=SimpleQueryResult(success=True))
     return bot
 
@@ -88,6 +92,103 @@ class TestMessageCallbackWithoutMessage:
             notification="ok",
             message=None,
             disable_link_preview=Omitted(),
+        )
+
+    @pytest.mark.parametrize("notification", [Omitted(), None])
+    async def test_callback_answer_sends_empty_notification_without_message(
+        self,
+        callback_without_message: MessageCallback,
+        bot: MagicMock,
+        notification: str | None | Omitted,
+    ) -> None:
+        await callback_without_message.callback_answer(notification=notification)
+
+        assert bot.answer_on_callback.await_args.kwargs["notification"] == ""
+
+    async def test_callback_answer_with_message_keeps_notification_omitted(
+        self,
+        callback_without_message: MessageCallback,
+        bot: MagicMock,
+    ) -> None:
+        message = NewMessageBody(text="edited")
+
+        await callback_without_message.callback_answer(message=message)
+
+        bot.answer_on_callback.assert_awaited_once_with(
+            callback_id="cb",
+            notification=Omitted(),
+            message=message,
+            disable_link_preview=Omitted(),
+        )
+
+
+class TestCallbackAnswer:
+    """Ported from upstream `tests/maxo/types/facades/test_callback.py`."""
+
+    async def test_forwards_all_params(
+        self,
+        callback_without_message: MessageCallback,
+        bot: MagicMock,
+    ) -> None:
+        message = NewMessageBody(text="edited")
+
+        await callback_without_message.callback_answer(
+            notification="Готово",
+            message=message,
+            disable_link_preview=True,
+        )
+
+        bot.answer_on_callback.assert_awaited_once_with(
+            callback_id="cb",
+            notification="Готово",
+            message=message,
+            disable_link_preview=True,
+        )
+
+    async def test_uses_text_alias(
+        self,
+        callback_without_message: MessageCallback,
+        bot: MagicMock,
+    ) -> None:
+        await callback_without_message.callback_answer(
+            text="Готово",
+            disable_link_preview=False,
+        )
+
+        bot.answer_on_callback.assert_awaited_once_with(
+            callback_id="cb",
+            notification="Готово",
+            message=None,
+            disable_link_preview=False,
+        )
+
+    async def test_prefers_notification_over_text(
+        self,
+        callback_without_message: MessageCallback,
+        bot: MagicMock,
+    ) -> None:
+        await callback_without_message.callback_answer(
+            notification="Первое",
+            text="Второе",
+        )
+
+        assert bot.answer_on_callback.await_args.kwargs["notification"] == "Первое"
+
+    async def test_answer_alias_forwards_disable_link_preview(
+        self,
+        callback_without_message: MessageCallback,
+        bot: MagicMock,
+    ) -> None:
+        await callback_without_message.answer(
+            notification="Готово",
+            disable_link_preview=True,
+        )
+
+        bot.answer_on_callback.assert_awaited_once_with(
+            callback_id="cb",
+            notification="Готово",
+            message=None,
+            disable_link_preview=True,
         )
 
 

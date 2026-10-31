@@ -2,7 +2,7 @@
 
 from collections.abc import Sequence
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -765,6 +765,7 @@ class TestBuildAttachments:
     async def test_preserves_media_order(self, tmp_path: Path) -> None:
         manager = MessageManager(media_id_storage=AsyncMock())
         bot = AsyncMock()
+        bot.build_attachments = AsyncMock(return_value=[])
         media = [
             MediaAttachment(
                 type=AttachmentType.IMAGE,
@@ -774,13 +775,9 @@ class TestBuildAttachments:
             MediaAttachment(type=AttachmentType.IMAGE, url="http://e.com/a.png"),
         ]
 
-        with patch(
-            "maxo.dialogs.manager.message_manager.AttachmentsFacade",
-        ) as facade_cls:
-            facade_cls.return_value.build_attachments = AsyncMock(return_value=[])
-            await manager._build_attachments(bot, keyboard=None, media=media)
+        await manager._build_attachments(bot, keyboard=None, media=media)
 
-        kwargs = facade_cls.return_value.build_attachments.await_args.kwargs
+        kwargs = bot.build_attachments.await_args.kwargs
         assert kwargs["base"] == []
         assert isinstance(kwargs["files"][0], PhotoAttachmentRequest)
         assert isinstance(kwargs["files"][1], FSInputFile)

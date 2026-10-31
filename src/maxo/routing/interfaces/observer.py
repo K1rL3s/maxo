@@ -15,27 +15,16 @@ _HandlerT = TypeVar("_HandlerT", bound=Handler[Any, Any])
 _HandlerFnT = TypeVar("_HandlerFnT", bound=Callable[..., Coroutine[Any, Any, Any]])
 
 
-class ObserverState(Protocol):
-    @abstractmethod
-    def ensure_add_handler(self) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def ensure_add_filter(self) -> None:
-        raise NotImplementedError
-
-
 class Observer(Protocol[_UpdateT, _HandlerT, _HandlerFnT]):
     __slots__ = ()
 
-    @property
     @abstractmethod
-    def state(self) -> ObserverState:
+    def freeze(self) -> None:
+        """Запретить менять handlers, фильтр и middleware: после startup."""
         raise NotImplementedError
 
-    @state.setter
     @abstractmethod
-    def state(self, value: ObserverState) -> None:
+    def unfreeze(self) -> None:
         raise NotImplementedError
 
     @property

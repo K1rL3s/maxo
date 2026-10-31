@@ -5,6 +5,7 @@ import pytest
 
 from maxo.enums import TextFormat
 from maxo.omit import Omitted
+from maxo.types.base import FacadeMaxoType
 from maxo.types.chat import Chat
 from maxo.types.chat_members_list import ChatMembersList
 from maxo.types.facades.chat import ChatMethodsFacade
@@ -15,14 +16,8 @@ from maxo.types.simple_query_result import SimpleQueryResult
 from tests.constants import NOW
 
 
-class MockChatFacade(ChatMethodsFacade):
-    def __init__(self, bot: MagicMock, chat_id: int) -> None:
-        self._bot = bot
-        self._chat_id = chat_id
-
-    @property
-    def chat_id(self) -> int:
-        return self._chat_id
+class MockChatFacade(FacadeMaxoType, ChatMethodsFacade, slots=False):
+    chat_id: int
 
 
 @pytest.fixture
@@ -40,7 +35,7 @@ def mock_bot() -> MagicMock:
 
 @pytest.fixture
 def facade(mock_bot: MagicMock) -> MockChatFacade:
-    return MockChatFacade(mock_bot, chat_id=12345)
+    return MockChatFacade(_bot=mock_bot, chat_id=12345)
 
 
 async def test_chat_id_property(facade: MockChatFacade) -> None:
@@ -179,7 +174,7 @@ async def test_send_message_minimal(
     mock_bot: MagicMock,
 ) -> None:
     with patch.object(
-        facade,
+        facade.bot,
         "build_attachments",
         new_callable=AsyncMock,
     ) as mock_build:
@@ -205,7 +200,7 @@ async def test_send_message_with_all_params(
     mock_bot: MagicMock,
 ) -> None:
     with patch.object(
-        facade,
+        facade.bot,
         "build_attachments",
         new_callable=AsyncMock,
     ) as mock_build:
@@ -244,7 +239,7 @@ async def test_send_message_with_all_params(
 
 async def test_send_message_without_attachments(facade: MockChatFacade) -> None:
     with patch.object(
-        facade,
+        facade.bot,
         "build_attachments",
         new_callable=AsyncMock,
     ) as mock_build:
@@ -257,7 +252,7 @@ async def test_send_message_without_attachments(facade: MockChatFacade) -> None:
 
 async def test_send_message_with_keyboard_only(facade: MockChatFacade) -> None:
     with patch.object(
-        facade,
+        facade.bot,
         "build_attachments",
         new_callable=AsyncMock,
     ) as mock_build:

@@ -26,7 +26,7 @@ class SignalObserver(
         *filters: Filter[_SignalT],
         flags: Mapping[str, Any] | None = None,
     ) -> SignalHandlerFn[_SignalT, Any]:
-        self.state.ensure_add_handler()
+        self._ensure_not_frozen("Can't add handler after startup")
 
         self._handlers.append(SignalHandler(handler_fn, *filters, flags=flags))
 

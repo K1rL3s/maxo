@@ -1,10 +1,9 @@
 from typing import Any
 
 from maxo import Ctx
+from maxo.routing.events import MaxoUpdate
 from maxo.routing.interfaces import BaseMiddleware, NextMiddleware
-from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
-from maxo.routing.signals import MaxoUpdate
-from maxo.types import UpdateContext
+from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY, UpdateContext
 
 from ..ids import MaxId
 from ..user_repo import ExternalType, UserRepo

@@ -4,13 +4,13 @@ import pytest
 
 from maxo.enums import ChatStatus, ChatType
 from maxo.routing.ctx import Ctx
+from maxo.routing.events import MaxoUpdate
 from maxo.routing.middlewares.update_context import (
     EVENT_CHAT_KEY,
     EVENT_FROM_USER_KEY,
     UPDATE_CONTEXT_KEY,
     UpdateContextMiddleware,
 )
-from maxo.routing.signals import MaxoUpdate
 from maxo.types import (
     BotAddedToChat,
     BotAdminPermissionsChanged,

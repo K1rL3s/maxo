@@ -20,6 +20,7 @@ SKIP_SCHEMAS: frozenset[str] = frozenset(
         "BotPatch",
         "CallbackAnswer",
         "ChatPatch",
+        "NewCommentBody",
         "PinMessageBody",
         "PhotoTokens",
         "SubscriptionRequestBody",
@@ -78,6 +79,9 @@ UPDATE_TYPE_ATTR = "type"
 
 #: Корень иерархии типов.
 ROOT_BASE_CLASS = "MaxoType"
+
+#: Root for flat schemas with facades (`CLASS_MIXINS`); holds the bot.
+FACADE_ROOT_BASE_CLASS = "FacadeMaxoType"
 
 #: Базы моделей, которыми maxo намеренно уточняет плоские схемы Swagger.
 MODEL_BASE_OVERRIDES: dict[str, str] = {
@@ -330,19 +334,6 @@ CLASS_MIXINS: dict[str, tuple[str, ...]] = {
 
 FACADES_MODULE = "maxo.types.facades"
 
-#: Модуль внутри `maxo.types.facades`, где лежит каждый миксин.
-#:
-#: `maxo.types.facades.__init__` пустой (реэкспорт всех фасадов оттуда
-#: зацикливает импорт с `maxo.types.base` - см. AGENTS.md), поэтому импорт
-#: всегда идёт из конкретного файла: `from maxo.types.facades.chat import
-#: ChatMethodsFacade`, а не `from maxo.types.facades import ChatMethodsFacade`.
-FACADE_MODULES: dict[str, str] = {
-    "CallbackMethodsFacade": "callback",
-    "ChatMethodsFacade": "chat",
-    "CommentMethodsFacade": "comment",
-    "MessageMethodsFacade": "message",
-}
-
 
 # --- ручные символы в __init__.py -------------------------------------------
 
@@ -364,8 +355,8 @@ TYPES_EXTRA_EXPORTS: tuple[ExtraExport, ...] = (
     ExtraExport(
         module="base",
         names=(
-            "BaseMaxoType",
             "BaseUpdate",
+            "FacadeMaxoType",
             "MaxUpdate",
             "MaxoType",
         ),
@@ -374,8 +365,7 @@ TYPES_EXTRA_EXPORTS: tuple[ExtraExport, ...] = (
         module="clear_subscriptions_result",
         names=("ClearSubscriptionsResult",),
     ),
-    ExtraExport(module="error_event", names=("ErrorEvent",)),
-    ExtraExport(module="update_context", names=("UpdateContext",)),
+    ExtraExport(module="media_input", names=("MediaInput",)),
     ExtraExport(module="upload_media_result", names=("UploadMediaResult",)),
 )
 

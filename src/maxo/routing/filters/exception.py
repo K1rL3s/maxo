@@ -3,9 +3,9 @@ from collections.abc import Callable
 from typing import Any, Generic, TypeVar
 
 from maxo.routing.ctx import Ctx
+from maxo.routing.events import ErrorEvent
 from maxo.routing.filters.base import BaseFilter
 from maxo.types import BaseUpdate
-from maxo.types.error_event import ErrorEvent
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 _ExceptionT = TypeVar("_ExceptionT", bound=Exception)

@@ -225,7 +225,7 @@ async def test_save_load_stack_keeps_access_settings() -> None:
 async def test_load_stack_without_access_settings_uses_default() -> None:
     proxy = make_proxy()
     await proxy.storage.set_data(
-        key=proxy._stack_key(DEFAULT_STACK_ID),
+        key=await proxy._stack_key(DEFAULT_STACK_ID),
         data={
             "_id": DEFAULT_STACK_ID,
             "intents": ["a"],

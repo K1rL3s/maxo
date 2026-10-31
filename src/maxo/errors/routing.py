@@ -39,3 +39,12 @@ class RouterAlreadyIncludedError(MaxoError):
 
     def __str__(self) -> str:
         return f"{self.router} is already included into {self.parent_router}"
+
+
+class RoutingFrozenError(MaxoError):
+    """Роутер, observer или middleware изменяют после startup."""
+
+    message: str
+
+    def __str__(self) -> str:
+        return self.message

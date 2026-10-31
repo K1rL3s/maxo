@@ -15,6 +15,7 @@ from maxo.enums import (
 )
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
+from maxo.routing.middlewares.update_context import UpdateContext
 from maxo.types import (
     AudioAttachment,
     BotAdminPermissionsChanged,
@@ -58,7 +59,6 @@ from maxo.types import (
     MessageRemoved,
     MessageStat,
     ModifyMembersResult,
-    NewCommentBody,
     NewMessageBody,
     NewMessageLink,
     OpenAppButton,
@@ -73,7 +73,6 @@ from maxo.types import (
     SimpleQueryResult,
     StickerAttachment,
     Subscription,
-    UpdateContext,
     UpdateList,
     UploadEndpoint,
     UploadMediaResult,
@@ -860,21 +859,20 @@ def test_message_generated_url_requires_chat_id() -> None:
     assert message.generated_url is None
 
 
-def test_maxo_type_bot_accessors() -> None:
-    user = make_user()
+def test_bot_lives_only_on_facade_types() -> None:
+    # Plain DTOs have no bot; messages do.
+    assert not hasattr(make_user(), "bot")
 
+    message = make_message()
     with pytest.raises(AttributeIsEmptyError):
-        _ = user.bot
-
-    user.bot = None
-    assert user._bot is None
+        _ = message.bot
 
     class DummyBot: ...
 
-    # cast нужен для проверки BaseMethodsFacade без создания реального Bot с сетевым клиентом.
+    # cast: avoid a real Bot with a network client.
     bot = cast(Bot, DummyBot())
-    assert user.as_(bot) is user
-    assert user.bot is bot
+    assert message.as_(bot) is message
+    assert message.bot is bot
 
 
 def test_user_and_chat_related_accessors() -> None:
@@ -1447,7 +1445,6 @@ def test_comment_accessors() -> None:
         sender=sender,
         stat=MessageStat(views=5),
     )
-    new_body = NewCommentBody(format=TextFormat.HTML)
 
     assert body.unsafe_markup == []
     assert body.unsafe_text == "Текст"
@@ -1459,14 +1456,7 @@ def test_comment_accessors() -> None:
     assert comment.unsafe_link is link
     assert comment.unsafe_sender is sender
     assert comment.unsafe_stat == MessageStat(views=5)
-    assert new_body.unsafe_format is TextFormat.HTML
 
-    with pytest.raises(AttributeIsEmptyError):
-        _ = new_body.unsafe_link
-    with pytest.raises(AttributeIsEmptyError):
-        _ = new_body.unsafe_text
-    with pytest.raises(AttributeIsEmptyError):
-        _ = NewCommentBody().unsafe_format
     with pytest.raises(AttributeIsEmptyError):
         _ = CommentMessageBody(mid="comment", seq=1).unsafe_markup
     with pytest.raises(AttributeIsEmptyError):

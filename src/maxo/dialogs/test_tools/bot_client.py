@@ -3,11 +3,12 @@ from datetime import UTC, datetime
 from typing import Any, cast
 from unittest.mock import AsyncMock
 
+from unihttp.clients.base import BaseAsyncClient
+
 from maxo import Bot, Dispatcher
-from maxo.bot.state import RunningBotState
 from maxo.enums import ChatAdminPermission, ChatStatus, ChatType, MessageLinkType
 from maxo.omit import Omittable, Omitted, is_defined
-from maxo.routing.signals import MaxoUpdate
+from maxo.routing.events import MaxoUpdate
 from maxo.types import (
     BotAddedToChat,
     BotAdminPermissionsChanged,
@@ -35,14 +36,14 @@ from .keyboard import InlineButtonLocator
 class FakeBot(Bot):
     def __init__(self) -> None:
         super().__init__("", warming_up=False)
-        info = BotInfo(
+        self._info = BotInfo(
             user_id=1000,
             first_name="bot",
             username="bot",
             is_bot=True,
             last_activity_time=datetime.fromtimestamp(1234567890, tz=UTC),
         )
-        self._state = RunningBotState(info=info, api_client=AsyncMock())
+        self._client = cast(BaseAsyncClient, AsyncMock())
 
     # `Bot.answer_on_callback` - это атрибут `bind_method(...)`, а не метод,
     # поэтому подмена его в наследнике для mypy выглядит как covariant override.
@@ -100,13 +101,14 @@ class BotClient:
         self,
         text: str,
         reply_to: Message | None,
+        bot_id: int,
     ) -> Message:
         message_seq = self._new_message_id()
         return Message(
             sender=self.user,
             recipient=Recipient(
                 chat_type=self.chat.type,
-                user_id=self.bot.state.info.user_id,
+                user_id=bot_id,
                 chat_id=self.chat.chat_id,
             ),
             timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
@@ -141,10 +143,14 @@ class BotClient:
         return await self.dp.feed_update(
             MaxoUpdate(
                 update=MessageCreated(
-                    message=self._new_message(text, reply_to),
+                    message=self._new_message(
+                        text,
+                        reply_to,
+                        (await self.bot.me()).user_id,
+                    ),
                     timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
                     user_locale="ru",
-                ).as_(self.bot),
+                ),
             ),
             self.bot,
         )
@@ -155,7 +161,7 @@ class BotClient:
         msg = Message(
             recipient=Recipient(
                 chat_type=ChatType.CHANNEL,
-                user_id=self.bot.state.info.user_id,
+                user_id=(await self.bot.me()).user_id,
                 chat_id=self.chat.chat_id,
             ),
             timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
@@ -173,7 +179,7 @@ class BotClient:
                     message=msg,
                     timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
                     user_locale="ru",
-                ).as_(self.bot),
+                ),
             ),
             self.bot,
         )
@@ -184,7 +190,7 @@ class BotClient:
         msg = Message(
             recipient=Recipient(
                 chat_type=ChatType.CHANNEL,
-                user_id=self.bot.state.info.user_id,
+                user_id=(await self.bot.me()).user_id,
                 chat_id=self.chat.chat_id,
             ),
             timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
@@ -197,7 +203,7 @@ class BotClient:
                 update=MessageEdited(
                     message=msg,
                     timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
-                ).as_(self.bot),
+                ),
             ),
             self.bot,
         )
@@ -209,9 +215,9 @@ class BotClient:
                 update=MessageRemoved(
                     message_id=mid,
                     chat_id=self.chat.chat_id,
-                    user_id=self.bot.state.info.user_id,
+                    user_id=(await self.bot.me()).user_id,
                     timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
-                ).as_(self.bot),
+                ),
             ),
             self.bot,
         )
@@ -248,7 +254,7 @@ class BotClient:
                     callback=callback,
                     message=message,
                     user_locale="ru",
-                ).as_(self.bot),
+                ),
             ),
             self.bot,
         )
@@ -262,7 +268,7 @@ class BotClient:
                     is_channel=self.chat.type == ChatType.CHANNEL,
                     user=self.user,
                     timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
-                ).as_(self.bot),
+                ),
             ),
             self.bot,
         )
@@ -275,7 +281,7 @@ class BotClient:
                     is_channel=self.chat.type == ChatType.CHANNEL,
                     user=self.user,
                     timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
-                ).as_(self.bot),
+                ),
             ),
             self.bot,
         )
@@ -290,12 +296,12 @@ class BotClient:
                 update=BotAdminPermissionsChanged(
                     chat_id=self.chat.chat_id,
                     user_id=self.user.user_id,
-                    bot_id=self.bot.state.info.user_id,
+                    bot_id=(await self.bot.me()).user_id,
                     is_channel=self.chat.type == ChatType.CHANNEL,
                     is_admin=is_admin,
                     permissions=permissions,
                     timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
-                ).as_(self.bot),
+                ),
             ),
             self.bot,
         )

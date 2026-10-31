@@ -21,12 +21,11 @@ class BotInfoStub:
     username = "maxobot"
 
 
-class BotStateStub:
+class BotStub:
     info = BotInfoStub()
 
-
-class BotStub:
-    state = BotStateStub()
+    async def me(self) -> BotInfoStub:
+        return self.info
 
 
 def make_bot() -> Bot:

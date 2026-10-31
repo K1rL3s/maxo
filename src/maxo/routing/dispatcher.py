@@ -9,6 +9,7 @@ from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
 from maxo.fsm.storages.memory import MemoryStorage, SimpleEventIsolation
 from maxo.omit import Omittable, Omitted
 from maxo.routing.ctx import Ctx
+from maxo.routing.events import MaxoUpdate
 from maxo.routing.flags import HANDLER_KEY
 from maxo.routing.middlewares.error import ErrorMiddleware
 from maxo.routing.middlewares.fsm_context import FSMContextMiddleware
@@ -17,10 +18,10 @@ from maxo.routing.observers import UpdateObserver
 from maxo.routing.routers.simple import Router
 from maxo.routing.sentinels import UNHANDLED, SkipHandler
 from maxo.routing.signals.base import BaseSignal
-from maxo.routing.signals.update import MaxoUpdate
 from maxo.routing.utils._resolving_inner_middlewares import resolve_middlewares
 from maxo.routing.utils.validate_router_graph import validate_router_graph
-from maxo.types.base import BaseUpdate
+from maxo.types.base import BaseUpdate, FacadeMaxoType
+from maxo.types.binding import bind_bot
 
 
 class Dispatcher(Router):
@@ -170,6 +171,12 @@ class Dispatcher(Router):
             ctx["bot"] = bot
             ctx["bots"] = [bot]
 
+            event = update.update if isinstance(update, MaxoUpdate) else update
+            if not (  # Single place binding bot to update for every transport
+                isinstance(event, FacadeMaxoType) and event._bot is bot  # noqa: SLF001
+            ):
+                bind_bot(event, bot)
+
         return await self.trigger(ctx)
 
     async def _feed_update_handler(self, update: MaxoUpdate[Any], ctx: Ctx) -> Any:
@@ -184,8 +191,8 @@ class Dispatcher(Router):
 
         return result
 
-    async def _emit_before_startup_handler(self) -> None:
+    async def _on_before_startup(self) -> None:
         validate_router_graph(self)
         resolve_middlewares(self)
 
-        await super()._emit_before_startup_handler()
+        await super()._on_before_startup()

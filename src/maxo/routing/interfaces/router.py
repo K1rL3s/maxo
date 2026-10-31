@@ -6,24 +6,8 @@ from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces.observer import Observer
 
 
-class RouterState(Protocol):
-    @abstractmethod
-    def ensure_include(self) -> None:
-        raise NotImplementedError
-
-
 class BaseRouter(Protocol):
     __slots__ = ()
-
-    @property
-    @abstractmethod
-    def state(self) -> RouterState:
-        raise NotImplementedError
-
-    @state.setter
-    @abstractmethod
-    def state(self, value: RouterState) -> None:
-        raise NotImplementedError
 
     @property
     @abstractmethod

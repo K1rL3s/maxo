@@ -1,21 +1,16 @@
 import asyncio
-import json
-import pathlib
-from collections.abc import AsyncIterator, Callable, Iterable
-from contextlib import asynccontextmanager
+from collections.abc import Callable, Iterable, Sequence
 from types import TracebackType
-from typing import Any, BinaryIO, Self, TypeVar
+from typing import Self, TypeAlias
 
-from adaptix import Retort
-from aiohttp import ClientTimeout
 from unihttp.bind_method import bind_method
 from unihttp.clients.base import BaseAsyncClient
 from unihttp.method import BaseMethod, ResponseType
 from unihttp.middlewares import AsyncMiddleware
 
-from maxo import loggers
-from maxo.bot.api_client import MaxApiClient
-from maxo.bot.defaults import BotDefaults
+from maxo.bot.client import default_client
+from maxo.bot.defaults import BotDefaults, apply_defaults
+from maxo.bot.media import Media
 from maxo.bot.methods import (  # type: ignore[deprecated]
     AddMembers,
     AnswerOnCallback,
@@ -54,137 +49,106 @@ from maxo.bot.methods import (  # type: ignore[deprecated]
     Subscribe,
     UnpinMessage,
     Unsubscribe,
-    UploadMedia,
 )
-from maxo.bot.methods.base import MaxoMethod
-from maxo.bot.state import (
-    BotState,
-    ClosedBotState,
-    ConnectingBotState,
-    EmptyBotState,
-    RunningBotState,
+from maxo.bot.middlewares import (
+    AttachmentNotReadyRetryMiddleware,
+    AuthMiddleware,
+    NetworkErrorMiddleware,
+    UserAgentMiddleware,
 )
-from maxo.bot.upload import UploadConfig
-from maxo.errors import MaxBotApiError, UnsubscribeError
-from maxo.serialization import create_retort_with_bot
-from maxo.types import AttachmentPayload, ClearSubscriptionsResult, MaxoType
-from maxo.types.upload_media_result import UploadMediaResult
+from maxo.bot.upload import ProcessingConfig
+from maxo.bot.warming_up import warm_up
+from maxo.enums import UploadType
+from maxo.errors import MaxBotResponseError, UnsubscribeError
+from maxo.omit import is_defined
+from maxo.types import BotInfo, ClearSubscriptionsResult
+from maxo.types.attachments import AttachmentsRequests, MediaAttachmentsRequests
+from maxo.types.audio_attachment_request import AudioAttachmentRequest
+from maxo.types.binding import bind_bot
+from maxo.types.buttons import InlineButtons
+from maxo.types.file_attachment_request import FileAttachmentRequest
+from maxo.types.inline_keyboard_attachment_request import (
+    InlineKeyboardAttachmentRequest,
+)
+from maxo.types.inline_keyboard_attachment_request_payload import (
+    InlineKeyboardAttachmentRequestPayload,
+)
+from maxo.types.media_input import MediaInput
+from maxo.types.photo_attachment_request import PhotoAttachmentRequest
+from maxo.types.video_attachment_request import VideoAttachmentRequest
 from maxo.utils.upload_media import InputFile
 
-_MethodResultT = TypeVar("_MethodResultT", bound=MaxoType)
+MediaAttachmentFactory: TypeAlias = Callable[[str], MediaAttachmentsRequests]
+
+MEDIA_ATTACHMENT_FACTORIES: dict[UploadType, MediaAttachmentFactory] = {
+    UploadType.FILE: FileAttachmentRequest.factory,
+    UploadType.AUDIO: AudioAttachmentRequest.factory,
+    UploadType.VIDEO: VideoAttachmentRequest.factory,
+    UploadType.IMAGE: lambda token: PhotoAttachmentRequest.factory(token=token),
+}
 
 
-class Bot(BaseAsyncClient):
-    __slots__ = (
-        "_defaults",
-        "_json_dumps",
-        "_json_loads",
-        "_middleware",
-        "_retort",
-        "_state",
-        "_token",
-        "_upload_config",
-        "_warming_up",
-    )
-
+class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
     def __init__(
         self,
         token: str,
         *,
         defaults: BotDefaults | None = None,
-        upload_config: UploadConfig | None = None,
         warming_up: bool = True,
-        middleware: list[AsyncMiddleware] | None = None,
-        json_dumps: Callable[[Any], str] = json.dumps,
-        json_loads: Callable[[str | bytes | bytearray], Any] = json.loads,
+        client: BaseAsyncClient | None = None,
+        media: Media | None = None,
+        processing: ProcessingConfig | None = None,
+        middlewares: Sequence[AsyncMiddleware] = (),
     ) -> None:
         self._defaults = defaults or BotDefaults()
         self._token = token
-        self._warming_up = warming_up
-        self._middleware = middleware
-        self._upload_config = (
-            upload_config if upload_config is not None else UploadConfig()
-        )
-        self._json_dumps = json_dumps
-        self._json_loads = json_loads
+        self._processing = processing if processing is not None else ProcessingConfig()
 
-        self._retort = create_retort_with_bot(
-            bot=self,
-            defaults=self._defaults,
-            warming_up=warming_up,
-        )
+        self.middleware: list[AsyncMiddleware] = [
+            *middlewares,
+            AuthMiddleware(self._token),
+            UserAgentMiddleware(),
+            AttachmentNotReadyRetryMiddleware(
+                max_retries=self._processing.not_ready_max_retries,
+                backoff_config=self._processing.not_ready_backoff,
+            ),
+            NetworkErrorMiddleware(),
+        ]
+        self._client = client
+        self._owns_client = client is None
 
-        self._state: BotState = EmptyBotState()
+        if warming_up:
+            warm_up()
+
+        self._info: BotInfo | None = None
+        self._me_lock = asyncio.Lock()
+        self._media = media if media is not None else Media()
 
     @property
-    def state(self) -> BotState:
-        return self._state
+    def client(self) -> BaseAsyncClient:
+        if self._client is None:
+            self._client = default_client()
+        return self._client
 
     @property
-    def retort(self) -> Retort:
-        return self._retort
+    def media(self) -> Media:
+        """Клиент файловых хостов: загрузка, вложения, скачивание."""
+        return self._media
 
     @property
     def defaults(self) -> BotDefaults:
         return self._defaults
 
     @property
-    def upload_config(self) -> UploadConfig:
-        return self._upload_config
-
-    @property
     def token(self) -> str:
         return self._token
 
-    @asynccontextmanager
-    async def context(self, auto_close: bool = True) -> AsyncIterator[Self]:
-        try:
-            await self.start()
-            yield self
-        finally:
-            if auto_close:
-                await self.close()
-
-    async def start(self) -> None:
-        if self.state.started:
-            return
-
-        api_client = MaxApiClient(
-            token=self._token,
-            request_dumper=self._retort,
-            response_loader=self._retort,
-            middleware=self._middleware,
-            upload_config=self._upload_config,
-            json_dumps=self._json_dumps,
-            json_loads=self._json_loads,
-        )
-        self._state = ConnectingBotState(api_client=api_client)
-
-        info = await self.get_my_info()
-        self._state = RunningBotState(info=info, api_client=api_client)
-
-    async def close(self) -> None:
-        if self.state.closed or not self.state.started:
-            return
-
-        await self.state.api_client.close()
-        self._state = ClosedBotState()
-
-    async def call_method(
-        self,
-        method: BaseMethod[ResponseType],
-    ) -> ResponseType:
-        return await self.state.api_client.call_method(method)
-
-    async def silent_call_method(self, method: MaxoMethod[_MethodResultT]) -> None:
-        try:
-            await self.call_method(method)
-        except MaxBotApiError as e:
-            # Webhook-ответ не позволяет вернуть ошибку вызывающему коду.
-            loggers.bot.error("Failed to make answer: %s: %s", e.__class__.__name__, e)
-
     async def __aenter__(self) -> Self:
-        await self.start()
+        try:
+            await self.me()
+        except BaseException:
+            await self.close()
+            raise
         return self
 
     async def __aexit__(
@@ -195,43 +159,44 @@ class Bot(BaseAsyncClient):
     ) -> None:
         await self.close()
 
-    async def download(
+    async def me(self) -> BotInfo:
+        """Ленивый `get_my_info`: запрос к API только при первом вызове."""
+        if self._info is None:
+            async with self._me_lock:
+                if self._info is None:
+                    return await self.get_my_info()
+        return self._info
+
+    async def get_my_info(self) -> BotInfo:
+        self._info = await self.call_method(GetMyInfo())
+        return self._info
+
+    async def close(self) -> None:
+        if self._owns_client and self._client is not None:
+            client, self._client = self._client, None
+            await client.close()
+        await self._media.close()
+
+    async def call_method(  # for unihttp bind_method
         self,
-        url: str | AttachmentPayload,
-        destination: BinaryIO | pathlib.Path | str | None = None,
-        timeout: float | ClientTimeout = 30,
-        chunk_size: int = 65536,
-        seek: bool = True,
-    ) -> BinaryIO | None:
-        return await self.state.api_client.download(
-            url=url,
-            destination=destination,
-            timeout=timeout,
-            chunk_size=chunk_size,
-            seek=seek,
+        method: BaseMethod[ResponseType],
+        *,
+        middleware: Sequence[AsyncMiddleware] | None = None,
+    ) -> ResponseType:
+        method = apply_defaults(method, self._defaults)
+        # Middleware вызова идут первыми: так они получают ошибки maxo,
+        # а не сырые исключения unihttp.
+        result = await self.client.call_method(
+            method,
+            middleware=[*(middleware or ()), *self.middleware],
         )
-
-    async def upload_media_resumable(
-        self,
-        upload_url: str,
-        file: InputFile,
-        size: int | None = None,
-    ) -> UploadMediaResult | None:
-        """
-        Загружает медиа по `upload_url` частями.
-
-        `size` - заранее известный размер файла, чтобы не делать лишний `stat`.
-        """
-        return await self.state.api_client.upload_resumable(upload_url, file, size)
+        return bind_bot(result, self)
 
     # Bots
-
     edit_bot_info = bind_method(EditBotInfo)
-    get_my_info = bind_method(GetMyInfo)
     edit_my_commands = bind_method(EditMyCommands)
 
     # Chats
-
     add_members = bind_method(AddMembers)
     delete_admins = bind_method(DeleteAdmins)
     delete_admin = delete_admins
@@ -260,7 +225,6 @@ class Bot(BaseAsyncClient):
     send_comment = bind_method(SendComment)
 
     # Messages
-
     answer_on_callback = bind_method(AnswerOnCallback)
     delete_message = bind_method(DeleteMessage)
     edit_message = bind_method(EditMessage)
@@ -270,7 +234,6 @@ class Bot(BaseAsyncClient):
     send_message = bind_method(SendMessage)
 
     # Subscriptions
-
     get_subscriptions = bind_method(GetSubscriptions)
     get_updates = bind_method(GetUpdates)
     subscribe = bind_method(Subscribe)
@@ -342,6 +305,95 @@ class Bot(BaseAsyncClient):
         return ClearSubscriptionsResult(removed=to_remove, kept=kept)
 
     # Uploads
-
     get_upload_url = bind_method(GetUploadUrl)
-    upload_media = bind_method(UploadMedia)
+
+    async def upload(
+        self,
+        file: InputFile,
+        size: int | None = None,
+    ) -> MediaAttachmentsRequests:
+        """Загружает файл и возвращает вложение с его токеном."""
+        if size is None:
+            size = await file.size()
+        if size <= 0:
+            # До `get_upload_url`: не тратить запрос на пустой файл
+            msg = "Нельзя загрузить пустой файл"
+            raise ValueError(msg)
+        endpoint = await self.get_upload_url(type=file.type)
+        upload_result = await self._media.upload(endpoint.url, file, size)
+
+        token: str
+        if is_defined(endpoint.token):
+            token = endpoint.token
+        elif upload_result is not None:
+            token = upload_result.last_token
+        else:
+            raise MaxBotResponseError(
+                method="UploadMedia",
+                detail="нет токена файла ни в ответе загрузки, ни в get_upload_url",
+            )
+
+        return MEDIA_ATTACHMENT_FACTORIES[file.type](token)
+
+    async def build_attachments(
+        self,
+        base: Sequence[AttachmentsRequests],
+        keyboard: Sequence[Sequence[InlineButtons]] | None = None,
+        files: Sequence[MediaInput] | None = None,
+    ) -> Sequence[AttachmentsRequests]:
+        """
+        Собирает вложения сообщения: `base`, клавиатуру и медиа.
+
+        Файлы из `files` загружаются, готовые вложения передаются как есть,
+        порядок сохраняется.
+        """
+        attachments = list(base)
+
+        if keyboard is not None:
+            attachments.append(
+                InlineKeyboardAttachmentRequest(
+                    payload=InlineKeyboardAttachmentRequestPayload(
+                        buttons=[list(row) for row in keyboard],
+                    ),
+                ),
+            )
+
+        if files:
+            attachments.extend(await self._build_media(files))
+
+        return attachments
+
+    async def _build_media(
+        self,
+        files: Sequence[MediaInput],
+    ) -> list[MediaAttachmentsRequests]:
+        """Загружает файлы, готовые вложения оставляет на местах."""
+        to_upload = [file for file in files if isinstance(file, InputFile)]
+
+        # Размер каждого файла считаем один раз и прокидываем дальше
+        sizes = await asyncio.gather(*(file.size() for file in to_upload))
+        # TaskGroup cancels the remaining uploads if one fails
+        try:
+            async with asyncio.TaskGroup() as group:
+                tasks = [
+                    group.create_task(self.upload(f, size))
+                    for f, size in zip(to_upload, sizes, strict=True)
+                ]
+        except* Exception as error_group:
+            # Callers catch MaxoError, not a group: re-raise the first failure,
+            # the rest stay visible through the chained group
+            raise error_group.exceptions[0] from error_group
+        uploaded = iter([task.result() for task in tasks])
+
+        # Let the server process files before sending
+        delay = max(
+            (
+                self._processing.estimated_delay(f.type, size)
+                for f, size in zip(to_upload, sizes, strict=True)
+            ),
+            default=0.0,
+        )
+        if delay > 0:
+            await asyncio.sleep(delay)
+
+        return [next(uploaded) if isinstance(f, InputFile) else f for f in files]

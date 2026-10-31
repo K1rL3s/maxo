@@ -2,7 +2,6 @@ from typing import Any
 
 import pytest
 
-from maxo.errors.state import StateError
 from maxo.routing.ctx import Ctx
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.interfaces import BaseMiddleware, NextMiddleware
@@ -64,8 +63,8 @@ async def test_register_after_startup_reports_addition() -> None:
 
     await dp.feed_signal(BeforeStartup())
 
-    with pytest.raises(StateError, match="Can't add middleware after startup"):
+    with pytest.raises(RuntimeError, match="Can't add middleware after startup"):
         dp.message_created.middleware.register(NoopMiddleware())
 
-    with pytest.raises(StateError, match="Can't add middleware after startup"):
+    with pytest.raises(RuntimeError, match="Can't add middleware after startup"):
         dp.message_created.outer_middleware.register(NoopMiddleware())

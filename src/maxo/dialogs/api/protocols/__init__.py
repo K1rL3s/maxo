@@ -16,7 +16,6 @@ __all__ = (
     "CancelEventProcessing",
     "DialogManager",
     "DialogProtocol",
-    "DialogProtocol",
     "DialogRegistryProtocol",
     "MediaIdStorageProtocol",
     "MessageManagerProtocol",

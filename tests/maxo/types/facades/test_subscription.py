@@ -3,14 +3,14 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from maxo.omit import Omitted
+from maxo.types.base import FacadeMaxoType
 from maxo.types.facades.subscription import SubscriptionMethodsFacade
 from maxo.types.get_subscriptions_result import GetSubscriptionsResult
 from maxo.types.simple_query_result import SimpleQueryResult
 
 
-class MockSubscriptionFacade(SubscriptionMethodsFacade):
-    def __init__(self, bot: MagicMock) -> None:
-        self._bot = bot
+class MockSubscriptionFacade(FacadeMaxoType, SubscriptionMethodsFacade, slots=False):
+    pass
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def mock_bot() -> MagicMock:
 
 @pytest.fixture
 def facade(mock_bot: MagicMock) -> MockSubscriptionFacade:
-    return MockSubscriptionFacade(mock_bot)
+    return MockSubscriptionFacade(_bot=mock_bot)
 
 
 async def test_get_subscriptions(

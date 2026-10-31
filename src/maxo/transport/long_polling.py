@@ -11,9 +11,9 @@ from maxo.backoff import Backoff, BackoffConfig
 from maxo.bot.bot import Bot
 from maxo.omit import Omittable, Omitted, is_defined
 from maxo.routing.dispatcher import Dispatcher
+from maxo.routing.events import MaxoUpdate
 from maxo.routing.signals.shutdown import AfterShutdown, BeforeShutdown
 from maxo.routing.signals.startup import AfterStartup, BeforeStartup
-from maxo.routing.signals.update import MaxoUpdate
 from maxo.routing.utils import collect_used_updates
 
 _DEFAULT_BACKOFF_CONFIG = BackoffConfig(
@@ -85,13 +85,14 @@ class LongPolling:
         async with self._lock:
             dispatcher.workflow_data.update(bot=bot, **workflow_data)
 
-            await dispatcher.feed_signal(BeforeStartup(), bot)
+            try:
+                info = await bot.me()
+                await dispatcher.feed_signal(BeforeStartup(), bot)
 
-            async with bot.context(auto_close=auto_close_bot):
                 loggers.dispatcher.info(
                     "Polling started for @%s id=%s",
-                    bot.state.info.username,
-                    bot.state.info.user_id,
+                    info.username,
+                    info.user_id,
                 )
 
                 if clear_subscriptions:
@@ -117,7 +118,7 @@ class LongPolling:
                                 "У бота @%s есть активные WebHook-подписки (%d). "
                                 "Они не были очищены перед запуском Long Polling. "
                                 "Передайте clear_subscriptions=True, чтобы удалить их.",
-                                bot.state.info.username,
+                                info.username,
                                 len(subscriptions.subscriptions),
                             )
 
@@ -143,11 +144,13 @@ class LongPolling:
 
                 loggers.dispatcher.info(
                     "Polling stop for @%s bot id=%s",
-                    bot.state.info.username,
-                    bot.state.info.user_id,
+                    info.username,
+                    info.user_id,
                 )
-
-        await dispatcher.feed_signal(AfterShutdown())
+                await dispatcher.feed_signal(AfterShutdown(), bot)
+            finally:
+                if auto_close_bot:
+                    await bot.close()
 
     async def _get_updates(
         self,
@@ -160,8 +163,9 @@ class LongPolling:
     ) -> AsyncIterator[MaxoUpdate[Any]]:
         start_time = time.time()
         backoff = Backoff(self._backoff_config)
-        bot_id = bot.state.info.user_id
-        bot_username = bot.state.info.username
+        info = await bot.me()
+        bot_id = info.user_id
+        bot_username = info.username
 
         failed = False
         while True:

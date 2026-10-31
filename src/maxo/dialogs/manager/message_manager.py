@@ -30,7 +30,7 @@ from maxo.types import (
     PhotoAttachmentRequest,
     VideoAttachmentRequest,
 )
-from maxo.types.facades.attachments import AttachmentsFacade, MediaInput
+from maxo.types.media_input import MediaInput
 from maxo.utils.upload_media import FSInputFile
 
 SEND_METHODS = {
@@ -321,7 +321,7 @@ class MessageManager(MessageManagerProtocol):
             for item in media
             if (converted := self._convert_media(item)) is not None
         ]
-        return await AttachmentsFacade(bot).build_attachments(
+        return await bot.build_attachments(
             base=[],
             keyboard=keyboard,
             files=converted_media,

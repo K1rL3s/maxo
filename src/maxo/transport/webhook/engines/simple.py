@@ -72,10 +72,8 @@ class SimpleEngine(WebhookEngine):
         workflow_data = self._build_workflow_data(app=app, bot=self.bot, **kwargs)
         self.dispatcher.workflow_data.update(workflow_data)
 
+        await self.bot.me()
         await self.dispatcher.feed_signal(BeforeStartup(), self.bot)
-
-        await self.bot.start()
-
         await self.dispatcher.feed_signal(AfterStartup(), self.bot)
 
     async def on_shutdown(self, app: Any, *args: Any, **kwargs: Any) -> None:
@@ -88,7 +86,6 @@ class SimpleEngine(WebhookEngine):
         self.dispatcher.workflow_data.update(workflow_data)
 
         await self.dispatcher.feed_signal(BeforeShutdown(), self.bot)
-
-        await self.bot.close()
-
         await self.dispatcher.feed_signal(AfterShutdown(), self.bot)
+        # After the signals: their handlers may still call the API
+        await self.bot.close()

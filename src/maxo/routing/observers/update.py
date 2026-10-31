@@ -25,7 +25,7 @@ class UpdateObserver(
         *filters: Filter[_UpdateT],
         flags: Mapping[str, Any] | None = None,
     ) -> UpdateHandlerFn[_UpdateT, Any]:
-        self.state.ensure_add_handler()
+        self._ensure_not_frozen("Can't add handler after startup")
 
         self._handlers.append(UpdateHandler(handler_fn, *filters, flags=flags))
 

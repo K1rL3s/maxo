@@ -47,15 +47,15 @@ def test_create_deep_link_encoded() -> None:
     assert link == "https://max.ru/testbot?start=dGVzdCBwYXlsb2Fk"
 
 
-def test_create_start_link() -> None:
+async def test_create_start_link() -> None:
     bot = MockBot(username="testbot")
-    link = deeplink.create_start_link(bot=cast("Bot", bot), payload="test")
+    link = await deeplink.create_start_link(bot=cast("Bot", bot), payload="test")
     assert link == "https://max.ru/testbot?start=test"
 
 
-def test_create_startapp_link() -> None:
+async def test_create_startapp_link() -> None:
     bot = MockBot(username="testbot")
-    link = deeplink.create_startapp_link(
+    link = await deeplink.create_startapp_link(
         bot=cast("Bot", bot),
         payload="test",
         app_name="testapp",

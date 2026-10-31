@@ -36,12 +36,14 @@ from .subscriptions.get_subscriptions import GetSubscriptions
 from .subscriptions.get_updates import GetUpdates
 from .subscriptions.subscribe import Subscribe
 from .subscriptions.unsubscribe import Unsubscribe
+from .upload.chunk_upload import ChunkUpload
 from .upload.get_upload_url import GetUploadUrl
 from .upload.upload_media import UploadMedia
 
 __all__ = (
     "AddMembers",
     "AnswerOnCallback",
+    "ChunkUpload",
     "DeleteAdmin",
     "DeleteAdmins",
     "DeleteChat",
