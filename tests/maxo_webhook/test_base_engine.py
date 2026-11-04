@@ -116,13 +116,13 @@ async def test_handle_request_returns_400_for_invalid_json() -> None:
     )
 
 
-async def test_handle_request_returns_400_for_load_error() -> None:
+async def test_handle_request_returns_200_for_load_error() -> None:
     bot = make_bot(load_error=True)
     engine = DummyEngine(Dispatcher(), DummyAdapter(), bot=bot)
 
     assert await engine.handle_request(JsonBoundRequest({"bad": "payload"})) == (
-        400,
-        {"detail": "Bad request"},
+        200,
+        {},
     )
     bot.retort.load.assert_called_once_with({"bad": "payload"}, Updates)
 
@@ -306,3 +306,97 @@ async def test_handle_request_logs_accepted_update_at_debug(
         await engine.handle_request(JsonBoundRequest({"update": "payload"}))
 
     assert [r.levelno for r in caplog.records] == [logging.DEBUG]
+
+
+UNKNOWN_UPDATE_TYPE: dict[str, Any] = {
+    "update_type": "some_new_event",
+    "timestamp": 1700000000000,
+}
+UNKNOWN_ATTACHMENT_TYPE: dict[str, Any] = {
+    "update_type": "message_created",
+    "timestamp": 1700000000000,
+    "message": {
+        "sender": {
+            "user_id": 1,
+            "first_name": "a",
+            "is_bot": False,
+            "last_activity_time": 1700000000000,
+        },
+        "recipient": {"chat_type": "dialog", "chat_id": 1, "user_id": 2},
+        "timestamp": 1700000000000,
+        "body": {
+            "mid": "m",
+            "seq": 1,
+            "text": "hi",
+            "attachments": [{"type": "hologram", "payload": {}}],
+        },
+    },
+}
+
+
+@pytest.mark.parametrize("handle_in_background", [True, False])
+@pytest.mark.parametrize(
+    "raw_update",
+    [UNKNOWN_UPDATE_TYPE, UNKNOWN_ATTACHMENT_TYPE],
+    ids=["unknown_update_type", "unknown_attachment_type"],
+)
+async def test_handle_request_skips_unloadable_update(
+    raw_update: dict[str, Any],
+    handle_in_background: bool,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dispatcher = Dispatcher()
+    dispatcher.feed_max_update = AsyncMock(return_value=None)  # type: ignore[method-assign]
+    engine = DummyEngine(
+        dispatcher,
+        DummyAdapter(),
+        bot=Bot("token"),
+        handle_in_background=handle_in_background,
+    )
+
+    with caplog.at_level(logging.WARNING, logger=loggers.webhook.name):
+        response = await engine.handle_request(JsonBoundRequest(raw_update))
+    await engine._task_tracker.close(timeout=1)
+
+    assert response == (200, {})
+    dispatcher.feed_max_update.assert_not_awaited()
+    assert [r.levelno for r in caplog.records] == [logging.WARNING]
+    assert caplog.records[0].exc_info is not None
+    assert str(raw_update) in caplog.text
+
+
+async def test_handle_request_still_dispatches_loadable_update() -> None:
+    dispatcher = Dispatcher()
+    dispatcher.feed_max_update = AsyncMock(return_value=None)  # type: ignore[method-assign]
+    engine = DummyEngine(
+        dispatcher,
+        DummyAdapter(),
+        bot=Bot("token"),
+        handle_in_background=False,
+    )
+    raw_update = {
+        **UNKNOWN_ATTACHMENT_TYPE,
+        "message": {
+            **UNKNOWN_ATTACHMENT_TYPE["message"],
+            "body": {"mid": "m", "seq": 1, "text": "hi", "attachments": []},
+        },
+    }
+
+    assert await engine.handle_request(JsonBoundRequest(raw_update)) == (200, {})
+
+    dispatcher.feed_max_update.assert_awaited_once()
+
+
+async def test_handle_request_rejects_unverified_unloadable_update() -> None:
+    engine = DummyEngine(
+        Dispatcher(),
+        DummyAdapter(),
+        bot=Bot("token"),
+        security=Security(secret_token=StaticSecretToken("expected-secret")),
+    )
+    request = JsonBoundRequest(
+        UNKNOWN_UPDATE_TYPE,
+        DummyRequest(headers={SECRET_HEADER: "wrong-secret"}),
+    )
+
+    assert await engine.handle_request(request) == (403, {"detail": "Forbidden"})

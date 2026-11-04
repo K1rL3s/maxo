@@ -111,14 +111,13 @@ class WebhookEngine(ABC):
             update = MaxoUpdate(update=bot.retort.load(raw_update, Updates))
         except LoadError:
             loggers.webhook.warning(
-                "Вебхук %s: не удалось разобрать обновление",
+                "Вебхук %s: пропуск незагружаемого обновления. Сообщите об этой "
+                "ошибке в https://github.com/K1rL3s/maxo/issues. Тело обновления: %s",
                 self.routing.path,
+                raw_update,
                 exc_info=True,
             )
-            return self.web_adapter.create_json_response(
-                status=400,
-                payload={"detail": "Bad request"},
-            )
+            return self.web_adapter.create_json_response(status=200, payload={})
 
         loggers.webhook.debug("New update: %s", update.update)
 
