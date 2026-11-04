@@ -60,3 +60,6 @@ butcher-test *args:
     uv run --group butcher pytest butcher/tests {{ args }}
 
 all: lint mypy test-all
+
+butcher-site *args:
+    uv run --group butcher python -m butcher.site_spec {{ args }}

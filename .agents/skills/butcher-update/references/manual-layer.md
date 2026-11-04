@@ -131,6 +131,14 @@ API отвечает 400 `Field 'webApp' cannot be null`. Тип оставле�
 с ними. В `max-swagger.json` они дописаны и в `User`, иначе adaptix молча
 отбрасывает аватар.
 
+Отчёт сайта (`just butcher-site build`) показывает как `manual` две формы схем
+из `max-swagger.json`, которые сайт рисует правильно. Параметр `comment_ids` у
+`GET /messages/{messageId}/comments` - массив без `type: array`: генератор
+выводит `list[str] | None` по `items`. Свойство `UserIdsList.user_ids`
+оформлено как параметр (`name`, `schema`, `style`): схема `UserIdsList` стоит в
+`SKIP_SCHEMAS`, а тип `AddMembers.user_ids` задаёт `METHOD_FIELD_TYPES`.
+Переносить с сайта их не нужно.
+
 ## Реестры и compat-слои, о которых легко не узнать
 
 Генерация их не трогает, но по ним расходится ручная регистрация новых

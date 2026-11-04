@@ -282,6 +282,7 @@ ignore = [
     "PLR", # complexity
 ]
 "butcher/__main__.py" = ["T201"] # CLI печатает итог генерации
+"butcher/site_spec/__main__.py" = ["T201"] # CLI печатает отчёт сайта
 "check_dist.py" = [
     "S603", # запуск uv
     "S607", # uv берётся из PATH
