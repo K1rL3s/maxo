@@ -1,4 +1,5 @@
 from typing_extensions import deprecated
+from unihttp.http import HTTPResponse
 
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.methods.markers import Body, Path
@@ -41,3 +42,6 @@ class AddMembers(MaxoMethod[ModifyMembersResult]):
 
     user_ids: Body[list[int]]
     """Массив ID пользователей, которых вы хотите добавить в групповой чат. В одном запросе можно передать максимум 100 идентификаторов"""
+
+    def validate_response(self, response: HTTPResponse) -> None:
+        return None

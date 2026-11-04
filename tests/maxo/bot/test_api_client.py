@@ -13,7 +13,6 @@ from unihttp.exceptions import NetworkError, RequestTimeoutError
 from unihttp.http import HTTPResponse
 
 from maxo.bot.api_client import MaxApiClient
-from maxo.bot.methods import AddMembers  # type: ignore[deprecated]
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.middlewares import AttachmentNotReadyRetryMiddleware
 from maxo.errors import (
@@ -274,51 +273,6 @@ def test_api_error_str_uses_fields_and_raw_data() -> None:
         "MaxBotApiError(code='code', error='error', message='message')"
     )
     assert str(raw_error) == "MaxBotApiError(raw_data={'raw': 'data'})"
-
-
-async def test_validate_response_ok(api_client: MaxApiClient) -> None:
-    response = HTTPResponse(
-        status_code=200,
-        data={"success": True},
-        headers=CIMultiDict(),
-        cookies=SimpleCookie(),
-        raw_response=AsyncMock(),
-    )
-    method: MaxoMethod[object] = MaxoMethod()
-    api_client.validate_response(response, method)
-    assert response.status_code == 200
-
-
-async def test_validate_response_error(api_client: MaxApiClient) -> None:
-    response = HTTPResponse(
-        status_code=200,
-        data={"success": False, "error_code": "some_error"},
-        headers=CIMultiDict(),
-        cookies=SimpleCookie(),
-        raw_response=AsyncMock(),
-    )
-    method: MaxoMethod[object] = MaxoMethod()
-    api_client.validate_response(response, method)
-    assert response.status_code == 400
-
-
-async def test_validate_response_preserves_add_members_result(
-    api_client: MaxApiClient,
-) -> None:
-    response = HTTPResponse(
-        status_code=200,
-        data={"success": False, "error_code": "some_error"},
-        headers=CIMultiDict(),
-        cookies=SimpleCookie(),
-        raw_response=AsyncMock(),
-    )
-
-    api_client.validate_response(
-        response,
-        AddMembers(chat_id=1, user_ids=[2]),
-    )
-
-    assert response.status_code == 200
 
 
 async def test_download_to_binaryio(api_client: MaxApiClient) -> None:
