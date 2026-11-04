@@ -8,7 +8,7 @@ from maxo.transport.webhook.adapters.base_adapter import BoundRequest
 from maxo.transport.webhook.security.base_check import SecurityCheck
 
 SECRET_HEADER = "X-Max-Bot-Api-Secret"  # noqa: S105
-SECRET_TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9-]{5,256}$")
+SECRET_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_-]{5,256}")
 
 
 class SecretToken(SecurityCheck):
@@ -24,17 +24,17 @@ class SecretToken(SecurityCheck):
 
 class StaticSecretToken(SecretToken):
     """
-    Static secret token implementation for webhook security.
+    Статический секретный токен вебхука.
 
-    Token format: 5-256 characters, only `A-Z, a-z, 0-9, -` are allowed.
-    See: https://dev.max.ru/docs-api/methods/POST/subscriptions
+    Формат токена: от 5 до 256 символов, допустимы только `A-Z, a-z, 0-9, _, -`.
+    См.: https://dev.max.ru/docs-api/methods/POST/subscriptions
     """
 
     def __init__(self, token: str) -> None:
-        if not SECRET_TOKEN_PATTERN.match(token):
+        if not SECRET_TOKEN_PATTERN.fullmatch(token):
             raise ValueError(
                 "Invalid secret token format. Must be 5-256 characters, "
-                "only A-Z, a-z, 0-9, -",
+                "only A-Z, a-z, 0-9, _, -",
             )
         self._token = token
 
