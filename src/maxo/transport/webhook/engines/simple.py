@@ -31,6 +31,7 @@ class SimpleEngine(WebhookEngine):
         routing: BaseRouting,
         security: Security | None = None,
         handle_in_background: bool = True,
+        shutdown_timeout: float = 10.0,
     ) -> None:
         self.bot = bot
         super().__init__(
@@ -39,6 +40,7 @@ class SimpleEngine(WebhookEngine):
             routing=routing,
             security=security,
             handle_in_background=handle_in_background,
+            shutdown_timeout=shutdown_timeout,
         )
 
     def _get_bot_from_request(self, bound_request: BoundRequest[Any]) -> Bot | None:
@@ -77,6 +79,7 @@ class SimpleEngine(WebhookEngine):
         await self.bot.start()
 
         await self.dispatcher.feed_signal(AfterStartup(), self.bot)
+        self._is_shutting_down = False
 
     async def on_shutdown(self, app: Any, *args: Any, **kwargs: Any) -> None:
         """
@@ -84,6 +87,8 @@ class SimpleEngine(WebhookEngine):
 
         Emits dispatcher shutdown event and closes bot session.
         """
+        await self._stop_background_tasks()
+
         workflow_data = self._build_workflow_data(app=app, bot=self.bot, **kwargs)
         self.dispatcher.workflow_data.update(workflow_data)
 

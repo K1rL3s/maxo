@@ -1,4 +1,3 @@
-import asyncio
 from abc import ABC, abstractmethod
 from json import JSONDecodeError
 from typing import Any
@@ -11,6 +10,7 @@ from maxo.routing.signals import MaxoUpdate
 from maxo.transport.webhook.adapters.base_adapter import BoundRequest, WebAdapter
 from maxo.transport.webhook.routing.base import BaseRouting
 from maxo.transport.webhook.security.security import Security
+from maxo.transport.webhook.tasks import TaskTracker
 from maxo.types import Updates
 
 
@@ -31,13 +31,16 @@ class WebhookEngine(ABC):
         routing: BaseRouting,
         security: Security | None = None,
         handle_in_background: bool = True,
+        shutdown_timeout: float = 10.0,
     ) -> None:
         self.dispatcher = dispatcher
         self.web_adapter = web_adapter
         self.routing = routing
         self.security = security
         self.handle_in_background = handle_in_background
-        self._background_feed_update_tasks: set[asyncio.Task[Any]] = set()
+        self.shutdown_timeout = shutdown_timeout
+        self._is_shutting_down = False
+        self._task_tracker = TaskTracker()
 
     @abstractmethod
     def _get_bot_from_request(self, bound_request: BoundRequest[Any]) -> Bot | None:
@@ -65,6 +68,9 @@ class WebhookEngine(ABC):
         }
 
     async def handle_request(self, bound_request: BoundRequest[Any]) -> Any:
+        if self._is_shutting_down:
+            return self._shutting_down_response()
+
         bot = self._get_bot_from_request(bound_request)
         if bot is None:
             loggers.webhook.warning(
@@ -146,6 +152,9 @@ class WebhookEngine(ABC):
         bot: Bot,
         update: MaxoUpdate[Any],
     ) -> Any:
+        if self._is_shutting_down:
+            return self._shutting_down_response()
+
         result = await self.dispatcher.feed_max_update(bot=bot, update=update)
 
         if not isinstance(result, MaxoMethod):
@@ -167,10 +176,22 @@ class WebhookEngine(ABC):
         bot: Bot,
         update: MaxoUpdate[Any],
     ) -> Any:
-        feed_update_task = asyncio.create_task(
-            self._background_feed_update(bot=bot, update=update),
-        )
-        self._background_feed_update_tasks.add(feed_update_task)
-        feed_update_task.add_done_callback(self._background_feed_update_tasks.discard)
+        if self._is_shutting_down:
+            return self._shutting_down_response()
 
+        self._task_tracker.spawn(self._background_feed_update(bot=bot, update=update))
         return self.web_adapter.create_json_response(status=200, payload={})
+
+    def _shutting_down_response(self) -> Any:
+        loggers.webhook.debug(
+            "Вебхук %s: идёт остановка, запрос отклонён",
+            self.routing.path,
+        )
+        return self.web_adapter.create_json_response(
+            status=503,
+            payload={"detail": "Service unavailable"},
+        )
+
+    async def _stop_background_tasks(self) -> None:
+        self._is_shutting_down = True
+        await self._task_tracker.close(timeout=self.shutdown_timeout)
