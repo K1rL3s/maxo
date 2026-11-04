@@ -418,3 +418,33 @@ async def test_handle_error_falls_back_to_status_group(
 
     with pytest.raises(error_class):
         api_client.handle_error(response, MaxoMethod())
+
+
+async def test_close_keeps_external_session_open() -> None:
+    retort = Retort()
+    session = ClientSession()
+    client = MaxApiClient(
+        token=TOKEN,
+        request_dumper=retort,
+        response_loader=retort,
+        session=session,
+    )
+
+    await client.close()
+
+    assert session.closed is False
+    await session.close()
+
+
+async def test_close_closes_own_session() -> None:
+    retort = Retort()
+    client = MaxApiClient(
+        token=TOKEN,
+        request_dumper=retort,
+        response_loader=retort,
+    )
+    session = client._session
+
+    await client.close()
+
+    assert session.closed is True

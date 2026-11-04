@@ -81,6 +81,7 @@ class Bot(BaseAsyncClient):
         "_json_loads",
         "_middleware",
         "_retort",
+        "_start_lock",
         "_state",
         "_token",
         "_upload_config",
@@ -115,6 +116,7 @@ class Bot(BaseAsyncClient):
         )
 
         self._state: BotState = EmptyBotState()
+        self._start_lock = asyncio.Lock()
 
     @property
     def state(self) -> BotState:
@@ -146,29 +148,36 @@ class Bot(BaseAsyncClient):
                 await self.close()
 
     async def start(self) -> None:
-        if self.state.started:
-            return
+        async with self._start_lock:
+            if self.state.started:
+                return
 
-        api_client = MaxApiClient(
-            token=self._token,
-            request_dumper=self._retort,
-            response_loader=self._retort,
-            middleware=self._middleware,
-            upload_config=self._upload_config,
-            json_dumps=self._json_dumps,
-            json_loads=self._json_loads,
-        )
-        self._state = ConnectingBotState(api_client=api_client)
+            api_client = MaxApiClient(
+                token=self._token,
+                request_dumper=self._retort,
+                response_loader=self._retort,
+                middleware=self._middleware,
+                upload_config=self._upload_config,
+                json_dumps=self._json_dumps,
+                json_loads=self._json_loads,
+            )
+            self._state = ConnectingBotState(api_client=api_client)
 
-        info = await self.get_my_info()
-        self._state = RunningBotState(info=info, api_client=api_client)
+            try:
+                info = await self.get_my_info()
+            except BaseException:
+                self._state = EmptyBotState()
+                await api_client.close()
+                raise
+            self._state = RunningBotState(info=info, api_client=api_client)
 
     async def close(self) -> None:
-        if self.state.closed or not self.state.started:
-            return
+        async with self._start_lock:
+            if self.state.closed or not self.state.started:
+                return
 
-        await self.state.api_client.close()
-        self._state = ClosedBotState()
+            await self.state.api_client.close()
+            self._state = ClosedBotState()
 
     async def call_method(
         self,

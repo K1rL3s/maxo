@@ -1,3 +1,4 @@
+import asyncio
 import io
 from asyncio import CancelledError
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -17,7 +18,7 @@ from maxo.types import (
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import BufferedInputFile
 from tests.constants import NOW, TOKEN
-from tests.factories import make_bot
+from tests.factories import make_bot, make_bot_info
 
 
 class MockMaxBotApiError(MaxBotApiError):
@@ -430,3 +431,90 @@ async def test_deprecated_method_warns_at_caller(
         await getattr(bot, method_name)(**kwargs)
 
     assert record[0].filename == __file__
+
+
+_API_CLIENT = "maxo.bot.bot.MaxApiClient"
+
+
+async def test_concurrent_start_requests_info_once() -> None:
+    bot = make_bot()
+    api_client = AsyncMock()
+
+    async def slow_info(*_: object, **__: object) -> BotInfo:
+        await asyncio.sleep(0)
+        return make_bot_info()
+
+    api_client.call_method.side_effect = slow_info
+
+    async def start_and_get_state() -> object:
+        await bot.start()
+        return bot.state
+
+    with patch(_API_CLIENT, side_effect=[api_client]) as api_client_class:
+        states = await asyncio.gather(*(start_and_get_state() for _ in range(5)))
+
+    api_client_class.assert_called_once()
+    api_client.call_method.assert_awaited_once()
+    assert all(isinstance(state, RunningBotState) for state in states)
+
+
+async def test_failed_start_closes_client_and_allows_retry() -> None:
+    bot = make_bot()
+    failed_client = AsyncMock()
+    failed_client.call_method.side_effect = MockMaxBotApiError("boom")
+    working_client = AsyncMock()
+    working_client.call_method.return_value = make_bot_info()
+
+    with patch(_API_CLIENT, side_effect=[failed_client, working_client]):
+        with pytest.raises(MaxBotApiError):
+            await bot.start()
+
+        failed_client.close.assert_awaited_once()
+        assert isinstance(bot.state, EmptyBotState)
+
+        await bot.start()
+
+    assert isinstance(bot.state, RunningBotState)
+    assert bot.state.api_client is working_client
+    working_client.close.assert_not_awaited()
+
+
+async def test_cancelled_start_closes_client() -> None:
+    bot = make_bot()
+    api_client = AsyncMock()
+    api_client.call_method.side_effect = CancelledError
+
+    with (
+        patch(_API_CLIENT, side_effect=[api_client]),
+        pytest.raises(CancelledError),
+    ):
+        await bot.start()
+
+    api_client.close.assert_awaited_once()
+    assert isinstance(bot.state, EmptyBotState)
+
+
+async def test_close_waits_for_start_in_progress() -> None:
+    bot = make_bot()
+    api_client = AsyncMock()
+    release = asyncio.Event()
+
+    async def blocked_info(*_: object, **__: object) -> BotInfo:
+        await release.wait()
+        return make_bot_info()
+
+    api_client.call_method.side_effect = blocked_info
+
+    with patch(_API_CLIENT, side_effect=[api_client]):
+        start_task = asyncio.create_task(bot.start())
+        await asyncio.sleep(0)
+        close_task = asyncio.create_task(bot.close())
+        await asyncio.sleep(0)
+
+        api_client.close.assert_not_awaited()
+
+        release.set()
+        await asyncio.gather(start_task, close_task)
+
+    api_client.close.assert_awaited_once()
+    assert isinstance(bot.state, ClosedBotState)

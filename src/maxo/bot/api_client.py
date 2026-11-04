@@ -77,6 +77,7 @@ class MaxApiClient(AiohttpAsyncClient):
             upload_config = UploadConfig()
         self._upload_config = upload_config
 
+        self._owns_session = session is None
         if session is None:
             connector = TCPConnector(ssl=self._get_ssl_context())
             session = ClientSession(connector=connector)
@@ -98,6 +99,10 @@ class MaxApiClient(AiohttpAsyncClient):
             json_dumps=json_dumps,
             json_loads=json_loads,
         )
+
+    async def close(self) -> None:
+        if self._owns_session:
+            await super().close()
 
     async def upload_resumable(
         self,
