@@ -1,15 +1,21 @@
+import logging
 from json import JSONDecodeError
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from adaptix.load_error import LoadError
 
-from maxo import Bot, Dispatcher
+from maxo import Bot, Dispatcher, loggers
 from maxo.routing.signals import MaxoUpdate
 from maxo.transport.webhook.adapters.base_adapter import BoundRequest, WebAdapter
 from maxo.transport.webhook.engines.base import WebhookEngine
 from maxo.transport.webhook.routing import StaticRouting
 from maxo.transport.webhook.security import Security
+from maxo.transport.webhook.security.secret_token import (
+    SECRET_HEADER,
+    StaticSecretToken,
+)
 from maxo.types import Updates
 
 from .fixtures import DummyAdapter, DummyBoundRequest, DummyRequest
@@ -196,3 +202,110 @@ def test_build_workflow_data_merges_dispatcher_data_and_kwargs() -> None:
     assert workflow_data["dp"] is dispatcher
     assert workflow_data["foo"] == "override"
     assert workflow_data["extra"] == "value"
+
+
+def test_register_warns_without_security(caplog: pytest.LogCaptureFixture) -> None:
+    engine = DummyEngine(Dispatcher(), MagicMock(spec=WebAdapter), bot=make_bot())
+
+    with caplog.at_level(logging.INFO, logger=loggers.webhook.name):
+        engine.register(object())
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert "/webhook" in warnings[0].getMessage()
+    assert any(r.levelno == logging.INFO for r in caplog.records)
+
+
+def test_register_does_not_warn_with_security(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    engine = DummyEngine(
+        Dispatcher(),
+        MagicMock(spec=WebAdapter),
+        bot=make_bot(),
+        security=MagicMock(spec=Security),
+    )
+
+    with caplog.at_level(logging.INFO, logger=loggers.webhook.name):
+        engine.register(object())
+
+    assert [(r.name, r.levelno) for r in caplog.records] == [
+        (loggers.webhook.name, logging.INFO),
+    ]
+
+
+async def test_handle_request_logs_forbidden_without_secret(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    expected = "expected-secret-value"
+    received = "received-secret-value"
+    engine = DummyEngine(
+        Dispatcher(),
+        DummyAdapter(),
+        bot=make_bot(),
+        security=Security(secret_token=StaticSecretToken(expected)),
+    )
+    request = DummyBoundRequest(DummyRequest(headers={SECRET_HEADER: received}))
+
+    with caplog.at_level(logging.WARNING, logger=loggers.webhook.name):
+        response = await engine.handle_request(request)
+
+    assert response == (403, {"detail": "Forbidden"})
+    assert [(r.name, r.levelno) for r in caplog.records] == [
+        (loggers.webhook.name, logging.WARNING),
+    ]
+    assert "/webhook" in caplog.text
+    assert expected not in caplog.text
+    assert received not in caplog.text
+
+
+async def test_handle_request_logs_bot_not_found(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    engine = DummyEngine(Dispatcher(), DummyAdapter())
+
+    with caplog.at_level(logging.WARNING, logger=loggers.webhook.name):
+        await engine.handle_request(DummyBoundRequest())
+
+    assert [r.levelno for r in caplog.records] == [logging.WARNING]
+
+
+async def test_handle_request_logs_invalid_json(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    engine = DummyEngine(Dispatcher(), DummyAdapter(), bot=make_bot())
+
+    with caplog.at_level(logging.WARNING, logger=loggers.webhook.name):
+        await engine.handle_request(JsonErrorBoundRequest())
+
+    assert [r.levelno for r in caplog.records] == [logging.WARNING]
+    assert caplog.records[0].exc_info is None
+
+
+async def test_handle_request_logs_load_error_with_traceback(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    engine = DummyEngine(
+        Dispatcher(),
+        DummyAdapter(),
+        bot=make_bot(load_error=True),
+    )
+
+    with caplog.at_level(logging.WARNING, logger=loggers.webhook.name):
+        await engine.handle_request(JsonBoundRequest({"bad": "payload"}))
+
+    assert [r.levelno for r in caplog.records] == [logging.WARNING]
+    assert caplog.records[0].exc_info is not None
+
+
+async def test_handle_request_logs_accepted_update_at_debug(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dispatcher = Dispatcher()
+    dispatcher.feed_max_update = AsyncMock(return_value=None)  # type: ignore[method-assign]
+    engine = DummyEngine(dispatcher, DummyAdapter(), bot=make_bot())
+
+    with caplog.at_level(logging.DEBUG, logger=loggers.webhook.name):
+        await engine.handle_request(JsonBoundRequest({"update": "payload"}))
+
+    assert [r.levelno for r in caplog.records] == [logging.DEBUG]
