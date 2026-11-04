@@ -1,8 +1,10 @@
+import logging
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from maxo.bot.bot import Bot
+from maxo.omit import Omitted
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.signals import (
     AfterShutdown,
@@ -10,7 +12,9 @@ from maxo.routing.signals import (
     BeforeShutdown,
     BeforeStartup,
 )
+from maxo.routing.utils import collect_used_updates
 from maxo.transport.webhook.engines.simple import SimpleEngine
+from maxo.types import MessageCreated
 
 
 class TestSimpleEngine:
@@ -73,6 +77,54 @@ class TestSimpleEngine:
         call_kwargs = bot.subscribe.call_args.kwargs
         assert call_kwargs["url"] == "https://example.com/webhook"
         assert call_kwargs["update_types"] == ["message"]
+
+    async def test_set_webhook_sends_collected_updates_as_list(
+        self,
+        engine: SimpleEngine,
+        dispatcher: Dispatcher,
+        bot: MagicMock,
+    ) -> None:
+        bot.subscribe = AsyncMock()
+
+        @dispatcher.message_created()
+        async def handler(update: MessageCreated) -> None:
+            return None
+
+        await engine.set_webhook(update_types=collect_used_updates(dispatcher))
+
+        assert bot.subscribe.call_args.kwargs["update_types"] == ["message_created"]
+
+    async def test_set_webhook_omits_empty_update_types(
+        self,
+        engine: SimpleEngine,
+        dispatcher: Dispatcher,
+        bot: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        bot.subscribe = AsyncMock()
+
+        with caplog.at_level(logging.WARNING, logger="maxo.webhook"):
+            await engine.set_webhook(update_types=collect_used_updates(dispatcher))
+
+        assert isinstance(bot.subscribe.call_args.kwargs["update_types"], Omitted)
+        assert [record.getMessage() for record in caplog.records] == [
+            "Не найдено ни одного обработчика обновлений, "
+            "вебхук будет получать обновления всех типов",
+        ]
+
+    async def test_set_webhook_without_update_types_does_not_warn(
+        self,
+        engine: SimpleEngine,
+        bot: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        bot.subscribe = AsyncMock()
+
+        with caplog.at_level(logging.WARNING, logger="maxo.webhook"):
+            await engine.set_webhook()
+
+        assert isinstance(bot.subscribe.call_args.kwargs["update_types"], Omitted)
+        assert caplog.text == ""
 
     async def test_on_startup(
         self,

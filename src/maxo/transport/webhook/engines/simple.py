@@ -1,7 +1,8 @@
+from collections.abc import Sequence
 from typing import Any
 
-from maxo import Bot, Dispatcher
-from maxo.omit import Omittable, Omitted
+from maxo import Bot, Dispatcher, loggers
+from maxo.omit import Omittable, Omitted, is_defined
 from maxo.routing.signals import (
     AfterShutdown,
     AfterStartup,
@@ -53,9 +54,18 @@ class SimpleEngine(WebhookEngine):
     async def set_webhook(
         self,
         *,
-        update_types: Omittable[list[str]] = Omitted(),
+        update_types: Omittable[Sequence[str]] = Omitted(),
     ) -> Bot:
         """Set the webhook for the Bot instance."""
+        subscribed_types: Omittable[list[str]] = Omitted()
+        if is_defined(update_types):
+            if update_types:
+                subscribed_types = list(update_types)
+            else:
+                loggers.webhook.warning(
+                    "Не найдено ни одного обработчика обновлений, "
+                    "вебхук будет получать обновления всех типов",
+                )
         secret_token: Omittable[str] = Omitted()
         if self.security is not None:
             secret_token = await self.security.get_secret_token(bot=self.bot)
@@ -63,7 +73,7 @@ class SimpleEngine(WebhookEngine):
         await self.bot.subscribe(
             url=self.routing.webhook_point(self.bot),
             secret=secret_token,
-            update_types=update_types,
+            update_types=subscribed_types,
         )
         return self.bot
 
