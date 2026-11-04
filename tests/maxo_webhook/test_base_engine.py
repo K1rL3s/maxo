@@ -163,12 +163,9 @@ async def test_handle_request_background_tracks_task() -> None:
         200,
         {},
     )
-    assert len(engine._background_feed_update_tasks) == 1
+    await engine._task_tracker.close(timeout=1)
 
-    task = next(iter(engine._background_feed_update_tasks))
-    await task
-
-    assert engine._background_feed_update_tasks == set()
+    dispatcher.feed_max_update.assert_awaited_once()
 
 
 def test_register_delegates_to_adapter() -> None:
