@@ -9,7 +9,8 @@ from maxo.routing.signals import MaxoUpdate
 from maxo.transport.webhook.adapters.base_adapter import BoundRequest, WebAdapter
 from maxo.transport.webhook.engines.base import WebhookEngine
 from maxo.transport.webhook.routing import StaticRouting
-from maxo.transport.webhook.security import Security
+from maxo.transport.webhook.security import Security, StaticSecretToken
+from maxo.transport.webhook.security.secret_token import SECRET_HEADER
 from maxo.types import Updates
 
 from .fixtures import DummyAdapter, DummyBoundRequest, DummyRequest
@@ -196,3 +197,35 @@ def test_build_workflow_data_merges_dispatcher_data_and_kwargs() -> None:
     assert workflow_data["dp"] is dispatcher
     assert workflow_data["foo"] == "override"
     assert workflow_data["extra"] == "value"
+
+
+async def test_handle_request_returns_403_for_non_ascii_secret_header() -> None:
+    security = Security(secret_token=StaticSecretToken("my-secret"))
+    engine = DummyEngine(
+        Dispatcher(),
+        DummyAdapter(),
+        bot=make_bot(),
+        security=security,
+    )
+    request = JsonBoundRequest(request=DummyRequest(headers={SECRET_HEADER: "секрет"}))
+
+    assert await engine.handle_request(request) == (403, {"detail": "Forbidden"})
+
+
+async def test_handle_request_accepts_matching_secret_header() -> None:
+    dispatcher = Dispatcher()
+    dispatcher.feed_max_update = AsyncMock(return_value=None)  # type: ignore[method-assign]
+    security = Security(secret_token=StaticSecretToken("my-secret"))
+    engine = DummyEngine(
+        dispatcher,
+        DummyAdapter(),
+        bot=make_bot(),
+        security=security,
+    )
+    request = JsonBoundRequest(
+        request=DummyRequest(headers={SECRET_HEADER: "my-secret"}),
+    )
+
+    result = await engine.handle_request(request)
+
+    assert result[0] == 200
