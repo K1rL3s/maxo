@@ -33,7 +33,7 @@ from collections.abc import AsyncGenerator, Callable
 from typing import Any, BinaryIO, Never
 
 from aiohttp import ClientError, ClientSession, ClientTimeout, TCPConnector
-from aiohttp.hdrs import AUTHORIZATION, USER_AGENT
+from aiohttp.hdrs import USER_AGENT
 from aiohttp.http import SERVER_SOFTWARE
 from anyio import open_file
 from unihttp.clients.aiohttp import AiohttpAsyncClient
@@ -46,7 +46,7 @@ from unihttp.serialize import RequestDumper, ResponseLoader
 from maxo import loggers
 from maxo.__meta__ import __version__
 from maxo.bot.methods import AddMembers  # type: ignore[deprecated]
-from maxo.bot.middlewares import AttachmentNotReadyRetryMiddleware
+from maxo.bot.middlewares import AttachmentNotReadyRetryMiddleware, AuthMiddleware
 from maxo.bot.upload import UploadConfig, resumable_upload
 from maxo.errors.api import raise_api_error
 from maxo.errors.network import MaxBotTimeoutError, to_network_error
@@ -81,13 +81,13 @@ class MaxApiClient(AiohttpAsyncClient):
             connector = TCPConnector(ssl=self._get_ssl_context())
             session = ClientSession(connector=connector)
 
-        _apply_auth_headers(session, self._token)
+        _apply_user_agent(session)
 
         not_ready_retry = AttachmentNotReadyRetryMiddleware(
             max_retries=self._upload_config.not_ready_max_retries,
             backoff_config=self._upload_config.not_ready_backoff,
         )
-        middleware = [*(middleware or []), not_ready_retry]
+        middleware = [*(middleware or []), not_ready_retry, AuthMiddleware(self._token)]
 
         super().__init__(
             base_url=base_url,
@@ -133,7 +133,7 @@ class MaxApiClient(AiohttpAsyncClient):
         """Отдельная сессия с одним соединением для resumable-загрузки."""
         connector = TCPConnector(ssl=self._get_ssl_context(), limit=1)
         session = ClientSession(connector=connector)
-        _apply_auth_headers(session, self._token)
+        _apply_user_agent(session)
         return session
 
     async def make_request(self, request: HTTPRequest) -> HTTPResponse:
@@ -267,8 +267,6 @@ def _build_ssl_context() -> ssl.SSLContext:
     return ssl_context
 
 
-def _apply_auth_headers(session: ClientSession, token: str) -> None:
-    if AUTHORIZATION not in session.headers:
-        session.headers[AUTHORIZATION] = token
+def _apply_user_agent(session: ClientSession) -> None:
     if USER_AGENT not in session.headers:
         session.headers[USER_AGENT] = f"{SERVER_SOFTWARE} maxo/{__version__}"
