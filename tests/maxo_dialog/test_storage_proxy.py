@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -22,6 +23,7 @@ from maxo.types import (
     PhotoAttachment,
     ShareAttachment,
     StickerAttachment,
+    User,
     VideoAttachment,
 )
 
@@ -240,3 +242,23 @@ async def test_load_stack_without_access_settings_uses_default() -> None:
     assert loaded.intents == ["a"]
     assert loaded.access_settings is not None
     assert loaded.access_settings.user_ids == [456]
+
+
+async def test_save_load_stack_with_contact_activity_time() -> None:
+    proxy = make_proxy()
+    user = User(
+        user_id=1,
+        first_name="Contact",
+        is_bot=False,
+        last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
+    )
+    stack = Stack(
+        _id="contact",
+        last_message_id="1",
+        last_attachments=[ContactAttachment.factory(max_info=user)],
+    )
+
+    await proxy.save_stack(stack)
+    loaded = await proxy.load_stack("contact")
+
+    assert loaded.last_attachments == stack.last_attachments
