@@ -10,6 +10,7 @@ from .sender_action import SenderAction
 from .text_format import ParseMode, TextFormat
 from .update_type import UpdateType
 from .upload_type import UploadType
+from .video_type import VideoType
 
 __all__ = (
     "AttachmentRequestType",
@@ -26,4 +27,5 @@ __all__ = (
     "TextFormat",
     "UpdateType",
     "UploadType",
+    "VideoType",
 )
