@@ -1,10 +1,13 @@
+import argparse
 import asyncio
 import importlib
+import importlib.util
 import inspect
 import os.path
 import sys
 from concurrent.futures import ProcessPoolExecutor
-from tempfile import NamedTemporaryFile
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, cast
 
 from aiohttp import web
@@ -70,15 +73,19 @@ class Controller:
 
     async def transitions(self, _request: web.Request) -> web.Response:
         loop = asyncio.get_running_loop()
-        with NamedTemporaryFile(suffix=".png") as f:
+        with TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "transitions.png"
             with ProcessPoolExecutor(max_workers=1) as executor:
-                await loop.run_in_executor(
-                    executor,
-                    self.renderer.load_transitions,
-                    f.name,
-                )
+                try:
+                    await loop.run_in_executor(
+                        executor,
+                        self.renderer.load_transitions,
+                        str(path),
+                    )
+                except ImportError as exc:
+                    return web.Response(status=500, text=str(exc))
             return web.Response(
-                body=f.read(),
+                body=path.read_bytes(),
                 headers={"Content-Type": "image/png"},
             )
 
@@ -103,12 +110,33 @@ def disable_print(*_args: Any, **_kwargs: Any) -> None:
 
 
 def main() -> None:
-    path, _, app_spec = sys.argv[1].rpartition(os.path.sep)
-    if path:
-        sys.path.append(path)
-    else:
-        sys.path.append(os.curdir)
-    app_module, dialogs_router = app_spec.split(":")
+    parser = argparse.ArgumentParser(
+        prog="maxo-dialog-preview",
+        description="Локальный веб-сервер с HTML-превью и диаграммой переходов.",
+    )
+    parser.add_argument(
+        "app",
+        metavar="module:router",
+        help="[путь/]модуль и имя роутера или фабрики, которая его возвращает",
+    )
+    args = parser.parse_args()
+    app = args.app
+    if os.path.altsep:
+        app = app.replace(os.path.altsep, os.path.sep)
+    path, _, app_spec = app.rpartition(os.path.sep)
+    app_module, _, dialogs_router = app_spec.partition(":")
+    if not app_module or not dialogs_router or ":" in dialogs_router:
+        parser.error(f"ожидается формат module:router, получено {args.app!r}")
+    if app_module.endswith(".py"):
+        parser.error(f"укажите модуль без .py, получено {args.app!r}")
+    directory = path or os.curdir
+    sys.path.append(directory)
+    try:
+        module_spec = importlib.util.find_spec(app_module)
+    except ImportError:
+        module_spec = None
+    if module_spec is None:
+        parser.error(f"модуль {app_module!r} не найден в {directory!r}")
     controller = Controller(app_module, dialogs_router)
     routes = web.RouteTableDef()
     routes.get("/transitions")(controller.transitions)

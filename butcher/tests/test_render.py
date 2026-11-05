@@ -1,11 +1,17 @@
 """Тесты формы сгенерированного кода."""
 
+import json
 import re
 from pathlib import Path
 
-from butcher import emit
-from butcher.profile import Enum, Field, MaxoDocument, Method, Model
+import pytest
+
+from butcher import emit, overrides
+from butcher.overrides import ExtraExport
+from butcher.profile import Enum, Field, MaxoDocument, Method, Model, build_profile
 from butcher.render import docs, enums, fields, inits, methods, types, unions
+from butcher.spec import load
+from butcher.tests.conftest import SPEC
 
 
 def _model(document: MaxoDocument, name: str) -> Model:
@@ -31,6 +37,22 @@ def test_update_declares_bare_type_assignment(document: MaxoDocument) -> None:
     source = types.render(_model(document, "MessageCreated"))
     assert "class MessageCreated(MaxUpdate, MessageMethodsFacade):" in source
     assert "    type = UpdateType.MESSAGE_CREATED" in source
+
+
+def test_comment_update_renders_comment_message(document: MaxoDocument) -> None:
+    source = types.render(_model(document, "CommentCreated"))
+
+    assert "class CommentCreated(MaxUpdate, CommentMethodsFacade):" in source
+    assert "    message: CommentMessage" in source
+    assert "from maxo.types.comment_message import CommentMessage" in source
+
+
+def test_comment_declares_message_and_facade_bases(document: MaxoDocument) -> None:
+    source = types.render(_model(document, "CommentMessage"))
+
+    assert "class CommentMessage(Message, CommentMethodsFacade):" in source
+    assert "from maxo.types.message import Message" in source
+    assert "from maxo.types.facades.comment import CommentMethodsFacade" in source
 
 
 def test_model_renders_unsafe_property(document: MaxoDocument) -> None:
@@ -81,6 +103,22 @@ def test_method_path_placeholder_is_snake_case(document: MaxoDocument) -> None:
     assert "    chat_id: Path[int]" in source
 
 
+def test_comment_method_examples_match_endpoints() -> None:
+    spec = json.loads(Path("max-swagger.json").read_text(encoding="utf-8"))
+    comments = spec["paths"]["/messages/{messageId}/comments"]
+    get_comments = comments["get"]["description"]
+    send_comment = comments["post"]["description"]
+    edit_comment = comments["put"]["description"]
+    edit_message = spec["paths"]["/messages"]["put"]["description"]
+
+    assert "/comments?comment_ids=" in get_comments
+    assert 'curl -X POST "https://platform-api2.max.ru/messages/' in send_comment
+    assert '-d \'{"text": "Новый комментарий"}\'' in send_comment
+    assert "/comments?comment_id={commentId}" in edit_comment
+    assert "/messages?message_id=message_id" in edit_message
+    assert "/comments?comment_id=" not in edit_message
+
+
 def test_unions_render_without_blank_lines(document: MaxoDocument) -> None:
     attachments = next(item for item in document.unions if item.module == "attachments")
     source = unions.render(attachments)
@@ -92,7 +130,10 @@ def test_updates_alias_is_annotated(document: MaxoDocument) -> None:
     updates = next(item for item in document.unions if item.module == "updates")
     source = unions.render(updates)
     assert "from typing import TypeAlias" in source
-    assert "Updates: TypeAlias = MessageCreated" in source
+    assert (
+        "Updates: TypeAlias = CommentCreated | CommentEdited | CommentRemoved | "
+        "MessageCreated"
+    ) in source
 
 
 def test_init_renders_empty_all_as_tuple() -> None:
@@ -106,10 +147,7 @@ def test_emit_uses_project_import_sorting(
     emit.write(document, tmp_path)
 
     source = (tmp_path / "types" / "__init__.py").read_text(encoding="utf-8")
-    assert (
-        "from .base import BaseMaxoType, BaseUpdate, BotMixin, MaxUpdate, MaxoType"
-        in source
-    )
+    assert "from .base import BaseMaxoType, BaseUpdate, MaxUpdate, MaxoType" in source
 
 
 def test_links_become_absolute() -> None:
@@ -168,6 +206,35 @@ def test_reflow_detached_list_stays_aligned() -> None:
     assert docs.reflow_lists(text) == text
 
 
+def test_reflow_normalizes_source_indentation() -> None:
+    text = "Тип:\n  - reply\n- forward\n\n **Только reply**"
+
+    assert docs.reflow_lists(text) == (
+        "Тип:\n    - reply\n    - forward\n\n**Только reply**"
+    )
+
+
+def test_args_normalize_source_indentation() -> None:
+    parts = docs.build_parts(
+        summary=None,
+        description=None,
+        parameters=[
+            ("type", "Тип:\n  - reply\n- forward\n\n **Только reply**"),
+        ],
+        reflow=True,
+    )
+
+    assert docs.render(parts) == [
+        '    """',
+        "    Args:",
+        "        type: Тип:",
+        "            - reply",
+        "            - forward",
+        "            **Только reply**",
+        '    """',
+    ]
+
+
 def test_collapse_removes_blank_between_items() -> None:
     text = "- a\n\n- b\n\n- c"
     assert docs.collapse_list_blanks(text) == "- a\n- b\n- c"
@@ -182,3 +249,38 @@ def test_collapse_removes_blank_before_list() -> None:
 def test_collapse_ignores_code_fence() -> None:
     text = "```\n- a\n\n- b\n```"
     assert docs.collapse_list_blanks(text) == text
+
+
+def test_field_docstring_strips_trailing_whitespace() -> None:
+    assert docs.render_field("строка с пробелом \nследующая") == [
+        '    """',
+        "    строка с пробелом",
+        "    следующая",
+        '    """',
+    ]
+
+
+def test_deprecated_method_renders_decorator(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setitem(overrides.DEPRECATED_METHODS, "GetChat", "Метод удалён")
+    path = tmp_path / "spec.json"
+    path.write_text(json.dumps(SPEC), encoding="utf-8")
+
+    source = methods.render(_method(build_profile(load(str(path))), "GetChat"))
+
+    assert "from typing_extensions import deprecated" in source
+    assert '@deprecated("Метод удалён", stacklevel=2)\nclass GetChat(' in source
+
+
+def test_methods_init_marks_deprecated_extra_export(document: MaxoDocument) -> None:
+    source = inits.methods(
+        document,
+        (ExtraExport(module="chats.get_chats", names=("GetChats",), deprecated=True),),
+    )
+
+    assert "from .chats.get_chat import GetChat\n" in source
+    assert (
+        "from .chats.get_chats import GetChats  # type: ignore[deprecated]\n" in source
+    )

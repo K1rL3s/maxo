@@ -32,6 +32,7 @@ from re import Match, Pattern
 from typing import Any, cast
 
 from maxo import Bot, Ctx
+from maxo.enums import MessageLinkType
 from maxo.omit import is_defined
 from maxo.routing.filters import BaseFilter
 from maxo.types import MessageCreated
@@ -128,7 +129,11 @@ class Command(BaseFilter[MessageCreated]):
     ) -> bool:
         if message.message.body.text:
             text = message.message.body.text
-        elif is_defined(link := message.message.link) and link.message.text:
+        elif (
+            is_defined(link := message.message.link)
+            and link.type == MessageLinkType.FORWARD
+            and link.message.text
+        ):
             text = link.message.text
         else:
             text = None
@@ -137,7 +142,7 @@ class Command(BaseFilter[MessageCreated]):
             return False
 
         try:
-            command = await self.parse_command(text=text, bot=ctx["bot"])
+            command = await self.parse_command(text=text, bot=ctx.get("bot"))
         except CommandException:
             return False
 
@@ -150,11 +155,16 @@ class Command(BaseFilter[MessageCreated]):
         except ValueError as e:
             raise CommandException("not enough values to unpack") from e
 
+        leading_mention = None
+        if full_command.startswith("@") and "@" not in self.prefix and args:
+            leading_mention = full_command[1:]
+            full_command, *args = args[0].split(maxsplit=1)
+
         prefix, (command, _, mention) = full_command[0], full_command[1:].partition("@")
         return CommandObject(
             prefix=prefix,
             command=command,
-            mention=mention or None,
+            mention=mention or leading_mention or None,
             args=args[0] if args else None,
         )
 
@@ -162,8 +172,10 @@ class Command(BaseFilter[MessageCreated]):
         if command.prefix not in self.prefix:
             raise CommandException("Invalid command prefix")
 
-    async def validate_mention(self, bot: Bot, command: CommandObject) -> None:
+    async def validate_mention(self, bot: Bot | None, command: CommandObject) -> None:
         if command.mention and not self.ignore_mention:
+            if bot is None:
+                raise CommandException("Mention can't be validated without bot")
             me = bot.state.info
             if me.username and command.mention.lower() != me.username.lower():
                 raise CommandException("Mention did not match")
@@ -183,7 +195,7 @@ class Command(BaseFilter[MessageCreated]):
                 return command
         raise CommandException("Command did not match pattern")
 
-    async def parse_command(self, text: str, bot: Bot) -> CommandObject:
+    async def parse_command(self, text: str, bot: Bot | None) -> CommandObject:
         command = self.extract_command(text)
         self.validate_prefix(command=command)
         await self.validate_mention(bot=bot, command=command)

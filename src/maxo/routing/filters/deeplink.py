@@ -26,8 +26,5 @@ class DeeplinkFilter(BaseFilter[BotStarted]):
 
     def validate_deeplink(self, payload: str) -> str:
         if self.deep_link_encoded:
-            try:
-                payload = decode_payload(payload)
-            except UnicodeDecodeError as e:
-                raise ValueError(f"Failed to decode Base64: {e}") from e
+            return decode_payload(payload)
         return payload

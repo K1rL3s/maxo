@@ -14,8 +14,10 @@ from maxo.enums import (
     TextFormat,
 )
 from maxo.errors import AttributeIsEmptyError
+from maxo.omit import Omittable, Omitted, is_defined
 from maxo.types import (
     AudioAttachment,
+    BotAdminPermissionsChanged,
     BotCommand,
     BotInfo,
     BotStopped,
@@ -26,6 +28,10 @@ from maxo.types import (
     ChatAdminsList,
     ChatList,
     ChatMember,
+    CommentLinkedMessage,
+    CommentMessage,
+    CommentMessageBody,
+    CommentRemoved,
     ContactAttachment,
     ContactAttachmentPayload,
     ContactAttachmentRequest,
@@ -49,13 +55,14 @@ from maxo.types import (
     MessageButton,
     MessageCallback,
     MessageEdited,
+    MessageRemoved,
     MessageStat,
     ModifyMembersResult,
+    NewCommentBody,
     NewMessageBody,
     NewMessageLink,
     OpenAppButton,
     PhotoAttachment,
-    PhotoAttachmentPayload,
     PhotoAttachmentRequest,
     PhotoAttachmentRequestPayload,
     PhotoToken,
@@ -114,6 +121,7 @@ def test_user_accessors() -> None:
     assert user.id == 1
     assert user.fullname == "Alice Tester"
     assert user.full_name == "Alice Tester"
+    assert user.unsafe_last_activity_time == NOW
     assert user.unsafe_last_name == "Tester"
     assert user.unsafe_name == "Alice T."
     assert user.unsafe_username == "alice"
@@ -124,9 +132,15 @@ def test_user_unsafe_accessors_raise_for_omitted_fields() -> None:
         user_id=1,
         first_name="Alice",
         is_bot=False,
-        last_activity_time=NOW,
     )
 
+    assert not is_defined(user.last_activity_time)
+    with pytest.raises(AttributeIsEmptyError):
+        _ = user.unsafe_avatar_url
+    with pytest.raises(AttributeIsEmptyError):
+        _ = user.unsafe_full_avatar_url
+    with pytest.raises(AttributeIsEmptyError):
+        _ = user.unsafe_last_activity_time
     with pytest.raises(AttributeIsEmptyError):
         _ = user.unsafe_last_name
     with pytest.raises(AttributeIsEmptyError):
@@ -666,11 +680,7 @@ def test_video_urls_and_details_accessors() -> None:
         height=2,
         token=TOKEN,
         width=3,
-        thumbnail=PhotoAttachment.factory(
-            photo_id=1,
-            token=TOKEN,
-            url="thumbnail",
-        ).payload,
+        thumbnail=VideoThumbnail(url="thumbnail"),
         urls=urls,
     )
 
@@ -861,7 +871,7 @@ def test_maxo_type_bot_accessors() -> None:
 
     class DummyBot: ...
 
-    # cast нужен для проверки BotMixin без создания реального Bot с сетевым клиентом.
+    # cast нужен для проверки BaseMethodsFacade без создания реального Bot с сетевым клиентом.
     bot = cast(Bot, DummyBot())
     assert user.as_(bot) is user
     assert user.bot is bot
@@ -1010,11 +1020,7 @@ def test_media_and_message_models() -> None:
         height=1080,
         token=DETAILS_ID,
         width=1920,
-        thumbnail=PhotoAttachmentPayload(
-            photo_id=1,
-            token=PHOTO_ATTACHMENT_ID,
-            url="https://example.com/video.png",
-        ),
+        thumbnail=VideoThumbnail(url="https://example.com/video.png"),
         urls=VideoUrls(mp4_720="https://example.com/720.mp4"),
     )
     video_urls = VideoUrls(mp4_720="https://example.com/720.mp4")
@@ -1407,3 +1413,137 @@ def test_message_callback_unsafe_user_locale() -> None:
     omitted = MessageCallback(callback=make_callback(), timestamp=NOW)
     with pytest.raises(AttributeIsEmptyError):
         _ = omitted.unsafe_user_locale
+
+
+def test_comment_accessors() -> None:
+    sender = make_user()
+    body = CommentMessageBody(mid="comment", seq=1, text="Текст", markup=[])
+    link = CommentLinkedMessage(
+        message=body,
+        type=MessageLinkType.REPLY,
+        chat_id=10,
+        sender=sender,
+    )
+    recipient = Recipient(chat_type=ChatType.CHANNEL, chat_id=10, post_id="post")
+    removed = MessageRemoved(
+        chat_id=10,
+        message_id="comment",
+        post_id="post",
+        timestamp=NOW,
+        user_id=20,
+    )
+    comment_removed = CommentRemoved(
+        chat_id=10,
+        message_id="comment",
+        post_id="post",
+        timestamp=NOW,
+        user_id=20,
+    )
+    comment = CommentMessage(
+        body=body,
+        recipient=recipient,
+        timestamp=NOW,
+        link=link,
+        sender=sender,
+        stat=MessageStat(views=5),
+    )
+    new_body = NewCommentBody(format=TextFormat.HTML)
+
+    assert body.unsafe_markup == []
+    assert body.unsafe_text == "Текст"
+    assert link.unsafe_chat_id == 10
+    assert link.unsafe_sender is sender
+    assert recipient.unsafe_post_id == "post"
+    assert removed.unsafe_post_id == "post"
+    assert comment_removed.unsafe_post_id == "post"
+    assert comment.unsafe_link is link
+    assert comment.unsafe_sender is sender
+    assert comment.unsafe_stat == MessageStat(views=5)
+    assert new_body.unsafe_format is TextFormat.HTML
+
+    with pytest.raises(AttributeIsEmptyError):
+        _ = new_body.unsafe_link
+    with pytest.raises(AttributeIsEmptyError):
+        _ = new_body.unsafe_text
+    with pytest.raises(AttributeIsEmptyError):
+        _ = NewCommentBody().unsafe_format
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentMessageBody(mid="comment", seq=1).unsafe_markup
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentMessageBody(mid="comment", seq=1).unsafe_text
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentLinkedMessage(
+            message=body,
+            type=MessageLinkType.REPLY,
+        ).unsafe_chat_id
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentLinkedMessage(
+            message=body,
+            type=MessageLinkType.REPLY,
+        ).unsafe_sender
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentMessage(
+            body=body,
+            recipient=recipient,
+            timestamp=NOW,
+        ).unsafe_link
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentMessage(
+            body=body,
+            recipient=recipient,
+            timestamp=NOW,
+        ).unsafe_sender
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentMessage(
+            body=body,
+            recipient=recipient,
+            timestamp=NOW,
+        ).unsafe_stat
+    with pytest.raises(AttributeIsEmptyError):
+        _ = MessageRemoved(
+            chat_id=10,
+            message_id="comment",
+            post_id=None,
+            timestamp=NOW,
+            user_id=20,
+        ).unsafe_post_id
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentRemoved(
+            chat_id=10,
+            message_id="comment",
+            post_id=None,
+            timestamp=NOW,
+            user_id=20,
+        ).unsafe_post_id
+
+
+def test_bot_admin_permissions_changed_unsafe_permissions() -> None:
+    def make(
+        permissions: Omittable[list[ChatAdminPermission] | None] = Omitted(),
+    ) -> BotAdminPermissionsChanged:
+        return BotAdminPermissionsChanged(
+            bot_id=1,
+            chat_id=10,
+            is_admin=True,
+            is_channel=False,
+            user_id=20,
+            timestamp=NOW,
+            permissions=permissions,
+        )
+
+    permissions = [ChatAdminPermission.READ_ALL_MESSAGES]
+    assert make(permissions=permissions).unsafe_permissions == permissions
+
+    for missing in (make(), make(permissions=None)):
+        with pytest.raises(AttributeIsEmptyError):
+            _ = missing.unsafe_permissions
+
+
+def test_linked_message_generated_url_is_none_for_inaccessible_chat() -> None:
+    linked = LinkedMessage(
+        type=MessageLinkType.FORWARD,
+        message=MessageBody(mid="mid", seq=5, text="forwarded"),
+        chat_id=0,
+    )
+
+    assert linked.generated_url is None

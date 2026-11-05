@@ -13,7 +13,12 @@ from maxo.dialogs.api.entities import (
     StartMode,
 )
 from maxo.dialogs.api.internal import Widget
-from maxo.dialogs.api.protocols import BaseDialogManager, DialogManager
+from maxo.dialogs.api.protocols import (
+    BaseDialogManager,
+    DialogManager,
+    DialogProtocol,
+)
+from maxo.dialogs.context.storage import StorageProxy
 from maxo.fsm import State
 
 
@@ -160,3 +165,19 @@ class SubManager(DialogManager):
     @asynccontextmanager
     async def fg(self) -> AsyncIterator[DialogManager]:
         yield self
+
+    @property
+    def disabled(self) -> bool:
+        return self.manager.disabled
+
+    def check_disabled(self) -> None:
+        self.manager.check_disabled()
+
+    def dialog(self) -> DialogProtocol:
+        return self.manager.dialog()
+
+    def storage(self) -> StorageProxy:
+        return self.manager.storage()
+
+    def is_event_simulated(self) -> bool:
+        return self.manager.is_event_simulated()

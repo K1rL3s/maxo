@@ -258,3 +258,16 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+================================================================================
+
+File: src/maxo/bot/russiantrustedca.pem
+Source: Russian Trusted Root CA / Russian Trusted Sub CA (https://www.gosuslugi.ru/crt)
+Issuer: The Ministry of Digital Development and Communications (RU)
+
+Вендоренные корневой и промежуточный сертификаты национального удостоверяющего центра Минцифры России.
+Нужны для проверки TLS-соединения с MAX Bot API, поскольку эта цепочка отсутствует в стандартных
+хранилищах доверенных корневых сертификатов.
+
+Сертификаты распространяются их издателем публично и не являются программным обеспечением под лицензией;
+включены в дистрибутив как есть.

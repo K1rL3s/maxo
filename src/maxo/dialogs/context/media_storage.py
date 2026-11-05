@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import NamedTuple, cast
+from typing import NamedTuple
 
 from cachetools import LRUCache
 
@@ -15,7 +15,10 @@ class CachedMediaId(NamedTuple):
 
 class MediaIdStorage(MediaIdStorageProtocol):
     def __init__(self, maxsize: int = 1024) -> None:
-        self.cache = LRUCache(maxsize=maxsize)
+        self.cache: LRUCache[
+            tuple[str | None, str | None, AttachmentType],
+            CachedMediaId,
+        ] = LRUCache(maxsize=maxsize)
 
     async def get_media_id(
         self,
@@ -26,7 +29,7 @@ class MediaIdStorage(MediaIdStorageProtocol):
         if not path and not url:
             return None
         key = (str(path) if path else None, url, type)
-        cached = cast(CachedMediaId | None, self.cache.get(key))
+        cached: CachedMediaId | None = self.cache.get(key)
         if cached is None:
             return None
 

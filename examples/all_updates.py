@@ -6,10 +6,14 @@ import os
 from maxo import Bot, Dispatcher
 from maxo.types import (
     BotAddedToChat,
+    BotAdminPermissionsChanged,
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
     ChatTitleChanged,
+    CommentCreated,
+    CommentEdited,
+    CommentRemoved,
     DialogCleared,
     DialogMuted,
     DialogRemoved,
@@ -99,6 +103,20 @@ async def bot_removed_from_chat_handler(bot_removed: BotRemovedFromChat) -> None
     )
 
 
+@dp.bot_admin_permissions_changed()
+async def bot_admin_permissions_changed_handler(
+    changed: BotAdminPermissionsChanged,
+) -> None:
+    logger.info(
+        "Пользователь (ID: %s) изменил права бота в чате (ID: %s): "
+        "администратор - %s, права - %s",
+        changed.user_id,
+        changed.chat_id,
+        changed.is_admin,
+        changed.permissions,
+    )
+
+
 @dp.user_added_to_chat()
 async def user_added_to_chat_handler(user_added: UserAddedToChat) -> None:
     await user_added.send_message(
@@ -155,6 +173,31 @@ async def dialog_unmuted_handler(dialog_unmuted: DialogUnmuted) -> None:
     await dialog_unmuted.send_message(
         f"Диалог с пользователем (ID: {dialog_unmuted.user.user_id}) в чате "
         f"(ID: {dialog_unmuted.chat_id}) был разглушен",
+    )
+
+
+@dp.comment_created()
+async def comment_created_handler(comment_created: CommentCreated) -> None:
+    await comment_created.reply_text(
+        f"Получен комментарий: {comment_created.message.body.text or 'без текста'}",
+    )
+
+
+@dp.comment_edited()
+async def comment_edited_handler(comment_edited: CommentEdited) -> None:
+    logger.info(
+        "Комментарий %s изменён: %s",
+        comment_edited.message.body.mid,
+        comment_edited.message.body.text,
+    )
+
+
+@dp.comment_removed()
+async def comment_removed_handler(comment_removed: CommentRemoved) -> None:
+    logger.info(
+        "Комментарий %s удалён пользователем %s",
+        comment_removed.message_id,
+        comment_removed.user_id,
     )
 
 

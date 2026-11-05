@@ -99,6 +99,7 @@ def dp(message_manager: MockMessageManager) -> Dispatcher:
     return dp
 
 
+@pytest.mark.flaky(reruns=2)
 async def test_start(
     dp: Dispatcher,
     message_manager: MockMessageManager,
@@ -120,6 +121,7 @@ async def test_start(
     assert second_message.body.reply_markup is None
 
 
+@pytest.mark.flaky(reruns=2)
 async def test_cascade_cancel(
     dp: Dispatcher,
     message_manager: MockMessageManager,

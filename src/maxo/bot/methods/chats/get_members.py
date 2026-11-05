@@ -19,7 +19,7 @@ class GetMembers(MaxoMethod[ChatMembersList]):
     ```
 
     Args:
-        chat_id: ID группового чата или канала
+        chat_id: ID группового чата или канала. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         count: Количество участников, которых нужно вернуть в ответе
         marker: Указатель на следующую страницу данных
         user_ids: Список ID пользователей, чьё членство нужно получить. Когда этот параметр передан, параметры `count` и `marker` игнорируются
@@ -31,7 +31,7 @@ class GetMembers(MaxoMethod[ChatMembersList]):
     __method__ = "get"
 
     chat_id: Path[int]
-    """ID группового чата или канала"""
+    """ID группового чата или канала. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
 
     count: Query[Omittable[int]] = Omitted()
     """Количество участников, которых нужно вернуть в ответе"""

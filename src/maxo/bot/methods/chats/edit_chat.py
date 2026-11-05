@@ -9,7 +9,7 @@ class EditChat(MaxoMethod[Chat]):
     """
     Изменение информации о групповом чате или канале
 
-    Позволяет редактировать информацию о групповом чате или канале, включая название, иконку и закреплённое сообщение или пост
+    Позволяет редактировать информацию о групповом чате или канале, включая название, описание, иконку и закреплённое сообщение или пост
 
     Бот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата или канала
 
@@ -20,13 +20,16 @@ class EditChat(MaxoMethod[Chat]):
       -H "Content-Type: application/json" \
       -d '{
       "icon": { "url": "https://example.com/image.jpg" },
-      "title": "Название чата",
+      "title": "Название чата или канала",
+      "description": "Описание чата или канала - от 0 до 16000 символов",
+      "pin": "ID сообщения для закрепления в чате или канале",
       "notify": true
     }'
     ```
 
     Args:
-        chat_id: ID чата или канала
+        chat_id: ID чата или канала. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
+        description: Новое описание чата или канала. Чтобы удалить описание, передайте пустую строку
         icon: Данные для прикрепления изображения в качестве аватара чата или канала
         notify: Если `true`, участники получат системное уведомление об изменении
         pin: ID сообщения для закрепления в чате или канале. Чтобы удалить закреплённое сообщение, используйте метод [`DELETE /chats/{chatId}/pin`](https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/pin)
@@ -39,8 +42,10 @@ class EditChat(MaxoMethod[Chat]):
     __method__ = "patch"
 
     chat_id: Path[int]
-    """ID чата или канала"""
+    """ID чата или канала. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
 
+    description: Body[Omittable[str | None]] = Omitted()
+    """Новое описание чата или канала. Чтобы удалить описание, передайте пустую строку"""
     icon: Body[Omittable[PhotoAttachmentRequestPayload | None]] = Omitted()
     """Данные для прикрепления изображения в качестве аватара чата или канала"""
     notify: Body[Omittable[bool | None]] = Omitted()

@@ -5,7 +5,7 @@ from maxo.routing.ctx import Ctx
 from maxo.routing.handlers.signal import SignalHandler, SignalHandlerFn
 from maxo.routing.interfaces.filter import Filter
 from maxo.routing.observers.base import BaseObserver, bind_handler
-from maxo.routing.sentinels import UNHANDLED
+from maxo.routing.sentinels import UNHANDLED, SkipHandler
 from maxo.routing.signals.base import BaseSignal
 
 _SignalT = TypeVar("_SignalT", bound=BaseSignal)
@@ -36,7 +36,10 @@ class SignalObserver(
         for handler in self._handlers:
             with bind_handler(ctx, handler):
                 if await handler.execute_filter(ctx):
-                    await self.execute_handler(ctx, handler)
+                    try:
+                        await self.execute_handler(ctx, handler)
+                    except SkipHandler:
+                        continue
 
         # Возврат UNHANDLED для того, чтобы сигнал прошёлся по дочерним роутерам
         return UNHANDLED

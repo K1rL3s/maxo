@@ -1,30 +1,41 @@
 from maxo.errors.api import (
     MaxBotApiError,
+    MaxBotBadGatewayError,
     MaxBotBadRequestError,
+    MaxBotClientError,
     MaxBotForbiddenError,
     MaxBotMethodNotAllowedError,
     MaxBotNotFoundError,
+    MaxBotServerError,
     MaxBotServiceUnavailableError,
     MaxBotTooManyRequestsError,
     MaxBotUnauthorizedError,
     MaxBotUnknownServerError,
     MaxBotUnsupportedMediaTypeError,
-    RetvalReturnedServerException,
+    RetvalReturnedError,
 )
 from maxo.errors.base import MaxoError
 from maxo.errors.network import MaxBotNetworkError, MaxBotTimeoutError
-from maxo.errors.routing import CycleRoutersError
+from maxo.errors.payload import InvalidPayloadError
+from maxo.errors.routing import CycleRoutersError, RouterAlreadyIncludedError
+from maxo.errors.subscriptions import UnsubscribeError
 from maxo.errors.types import AttributeIsEmptyError
+from maxo.errors.webapp import InvalidWebAppInitDataError
 
 __all__ = (
     "AttributeIsEmptyError",
     "CycleRoutersError",
+    "InvalidPayloadError",
+    "InvalidWebAppInitDataError",
     "MaxBotApiError",
+    "MaxBotBadGatewayError",
     "MaxBotBadRequestError",
+    "MaxBotClientError",
     "MaxBotForbiddenError",
     "MaxBotMethodNotAllowedError",
     "MaxBotNetworkError",
     "MaxBotNotFoundError",
+    "MaxBotServerError",
     "MaxBotServiceUnavailableError",
     "MaxBotTimeoutError",
     "MaxBotTooManyRequestsError",
@@ -32,5 +43,7 @@ __all__ = (
     "MaxBotUnknownServerError",
     "MaxBotUnsupportedMediaTypeError",
     "MaxoError",
-    "RetvalReturnedServerException",
+    "RetvalReturnedError",
+    "RouterAlreadyIncludedError",
+    "UnsubscribeError",
 )

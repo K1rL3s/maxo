@@ -2,7 +2,7 @@ Updates
 =======
 
 Апдейты живут в :mod:`maxo.types`. Импорт из ``maxo.routing.updates``
-устарел и оставлен только для обратной совместимости.
+удалён - используйте ``maxo.types``.
 
 .. autoclass:: maxo.types.BaseUpdate
    :members:
@@ -34,6 +34,21 @@ Updates
    :undoc-members:
    :show-inheritance:
 
+.. autoclass:: maxo.types.CommentCreated
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: maxo.types.CommentEdited
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: maxo.types.CommentRemoved
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. autoclass:: maxo.types.BotStarted
    :members:
    :undoc-members:
@@ -50,6 +65,11 @@ Updates
    :show-inheritance:
 
 .. autoclass:: maxo.types.BotRemovedFromChat
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: maxo.types.BotAdminPermissionsChanged
    :members:
    :undoc-members:
    :show-inheritance:

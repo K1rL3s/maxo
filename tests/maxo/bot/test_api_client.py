@@ -13,16 +13,19 @@ from unihttp.exceptions import NetworkError, RequestTimeoutError
 from unihttp.http import HTTPResponse
 
 from maxo.bot.api_client import MaxApiClient
-from maxo.bot.methods import AddMembers
+from maxo.bot.methods import AddMembers  # type: ignore[deprecated]
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.middlewares import AttachmentNotReadyRetryMiddleware
 from maxo.errors import (
     MaxBotApiError,
+    MaxBotBadGatewayError,
     MaxBotBadRequestError,
+    MaxBotClientError,
     MaxBotForbiddenError,
     MaxBotMethodNotAllowedError,
     MaxBotNetworkError,
     MaxBotNotFoundError,
+    MaxBotServerError,
     MaxBotServiceUnavailableError,
     MaxBotTimeoutError,
     MaxBotTooManyRequestsError,
@@ -381,3 +384,38 @@ async def test_download_from_attachment_payload(api_client: MaxApiClient) -> Non
         await api_client.download(payload, destination=destination)
 
         assert destination.read() == b"test content"
+
+
+@pytest.mark.parametrize(
+    ("status_code", "error_class"),
+    [
+        (400, MaxBotBadRequestError),
+        (401, MaxBotUnauthorizedError),
+        (403, MaxBotForbiddenError),
+        (404, MaxBotNotFoundError),
+        (405, MaxBotMethodNotAllowedError),
+        (415, MaxBotUnsupportedMediaTypeError),
+        (429, MaxBotTooManyRequestsError),
+        (500, MaxBotUnknownServerError),
+        (502, MaxBotBadGatewayError),
+        (503, MaxBotServiceUnavailableError),
+        (418, MaxBotClientError),
+        (501, MaxBotServerError),
+        (302, MaxBotApiError),
+    ],
+)
+async def test_handle_error_falls_back_to_status_group(
+    api_client: MaxApiClient,
+    status_code: int,
+    error_class: type[MaxBotApiError],
+) -> None:
+    response = HTTPResponse(
+        status_code=status_code,
+        data={},
+        headers=CIMultiDict(),
+        cookies=SimpleCookie(),
+        raw_response=AsyncMock(),
+    )
+
+    with pytest.raises(error_class):
+        api_client.handle_error(response, MaxoMethod())

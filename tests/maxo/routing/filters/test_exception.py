@@ -1,5 +1,7 @@
 import re
 
+import pytest
+
 from maxo import Ctx
 from maxo.enums import ChatType
 from maxo.routing.filters.exception import ExceptionMessageFilter, ExceptionTypeFilter
@@ -64,3 +66,8 @@ async def test_exception_message_filter_returns_false_on_miss() -> None:
     event = make_error_event(ValueError("other"))
 
     assert await ExceptionMessageFilter("code")(event, Ctx({})) is False
+
+
+def test_exception_type_filter_requires_errors() -> None:
+    with pytest.raises(ValueError, match="At least one exception type is required"):
+        ExceptionTypeFilter()

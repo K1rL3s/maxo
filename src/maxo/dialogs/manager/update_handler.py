@@ -27,6 +27,9 @@ async def handle_aiogd_update(
         await dialog_manager.switch_to(state=event.new_state)
         await dialog_manager.show()
     elif isinstance(event, DialogFgEvent):
+        if event.entered.done():
+            # Вызвавший fg() отменен раньше, чем событие дошло до хендлера
+            return
         event.entered.set_result(dialog_manager)
         await event.exited
     elif event.action is DialogAction.UPDATE:

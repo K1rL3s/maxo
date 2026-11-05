@@ -1,10 +1,33 @@
 from unittest.mock import AsyncMock, Mock
 
-from maxo.dialogs import DialogManager
+from maxo import Dispatcher
+from maxo.dialogs import (
+    Dialog,
+    DialogManager,
+    DialogProtocol,
+    StartMode,
+    Window,
+    setup_dialogs,
+)
+from maxo.dialogs.manager.sub_manager import SubManager
+from maxo.dialogs.test_tools import BotClient, MockMessageManager
+from maxo.dialogs.test_tools.keyboard import InlineButtonTextLocator
+from maxo.dialogs.test_tools.memory_storage import JsonMemoryStorage
 from maxo.dialogs.widgets.kbd import ListGroup
 from maxo.dialogs.widgets.kbd.button import Button, Url
 from maxo.dialogs.widgets.text import Const, Format
-from maxo.types import Callback, CallbackButton, LinkButton, MessageCallback, User
+from maxo.fsm.key_builder import DefaultKeyBuilder
+from maxo.fsm.state import State, StatesGroup
+from maxo.routing.filters import CommandStart
+from maxo.routing.signals import AfterStartup, BeforeStartup
+from maxo.types import (
+    Callback,
+    CallbackButton,
+    LinkButton,
+    MessageCallback,
+    MessageCreated,
+    User,
+)
 from tests.constants import NOW
 
 
@@ -235,3 +258,52 @@ async def test_managed_find_for_item(mock_manager: DialogManager) -> None:
     managed_button = managed.find_for_item("button", "a")
 
     assert managed_button is not None
+
+
+class ListGroupSG(StatesGroup):
+    main = State()
+
+
+async def test_callback_manager_has_dialog_outside_and_inside_list_group() -> None:
+    calls: list[tuple[DialogProtocol, bool]] = []
+
+    async def on_click(
+        event: MessageCallback,
+        button: Button,
+        manager: DialogManager,
+    ) -> None:
+        calls.append((manager.dialog(), isinstance(manager, SubManager)))
+
+    async def start(message: MessageCreated, dialog_manager: DialogManager) -> None:
+        await dialog_manager.start(ListGroupSG.main, mode=StartMode.RESET_STACK)
+
+    dialog = Dialog(
+        Window(
+            Const("stub"),
+            Button(Const("Top"), id="top", on_click=on_click),
+            ListGroup(
+                Button(Const("Item"), id="item", on_click=on_click),
+                id="list",
+                items=["a"],
+                item_id_getter=lambda item: item,
+            ),
+            state=ListGroupSG.main,
+        ),
+    )
+    dp = Dispatcher(
+        storage=JsonMemoryStorage(),
+        key_builder=DefaultKeyBuilder(with_destiny=True),
+    )
+    dp.include(dialog)
+    dp.message_created.handler(start, CommandStart())
+    client = BotClient(dp)
+    message_manager = MockMessageManager()
+    setup_dialogs(dp, message_manager=message_manager)
+    await dp.feed_signal(BeforeStartup(), client.bot)
+    await dp.feed_signal(AfterStartup(), client.bot)
+
+    await client.send("/start")
+    await client.click(message_manager.one_message(), InlineButtonTextLocator("Top"))
+    await client.click(message_manager.last_message(), InlineButtonTextLocator("Item"))
+
+    assert calls == [(dialog, False), (dialog, True)]

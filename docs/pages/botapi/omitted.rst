@@ -194,7 +194,8 @@ Omitted в объектах ответа
 
 Типы с ``Omittable``-полями в ответах: ``Message`` (``sender``, ``link``, ``stat``, ``url``),
 ``Chat`` (``pinned_message``, ``owner_id``, ``link``, ``dialog_with_user``),
-``User`` (``last_name``, ``name``), ``VideoAttachment`` (``duration``, ``width``, ``height``)
+``User`` (``last_activity_time``, ``last_name``, ``name``),
+``VideoAttachment`` (``duration``, ``width``, ``height``)
 и многие другие.
 
 .. _message-callback-none:

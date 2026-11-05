@@ -8,7 +8,7 @@ from maxo.types.photo_token import PhotoToken
 class UploadMediaResult(MaxoType):
     token: Omittable[str] = Omitted()
     photos: Omittable[dict[str, PhotoToken]] = Omitted()
-    file_id: Omittable[int] = Omitted()  # ???
+    file_id: Omittable[int] = Omitted()
 
     @property
     def last_token(self) -> str:

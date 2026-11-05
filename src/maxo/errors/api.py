@@ -25,34 +25,50 @@ class MaxBotApiError(MaxoError):
         return f"{self.__class__.__name__}({', '.join(parts)})"
 
 
-class MaxBotBadRequestError(MaxBotApiError): ...
+class MaxBotClientError(MaxBotApiError): ...
 
 
-class MaxBotForbiddenError(MaxBotApiError): ...
+class MaxBotServerError(MaxBotApiError): ...
 
 
-class MaxBotUnauthorizedError(MaxBotApiError): ...
+class MaxBotBadRequestError(MaxBotClientError): ...
 
 
-class MaxBotNotFoundError(MaxBotApiError): ...
+class MaxBotForbiddenError(MaxBotClientError): ...
 
 
-class MaxBotMethodNotAllowedError(MaxBotApiError): ...
+class MaxBotUnauthorizedError(MaxBotClientError): ...
 
 
-class MaxBotUnsupportedMediaTypeError(MaxBotApiError): ...
+class MaxBotNotFoundError(MaxBotClientError): ...
 
 
-class MaxBotTooManyRequestsError(MaxBotApiError): ...
+class MaxBotMethodNotAllowedError(MaxBotClientError): ...
 
 
-class MaxBotUnknownServerError(MaxBotApiError): ...
+class MaxBotUnsupportedMediaTypeError(MaxBotClientError): ...
 
 
-class MaxBotServiceUnavailableError(MaxBotApiError): ...
+class MaxBotTooManyRequestsError(MaxBotClientError): ...
 
 
-class RetvalReturnedServerException(MaxoError): ...
+class MaxBotUnknownServerError(MaxBotServerError): ...
+
+
+class MaxBotBadGatewayError(MaxBotServerError): ...
+
+
+class MaxBotServiceUnavailableError(MaxBotServerError): ...
+
+
+class RetvalReturnedError(MaxoError):
+    """Сервер загрузки ответил `<retval>1</retval>` вместо токена."""
+
+    def __str__(self) -> str:
+        return (
+            "Сервер загрузки вернул <retval>1</retval> вместо токена, "
+            "используйте token из ответа POST /uploads"
+        )
 
 
 _ERRORS_BY_STATUS: dict[int, type[MaxBotApiError]] = {
@@ -64,13 +80,21 @@ _ERRORS_BY_STATUS: dict[int, type[MaxBotApiError]] = {
     415: MaxBotUnsupportedMediaTypeError,
     429: MaxBotTooManyRequestsError,
     500: MaxBotUnknownServerError,
+    502: MaxBotBadGatewayError,
     503: MaxBotServiceUnavailableError,
 }
 
 
 def raise_api_error(status_code: int, data: object) -> Never:
     code, error, message = _extract_api_error(data)
-    error_type = _ERRORS_BY_STATUS.get(status_code, MaxBotApiError)
+    error_type = _ERRORS_BY_STATUS.get(status_code)
+    if error_type is None:
+        if status_code in range(400, 500):
+            error_type = MaxBotClientError
+        elif status_code in range(500, 600):
+            error_type = MaxBotServerError
+        else:
+            error_type = MaxBotApiError
     raise error_type(code, error, message, data)
 
 

@@ -10,9 +10,11 @@ from maxo.dialogs.api.entities import (
     EventContext,
     Stack,
 )
+from maxo.dialogs.api.entities.update_event import DialogFgEvent
 from maxo.dialogs.api.exceptions import (
     InvalidStackIdError,
     OutdatedIntent,
+    StackAccessDeniedError,
     UnknownIntent,
     UnknownState,
 )
@@ -29,8 +31,6 @@ from maxo.dialogs.utils import remove_intent_id
 from maxo.enums import ChatType
 from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
 from maxo.routing.ctx import Ctx
-from maxo.routing.facades import MessageCallbackFacade
-from maxo.routing.facades.middleware import FACADE_KEY
 from maxo.routing.interfaces import BaseMiddleware, NextMiddleware
 from maxo.routing.middlewares.fsm_context import FSM_STORAGE_KEY
 from maxo.routing.middlewares.update_context import (
@@ -40,6 +40,7 @@ from maxo.routing.middlewares.update_context import (
 from maxo.routing.sentinels import UNHANDLED
 from maxo.types import (
     BotAddedToChat,
+    BotAdminPermissionsChanged,
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
@@ -128,7 +129,7 @@ def event_context_from_aiogd(event: DialogUpdateEvent) -> EventContext:
     return EventContext(
         bot=event.bot,
         user=event.user,
-        user_id=event.user.user_id,
+        user_id=None if event.user is None else event.user.user_id,
         chat=None,
         chat_id=event.recipient.chat_id,
         chat_type=event.recipient.chat_type,
@@ -154,6 +155,8 @@ def event_context_from_error(event: ErrorEvent[Any, Any], ctx: Ctx) -> EventCont
         return event_context_from_bot_added_to_chat(event.event, ctx)
     if isinstance(event.event, BotRemovedFromChat):
         return event_context_from_bot_removed_from_chat(event.event, ctx)
+    if isinstance(event.event, BotAdminPermissionsChanged):
+        return event_context_from_bot_admin_permissions_changed(event.event, ctx)
     raise ValueError(f"Unsupported event in ErrorEvent.event: {event.event}")
 
 
@@ -339,6 +342,14 @@ class IntentMiddlewareFactory:
                 stack_id=update.stack_id,
                 ctx=ctx,
             )
+        if ctx.get(FORBIDDEN_STACK_KEY):
+            if isinstance(update, DialogFgEvent):
+                update.entered.set_exception(
+                    StackAccessDeniedError(
+                        f"Stack is not allowed for user {event_context.user_id}",
+                    ),
+                )
+            return UNHANDLED
         return await next(ctx)
 
     async def process_callback(
@@ -369,8 +380,8 @@ class IntentMiddlewareFactory:
             await self._load_default_context(update, ctx, event_context)
         result = await next(ctx)
         if result is UNHANDLED and ctx.get(FORBIDDEN_STACK_KEY):
-            facade: MessageCallbackFacade = ctx[FACADE_KEY]
-            await facade.callback_answer(notification="")
+            # Гасим "часики" на кнопке: чужой/протухший стек хендлер не обработает.
+            await update.callback_answer(notification="")
         return result
 
     async def process_bot_started(
@@ -457,6 +468,20 @@ class IntentMiddlewareFactory:
         await self._load_default_context(update, ctx, event_context)
         return await next(ctx)
 
+    async def process_bot_admin_permissions_changed(
+        self,
+        update: BotAdminPermissionsChanged,
+        ctx: Ctx,
+        next: NextMiddleware[BotAdminPermissionsChanged],
+    ) -> Any:
+        if UPDATE_CONTEXT_KEY not in ctx:
+            return await next(ctx)
+
+        event_context = event_context_from_bot_admin_permissions_changed(update, ctx)
+        ctx[EVENT_CONTEXT_KEY] = event_context
+        await self._load_default_context(update, ctx, event_context)
+        return await next(ctx)
+
 
 SUPPORTED_ERROR_EVENTS = (
     MessageCreated,
@@ -467,6 +492,7 @@ SUPPORTED_ERROR_EVENTS = (
     UserRemovedFromChat,
     BotAddedToChat,
     BotRemovedFromChat,
+    BotAdminPermissionsChanged,
     DialogUpdateEvent,
     ErrorEvent,
 )
@@ -523,9 +549,8 @@ class IntentErrorMiddleware(BaseMiddleware[ErrorEvent[Any, Any]]):
             return False
         if UPDATE_CONTEXT_KEY not in ctx:
             return False
-        if EVENT_FROM_USER_KEY not in ctx:  # noqa: SIM103
-            return False
-        return True
+        # Апдейт может нести только user_id, без объекта пользователя
+        return EVENT_FROM_USER_KEY in ctx or ctx[UPDATE_CONTEXT_KEY].user_id is not None
 
     async def _fix_broken_stack(
         self,
@@ -622,3 +647,18 @@ class IntentErrorMiddleware(BaseMiddleware[ErrorEvent[Any, Any]]):
                     await stored_proxy.save_context(context)
                 await stored_proxy.save_stack(ctx.get(STACK_KEY))
                 await stored_proxy.unlock()
+
+
+def event_context_from_bot_admin_permissions_changed(
+    event: BotAdminPermissionsChanged,
+    ctx: Ctx,
+) -> EventContext:
+    # В апдейте только user_id, объект пользователя есть, лишь если его подгрузил enrich
+    return EventContext(
+        bot=ctx["bot"],
+        user=ctx.get(EVENT_FROM_USER_KEY),
+        user_id=event.user_id,
+        chat_id=event.chat_id,
+        chat_type=ChatType.CHANNEL if event.is_channel else ChatType.CHAT,
+        chat=None,
+    )

@@ -49,6 +49,15 @@ from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
 
 
 class RedisStorage(BaseStorage):
+    __slots__ = (
+        "data_ttl",
+        "json_dumps",
+        "json_loads",
+        "key_builder",
+        "redis",
+        "state_ttl",
+    )
+
     def __init__(
         self,
         redis: Redis,
@@ -82,9 +91,11 @@ class RedisStorage(BaseStorage):
     async def get_state(self, key: StorageKey) -> str | None:
         built_key = self.key_builder.build(key, StorageKeyType.STATE)
         value = await self.redis.get(built_key)
+        if value is None:
+            return None
         if isinstance(value, bytes):
             return value.decode("utf-8")
-        return cast(str | None, value)
+        return str(value)
 
     async def set_data(self, key: StorageKey, data: MutableMapping[str, Any]) -> None:
         built_key = self.key_builder.build(key, StorageKeyType.DATA)

@@ -7,7 +7,7 @@ from maxo.enums import ChatStatus, ChatType
 from maxo.omit import Omitted
 from maxo.types.chat import Chat
 from maxo.types.chat_list import ChatList
-from maxo.utils.iterators.chats import ChatsIterator
+from maxo.utils.iterators.chats import ChatsIterator  # type: ignore[deprecated]
 from tests.constants import NOW
 from tests.factories import make_bot
 
@@ -106,3 +106,10 @@ async def test_chats_iterator_stops_on_none_marker(bot: Bot) -> None:
 
     assert len(chats) == 1
     assert bot.get_chats.await_count == 1
+
+
+def test_chats_iterator_is_deprecated(bot: Bot) -> None:
+    with pytest.warns(DeprecationWarning, match="GET /chats") as record:
+        ChatsIterator(bot=bot)
+
+    assert record[0].filename == __file__

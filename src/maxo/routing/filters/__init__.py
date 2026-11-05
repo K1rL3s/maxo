@@ -2,6 +2,7 @@
 
 from .always import AlwaysFalseFilter, AlwaysTrueFilter
 from .base import BaseFilter
+from .chat_admin_permission import ChatAdminPermissionFilter
 from .command import Command, CommandObject, CommandStart
 from .deeplink import DeeplinkFilter
 from .exception import ExceptionMessageFilter, ExceptionTypeFilter
@@ -16,6 +17,7 @@ __all__ = (
     "AndFilter",
     "BaseFilter",
     "CallbackData",
+    "ChatAdminPermissionFilter",
     "Command",
     "CommandObject",
     "CommandStart",

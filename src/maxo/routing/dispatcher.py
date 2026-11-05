@@ -9,7 +9,6 @@ from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
 from maxo.fsm.storages.memory import MemoryStorage, SimpleEventIsolation
 from maxo.omit import Omittable, Omitted
 from maxo.routing.ctx import CTX_KEY, Ctx
-from maxo.routing.facades.middleware import FacadeMiddleware
 from maxo.routing.flags import HANDLER_KEY
 from maxo.routing.middlewares.error import ErrorMiddleware
 from maxo.routing.middlewares.fsm_context import FSMContextMiddleware
@@ -68,9 +67,6 @@ class Dispatcher(Router):
                 FSMContextMiddleware(storage, events_isolation),
             )
 
-        # Facade settings
-        self.update.middleware.outer(FacadeMiddleware())
-
     async def start_polling(
         self,
         bot: Bot,
@@ -81,6 +77,7 @@ class Dispatcher(Router):
         types: Omittable[Sequence[str]] = Omitted(),
         auto_close_bot: bool = True,
         drop_pending_updates: bool = False,
+        clear_subscriptions: bool = False,
         **workflow_data: Any,
     ) -> None:
         from maxo.transport.long_polling import LongPolling  # noqa: PLC0415
@@ -98,6 +95,7 @@ class Dispatcher(Router):
             types=types,
             auto_close_bot=auto_close_bot,
             drop_pending_updates=drop_pending_updates,
+            clear_subscriptions=clear_subscriptions,
             **workflow_data,
         )
 
@@ -111,6 +109,7 @@ class Dispatcher(Router):
         types: Omittable[Sequence[str]] = Omitted(),
         auto_close_bot: bool = True,
         drop_pending_updates: bool = False,
+        clear_subscriptions: bool = False,
         **workflow_data: Any,
     ) -> None:
         asyncio.run(
@@ -123,6 +122,7 @@ class Dispatcher(Router):
                 types=types,
                 auto_close_bot=auto_close_bot,
                 drop_pending_updates=drop_pending_updates,
+                clear_subscriptions=clear_subscriptions,
                 **workflow_data,
             ),
         )
@@ -169,9 +169,6 @@ class Dispatcher(Router):
         if bot is not None:
             ctx["bot"] = bot
             ctx["bots"] = [bot]
-            # Костыль для тестов (в них апдейты создаются без `.as_`)
-            # и неправильных вызовах `.feed_update`. Удачи отдебажить >:)
-            update.bot = bot
 
         return await self.trigger(ctx)
 
@@ -180,11 +177,6 @@ class Dispatcher(Router):
         ctx_copy[CTX_KEY] = ctx_copy
         ctx_copy["update"] = update.update
         ctx_copy.pop(HANDLER_KEY, None)
-
-        if "bot" in ctx:
-            # Костыль для тестов (в них апдейты создаются без `.as_`)
-            # и неправильных вызовах `.feed_update`. Удачи отдебажить >:)
-            update.update.bot = update.bot = ctx["bot"]
 
         result = await self.trigger(ctx_copy)
         if result is UNHANDLED:

@@ -1,6 +1,6 @@
 from maxo.enums.update_type import UpdateType
-from maxo.routing.mixins import MessageMethodsFacade
 from maxo.types.base import MaxUpdate
+from maxo.types.facades.message import MessageMethodsFacade
 from maxo.types.message import Message
 
 

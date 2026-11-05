@@ -3,8 +3,8 @@ from typing import Self
 
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
-from maxo.routing.mixins import MessageMethodsFacade
 from maxo.types.base import MaxoType
+from maxo.types.facades.message import MessageMethodsFacade
 from maxo.types.linked_message import LinkedMessage
 from maxo.types.message_body import MessageBody
 from maxo.types.message_stat import MessageStat
@@ -28,7 +28,7 @@ class Message(MaxoType, MessageMethodsFacade):
             **Обратите внимание**:
             - Все параметры в объекте относятся к отправителю сообщения
             - Объект отсутствует, если сообщение отправлено в канал
-        stat: Статистика просмотров постов - возвращается только для каналов
+        stat: Статистика просмотров постов и репостов - возвращается только для каналов
         timestamp: Время создания сообщения в формате Unix timestamp в миллисекундах
         url: Публичная ссылка на пост в канале. Отсутствует для диалогов и групповых чатов
     """
@@ -46,7 +46,7 @@ class Message(MaxoType, MessageMethodsFacade):
 
     link: Omittable[LinkedMessage | None] = Omitted()
     """Пересланное или ответное сообщение"""
-    sender: Omittable[User] = Omitted()
+    sender: Omittable[User | None] = Omitted()
     """
     Отправитель сообщения: пользователь или бот
 
@@ -55,7 +55,7 @@ class Message(MaxoType, MessageMethodsFacade):
         - Объект отсутствует, если сообщение отправлено в канал
     """
     stat: Omittable[MessageStat | None] = Omitted()
-    """Статистика просмотров постов - возвращается только для каналов"""
+    """Статистика просмотров постов и репостов - возвращается только для каналов"""
     url: Omittable[str | None] = Omitted()
     """Публичная ссылка на пост в канале. Отсутствует для диалогов и групповых чатов"""
 

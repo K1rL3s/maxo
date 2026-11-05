@@ -17,12 +17,32 @@
 Встроенные фильтры
 ------------------
 
-**maxo** поставляется с набором готовых фильтров:
+**maxo** поставляется с набором готовых фильтров в ``maxo.routing.filters``
+(постоянный алиас для портирования с ``aiogram`` - ``maxo.filters``):
 
-- ``Command`` - проверяет команду (например, ``/start`` или ``/help``).
+- ``Command`` - проверяет команду (например, ``/start`` или ``/help``) и кладёт
+  разобранную команду в ``ctx["command"]`` как ``CommandObject``. Упоминание
+  бота понимает в обеих формах: ``/start@bot`` и ``@bot /start``, вторую
+  подставляет автодополнение в группах. Если у сообщения нет своего текста,
+  берётся текст пересланного сообщения; ответ на сообщение с командой
+  командой не считается.
+- ``CommandStart`` - то же самое, но сразу для ``/start``.
 - ``StateFilter`` - фильтрует по текущему состоянию FSM (например, ``StateFilter(MyStates.waiting_name)``).
-- ``MagicFilter`` - инструмент для создания условий на лету (см. ниже).
+- ``Payload`` (алиас ``CallbackData``) - типизированный payload инлайн-кнопки (см. ниже).
+- ``DeeplinkFilter`` - диплинк в ``BotStarted``; значение попадает в ``ctx`` под
+  ключами ``deeplink``, ``payload`` и ``args``.
+- ``ChatAdminPermissionFilter`` - проверяет права бота в апдейте
+  ``BotAdminPermissionsChanged`` (см. ниже).
+- ``ExceptionTypeFilter`` и ``ExceptionMessageFilter`` - для обработчиков ошибок,
+  см. :doc:`errors`.
 - ``SyncFilter`` - оборачивает синхронную функцию-предикат, чтобы её можно было использовать как фильтр (см. ниже).
+- ``AlwaysTrueFilter`` и ``AlwaysFalseFilter`` - заглушки, удобные в тестах.
+- ``AndFilter``, ``OrFilter``, ``InvertFilter`` и функции ``and_f``, ``or_f``,
+  ``invert_f`` - то же, что операторы ``&``, ``|`` и ``~``.
+- ``BaseFilter`` - база для своих фильтров (см. ниже).
+
+``MagicFilter`` лежит отдельно, в ``maxo.integrations.magic_filter``, потому что
+требует дополнительной зависимости ``maxo[magic_filter]``.
 
 Комбинирование (Логические операции)
 ------------------------------------
@@ -106,6 +126,116 @@ Magic Filter
     @dispatcher.message_created(MagicFilter(F.message.sender.first_name == "Kirill"))
     async def kirill_handler(update: MessageCreated, ctx: Ctx):
         ...
+
+.. warning::
+
+    При объединении сравнений через ``|`` или ``&`` каждое сравнение нужно
+    заключать в скобки. Побитовые операторы имеют более высокий приоритет,
+    чем ``==``.
+
+    .. code-block:: python
+
+        # Неправильно: Python сначала вычислит "hello" | F.text
+        F.text == "hello" | F.text == "hi"
+
+        # Правильно
+        (F.text == "hello") | (F.text == "hi")
+
+        # Для нескольких допустимых значений короче использовать in_
+        F.text.in_({"hello", "hi"})
+
+Payload (типизированный callback)
+---------------------------------
+
+``Payload`` описывает данные инлайн-кнопки как датакласс: ``pack()`` собирает их
+в строку payload, а фильтр ``Payload.filter()`` разбирает строку обратно и кладёт
+готовый объект в ``ctx["payload"]``. Для привычек из ``aiogram`` есть алиас
+``CallbackData``.
+
+.. code-block:: python
+
+    from maxo.routing.filters import Payload
+    from maxo.types import MessageCallback, MessageCreated
+    from maxo.utils.builders import KeyboardBuilder
+
+    class ItemPayload(Payload, prefix="item"):
+        item_id: int
+        action: str
+
+    @dispatcher.message_created()
+    async def show_item(update: MessageCreated) -> None:
+        keyboard = (
+            KeyboardBuilder()
+            .add_callback(
+                text="Купить",
+                payload=ItemPayload(item_id=1, action="buy").pack(),
+            )
+            .build()
+        )
+        await update.answer_text("Товар", keyboard=keyboard)
+
+    @dispatcher.message_callback(ItemPayload.filter())
+    async def on_item(update: MessageCallback, payload: ItemPayload) -> None:
+        await update.callback_answer(f"{payload.action}: {payload.item_id}")
+
+``prefix`` обязателен и не должен содержать разделитель (по умолчанию ``":"``,
+меняется параметром ``sep``). Поля упаковываются в том же порядке, в каком
+объявлены; поддерживаются ``int``, ``str``, ``float``, ``bool``, ``Decimal``,
+``Fraction``, ``UUID``, ``Enum`` и их nullable-варианты. Собранный payload
+ограничен 1024 байтами - при превышении ``pack()`` кидает ``ValueError``.
+
+В ``filter()`` можно передать дополнительный фильтр, который получит уже
+разобранный payload из ``ctx``:
+
+.. code-block:: python
+
+    from magic_filter import F
+
+    from maxo.integrations.magic_filter import MagicData
+
+    # MagicData смотрит в ctx, где уже лежит разобранный payload
+    @dispatcher.message_callback(
+        ItemPayload.filter(MagicData(F.payload.action == "buy")),
+    )
+    async def on_buy(update: MessageCallback, payload: ItemPayload) -> None:
+        ...
+
+Права бота-администратора
+-------------------------
+
+``ChatAdminPermissionFilter`` пропускает апдейт ``BotAdminPermissionsChanged``,
+только если боту выданы **все** перечисленные права. Для «хотя бы одного из»
+объединяйте фильтры через ``|``.
+
+.. code-block:: python
+
+    from maxo.enums import ChatAdminPermission
+    from maxo.routing.filters import ChatAdminPermissionFilter
+    from maxo.types import BotAdminPermissionsChanged
+
+    @dispatcher.bot_admin_permissions_changed(
+        ChatAdminPermissionFilter(
+            ChatAdminPermission.WRITE,
+            ChatAdminPermission.PIN_MESSAGE,
+        ),
+    )
+    async def can_post_and_pin(update: BotAdminPermissionsChanged):
+        ...
+
+    @dispatcher.bot_admin_permissions_changed(
+        ChatAdminPermissionFilter(ChatAdminPermission.EDIT)
+        | ChatAdminPermissionFilter(ChatAdminPermission.DELETE),
+    )
+    async def can_edit_or_delete(update: BotAdminPermissionsChanged):
+        ...
+
+Устаревшие названия прав фильтр приводит к текущим, поэтому
+``ChatAdminPermission.WRITE`` сработает и когда MAX пришлёт
+``post_edit_delete_message``. То же для пар ``edit_message`` - ``edit`` и
+``delete_message`` - ``delete``.
+
+Если бот больше не администратор (``is_admin`` ложно), фильтр не срабатывает,
+даже когда в апдейте пришёл список прав.
 
 SyncFilter (синхронные предикаты)
 ---------------------------------

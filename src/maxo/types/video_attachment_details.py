@@ -1,7 +1,7 @@
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
 from maxo.types.base import MaxoType
-from maxo.types.photo_attachment_payload import PhotoAttachmentPayload
+from maxo.types.video_thumbnail import VideoThumbnail
 from maxo.types.video_urls import VideoUrls
 
 
@@ -25,13 +25,13 @@ class VideoAttachmentDetails(MaxoType):
     width: int
     """Ширина видео"""
 
-    thumbnail: Omittable[PhotoAttachmentPayload | None] = Omitted()
+    thumbnail: Omittable[VideoThumbnail | None] = Omitted()
     """Миниатюра видео"""
     urls: Omittable[VideoUrls | None] = Omitted()
     """URL-ы для скачивания или воспроизведения видео. Может быть null, если видео недоступно"""
 
     @property
-    def unsafe_thumbnail(self) -> PhotoAttachmentPayload:
+    def unsafe_thumbnail(self) -> VideoThumbnail:
         if is_defined(self.thumbnail):
             return self.thumbnail
 

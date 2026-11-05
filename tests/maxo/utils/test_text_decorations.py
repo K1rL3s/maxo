@@ -219,6 +219,30 @@ class TestTextDecoration:
                 (StrongMarkup(from_=0, length=8),),
                 "<b>👋🏾 Hi!</b>",
             ),
+            (
+                html_decoration,
+                "hello",
+                (StrongMarkup(from_=0, length=0),),
+                "<b></b>hello",
+            ),
+            (
+                markdown_decoration,
+                "hello",
+                (StrongMarkup(from_=0, length=0),),
+                "****hello",
+            ),
+            (
+                html_decoration,
+                "hello",
+                (StrongMarkup(from_=2, length=0),),
+                "he<b></b>llo",
+            ),
+            (
+                markdown_decoration,
+                "hello",
+                (StrongMarkup(from_=2, length=0),),
+                "he****llo",
+            ),
         ],
     )
     def test_unparse(
@@ -229,3 +253,20 @@ class TestTextDecoration:
         result: str,
     ) -> None:
         assert decorator.unparse(text, entities) == result
+
+
+class TestMarkdownDecorationBlockquote:
+    @pytest.mark.parametrize(
+        ("value", "result"),
+        [
+            ("", "> "),
+            ("test", "> test"),
+            ("a\nb", "> a\n> b"),
+            ("a\n", "> a\n> "),
+            ("a\r\nb", "> a\n> b"),
+            ("a\rb", "> a\n> b"),
+            ("a\r", "> a\n> "),
+        ],
+    )
+    def test_blockquote(self, value: str, result: str) -> None:
+        assert markdown_decoration.blockquote(value) == result

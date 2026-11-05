@@ -178,3 +178,13 @@ def test_redis_storage_from_url(monkeypatch: pytest.MonkeyPatch) -> None:
     storage_redis = cast(Any, storage.redis)
     assert storage_redis is redis
     assert storage.state_ttl == 30
+
+
+def test_redis_storage_declares_slots() -> None:
+    redis = FakeRedis()
+    storage = make_storage(redis)
+
+    assert not hasattr(storage, "__dict__")
+
+    with pytest.raises(AttributeError):
+        cast(Any, storage).unexpected_attribute = "value"

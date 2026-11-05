@@ -10,19 +10,25 @@ from maxo.utils.link import id_to_message_url
 class LinkedMessage(MaxoType):
     """
     Args:
-        chat_id: Чат или канал, в котором сообщение было изначально опубликовано. Только для пересланных сообщений с `type = forward`. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)
+        chat_id: Чат или канал, в котором сообщение было изначально опубликовано. Только для пересланных сообщений с `type = forward`. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
         message:
         sender: Пользователь или бот, отправивший сообщение
-        type: Тип связанного сообщения
+        type: Тип связанного сообщения:
+            - `"reply"` - ответ на сообщение в чате
+            - `"forward"` - пересланное сообщение в чате
     """
 
     message: MessageBody
     type: MessageLinkType
-    """Тип связанного сообщения"""
+    """
+    Тип связанного сообщения:
+        - `"reply"` - ответ на сообщение в чате
+        - `"forward"` - пересланное сообщение в чате
+    """
 
     chat_id: Omittable[int] = Omitted()
-    """Чат или канал, в котором сообщение было изначально опубликовано. Только для пересланных сообщений с `type = forward`. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)"""
-    sender: Omittable[User] = Omitted()
+    """Чат или канал, в котором сообщение было изначально опубликовано. Только для пересланных сообщений с `type = forward`. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""
+    sender: Omittable[User | None] = Omitted()
     """Пользователь или бот, отправивший сообщение"""
 
     @property
@@ -51,9 +57,10 @@ class LinkedMessage(MaxoType):
         Генерирует ссылку на сообщение.
 
         Возвращает:
-            str | None: Ссылка на сообщение или `None`, если `chat_id` не определен.
+            str | None: Ссылка на сообщение или `None`, если `chat_id` не определен
+            или равен 0: так MAX отдаёт чат-источник, к которому у бота нет доступа.
         """
-        if not is_defined(self.chat_id):
+        if not is_defined(self.chat_id) or self.chat_id == 0:
             return None
 
         return id_to_message_url(

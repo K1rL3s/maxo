@@ -2,7 +2,7 @@
 
 __all__ = ("CONTAINER_NAME", "MaxoProvider", "inject", "setup_dishka")
 
-from collections.abc import Callable, Container, Generator
+from collections.abc import Callable, Generator
 from inspect import Parameter, signature
 from typing import Any, Concatenate, ParamSpec, TypeVar, overload
 
@@ -63,7 +63,7 @@ def inject(func: Any) -> Any:
         additional_params = [
             Parameter(
                 name=CONTAINER_NAME,
-                annotation=Container,
+                annotation=AsyncContainer,
                 kind=Parameter.KEYWORD_ONLY,
             ),
         ]

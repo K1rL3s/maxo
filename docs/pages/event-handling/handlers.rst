@@ -26,10 +26,9 @@
 
 **maxo** автоматически внедряет аргументы в функцию-обработчик на основе их имен (ключей в ``ctx``). Основные доступные аргументы:
 
-1.  **Объект обновления** (первый позиционный аргумент): типизированный объект события, например ``MessageCreated``, ``MessageCallback``. Содержит все данные, пришедшие от API.
+1.  **Объект обновления** (первый позиционный аргумент): типизированный объект события, например ``MessageCreated``, ``MessageCallback``. Содержит все данные, пришедшие от API, а также методы для ответа на событие (``answer_text``, ``reply_text`` и другие - подробнее в разделе :doc:`facades`).
 2.  ``ctx: Ctx`` - контекст выполнения. Словарь-подобный объект, который живет в рамках обработки одного обновления. В нем хранятся ссылки на ``bot``, ``update``, а также любые данные, добавленные мидлварями.
-3.  ``facade`` - обёртка над обновлением. Тип зависит от события: ``MessageCreatedFacade``, ``MessageCallbackFacade`` и так далее (общий базовый класс - ``BaseUpdateFacade``). Подробнее в разделе :doc:`facades`.
-4.  ``fsm_context: FSMContext`` - контекст конечного автомата (FSM). Доступен, если FSM активирован. Подробнее в разделе :doc:`fsm`.
+3.  ``fsm_context: FSMContext`` - контекст конечного автомата (FSM). Доступен, если FSM активирован. Подробнее в разделе :doc:`fsm`.
 
 .. code-block:: python
 
@@ -76,7 +75,10 @@ Dependency Injection (DI)
     async def handler(update: MessageCreated, user: User, ctx: Ctx):
         # Аргумент user будет автоматически передан из фильтра
         bot: Bot = ctx["bot"]
-        await bot.send_message(user.user_id, f"Hello, {user.first_name}!")
+        await bot.send_message(
+            user_id=user.user_id,
+            text=f"Hello, {user.first_name}!",
+        )
 
 Возвращаемые значения
 ---------------------

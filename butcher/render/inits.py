@@ -4,10 +4,14 @@ from butcher.overrides import ExtraExport
 from butcher.profile import MaxoDocument
 
 
-def render(exports: list[tuple[str, tuple[str, ...]]]) -> str:
+def render(
+    exports: list[tuple[str, tuple[str, ...]]],
+    deprecated: frozenset[str] = frozenset(),
+) -> str:
     """Файл реэкспорта: ``from .<module> import <names>`` плюс ``__all__``."""
     lines = sorted(
         f"from .{module} import {', '.join(sorted(names))}"
+        + ("  # type: ignore[deprecated]" if deprecated.intersection(names) else "")
         for module, names in exports
         if names
     )
@@ -36,4 +40,6 @@ def methods(document: MaxoDocument, extra: tuple[ExtraExport, ...]) -> str:
         for method in document.methods
     ]
     exports.extend((item.module, item.names) for item in extra)
-    return render(exports)
+    deprecated = {method.name for method in document.methods if method.deprecated}
+    deprecated.update(name for item in extra if item.deprecated for name in item.names)
+    return render(exports, frozenset(deprecated))

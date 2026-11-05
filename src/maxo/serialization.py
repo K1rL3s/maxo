@@ -3,16 +3,22 @@ import typing
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from adaptix import Chain, P, Retort, dumper, loader
+from adaptix import Chain, P, Retort, dumper, loader, name_mapping
 from adaptix.type_tools import exec_type_checking
-from unihttp.markers import QueryMarker
 from unihttp.serializers.adaptix.marker_tools import for_marker
 from unihttp.serializers.adaptix.serialize import DEFAULT_RETORT
 
 from maxo._internal.adaptix import concat_provider, has_tag_provider, is_subclass
 from maxo.bot.defaults import BotDefaults
-from maxo.bot.methods import EditMessage, SendMessage
+from maxo.bot.methods import (
+    AnswerOnCallback,
+    EditComment,
+    EditMessage,
+    SendComment,
+    SendMessage,
+)
 from maxo.bot.methods.base import MaxoMethod
+from maxo.bot.methods.markers import QueryMarker
 from maxo.bot.warming_up import WarmingUpType, warming_up_retort
 from maxo.enums import (
     AttachmentRequestType,
@@ -22,19 +28,22 @@ from maxo.enums import (
     UpdateType,
 )
 from maxo.omit import Omitted, is_omitted
-from maxo.routing.mixins import message
 from maxo.types import (
     Attachments,
     AttachmentsRequests,
     AudioAttachment,
     AudioAttachmentRequest,
     BotAddedToChat,
+    BotAdminPermissionsChanged,
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
     CallbackButton,
     ChatTitleChanged,
     ClipboardButton,
+    CommentCreated,
+    CommentEdited,
+    CommentRemoved,
     ContactAttachment,
     ContactAttachmentRequest,
     DialogCleared,
@@ -58,6 +67,7 @@ from maxo.types import (
     MessageEdited,
     MessageRemoved,
     MonospacedMarkup,
+    NewCommentBody,
     NewMessageBody,
     OpenAppButton,
     PhotoAttachment,
@@ -72,6 +82,7 @@ from maxo.types import (
     StrikethroughMarkup,
     StrongMarkup,
     UnderlineMarkup,
+    UploadMediaResult,
     UserAddedToChat,
     UserMentionMarkup,
     UserRemovedFromChat,
@@ -79,6 +90,7 @@ from maxo.types import (
     VideoAttachmentRequest,
     base,
 )
+from maxo.types.facades import base as facades_base, comment, message
 
 if TYPE_CHECKING:
     from maxo import Bot
@@ -87,10 +99,18 @@ if TYPE_CHECKING:
 TAG_PROVIDERS = concat_provider(
     # ---> UpdateType <---
     has_tag_provider(BotAddedToChat, "update_type", UpdateType.BOT_ADDED),
+    has_tag_provider(
+        BotAdminPermissionsChanged,
+        "update_type",
+        UpdateType.BOT_ADMIN_PERMISSIONS_CHANGED,
+    ),
     has_tag_provider(BotRemovedFromChat, "update_type", UpdateType.BOT_REMOVED),
     has_tag_provider(BotStarted, "update_type", UpdateType.BOT_STARTED),
     has_tag_provider(BotStopped, "update_type", UpdateType.BOT_STOPPED),
     has_tag_provider(ChatTitleChanged, "update_type", UpdateType.CHAT_TITLE_CHANGED),
+    has_tag_provider(CommentCreated, "update_type", UpdateType.COMMENT_CREATED),
+    has_tag_provider(CommentEdited, "update_type", UpdateType.COMMENT_EDITED),
+    has_tag_provider(CommentRemoved, "update_type", UpdateType.COMMENT_REMOVED),
     has_tag_provider(DialogCleared, "update_type", UpdateType.DIALOG_CLEARED),
     has_tag_provider(DialogMuted, "update_type", UpdateType.DIALOG_MUTED),
     has_tag_provider(DialogRemoved, "update_type", UpdateType.DIALOG_REMOVED),
@@ -147,21 +167,35 @@ TAG_PROVIDERS = concat_provider(
 )
 
 
+TypesWithFormat: typing.TypeAlias = (
+    SendMessage
+    | EditMessage
+    | SendComment
+    | EditComment
+    | NewMessageBody
+    | NewCommentBody
+)
+TypesWithLinkPreview: typing.TypeAlias = AnswerOnCallback | SendMessage | SendComment
+TypesWithDefaults: typing.TypeAlias = TypesWithFormat | TypesWithLinkPreview
+
+
 def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
     if defaults is None:
         defaults = BotDefaults()
 
-    types_with_defaults = SendMessage | EditMessage | NewMessageBody
-
-    def _set_method_defaults(method: types_with_defaults) -> types_with_defaults:
-        if hasattr(method, "format") and is_omitted(method.format):
+    def _set_method_defaults(method: TypesWithDefaults) -> TypesWithDefaults:
+        if isinstance(method, TypesWithFormat) and is_omitted(method.format):
             method = dataclasses.replace(method, format=defaults.text_format)
-        if hasattr(method, "disable_link_preview") and is_omitted(
-            method.disable_link_preview,
+
+        disable_link_preview = defaults.disable_link_preview
+        if (
+            isinstance(method, TypesWithLinkPreview)
+            and is_omitted(method.disable_link_preview)
+            and not is_omitted(disable_link_preview)
         ):
             method = dataclasses.replace(
                 method,
-                disable_link_preview=defaults.disable_link_preview,  # type: ignore[arg-type]
+                disable_link_preview=disable_link_preview,
             )
         return method
 
@@ -174,6 +208,8 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
             return datetime.min.replace(tzinfo=UTC)
 
     exec_type_checking(base)
+    exec_type_checking(facades_base)
+    exec_type_checking(comment)
     exec_type_checking(message)
 
     extended = DEFAULT_RETORT.extend(
@@ -186,14 +222,15 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
             ),
             dumper(
                 for_marker(QueryMarker, P[bool]),
-                int,
+                lambda flag: "true" if flag else "false",
             ),
             dumper(
                 for_marker(QueryMarker, P[list[str]] | P[list[int]]),
                 lambda seq: ",".join(str(el) for el in seq),
             ),
+            dumper(P[datetime], lambda time: round(time.timestamp() * 1000)),
             dumper(
-                P[*typing.get_args(types_with_defaults)],
+                P[*typing.get_args(TypesWithDefaults)],
                 _set_method_defaults,
                 chain=Chain.FIRST,
             ),
@@ -203,8 +240,10 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
                 chain=Chain.FIRST,
             ),
             loader(P[datetime], _load_datetime),
+            name_mapping(UploadMediaResult, map={"file_id": "fileId"}),
         ],
     )
+
     return typing.cast(Retort, extended)
 
 

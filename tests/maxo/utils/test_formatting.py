@@ -1,12 +1,18 @@
+from typing import Any, get_args
+
 import pytest
 
 from maxo.enums import MarkupElementType
 from maxo.types import StrikethroughMarkup
 from maxo.types.emphasized_markup import EmphasizedMarkup
+from maxo.types.markup_element import MarkupElement
+from maxo.types.markup_elements import MarkupElements
 from maxo.types.strong_markup import StrongMarkup
 from maxo.types.underline_markup import UnderlineMarkup
 from maxo.types.user_mention_markup import UserMentionMarkup
 from maxo.utils.formatting import (
+    NODE_TYPES,
+    _MARKUP_MAP,
     BlockQuote,
     Bold,
     Heading,
@@ -219,16 +225,43 @@ class TestNode:
                 ),
             ],
         )
-        assert (
-            node.as_pretty_string(indent=True)
-            == r"""Strikethrough(
+        expected = r"""Strikethrough(
     Mention(
         'X',
         user_id=42,
         user_link=<Omitted>
     )
 )"""
-        )
+        assert node.as_pretty_string(indent=True) == expected
+
+    @pytest.mark.parametrize("markup_type", list(MarkupElementType))
+    def test_render_entity_is_concrete_markup(
+        self,
+        markup_type: MarkupElementType,
+    ) -> None:
+        params: dict[MarkupElementType, dict[str, Any]] = {
+            MarkupElementType.LINK: {"url": "https://example.com"},
+            MarkupElementType.USER_MENTION: {"user_id": 42},
+        }
+        node_params = params.get(markup_type, {})
+        node = NODE_TYPES[markup_type]("test", **node_params)
+
+        _, entities = node.render()
+
+        assert len(entities) == 1
+        markup_class = type(entities[0])
+        assert markup_class in get_args(MarkupElements)
+        assert markup_class(from_=0, length=4, **node_params).type == markup_type
+
+    def test_render_entity_unknown_type_falls_back_to_markup_element(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.delitem(_MARKUP_MAP, MarkupElementType.QUOTE)
+
+        _, entities = BlockQuote("test").render()
+
+        assert type(entities[0]) is MarkupElement
 
 
 class TestUtils:
@@ -491,3 +524,34 @@ class TestGetItemUnicode:
         """
         assert Bold(Italic("x"), "y").as_html() == "<b><i>x</i>y</b>"
         assert Bold(Italic("foo"), "bar").as_html() == "<b><i>foo</i>bar</b>"
+
+
+class TestGetItemNonTextNode:
+    def test_getitem_int_node_slice_across_boundary(self) -> None:
+        node = Text(123, "abc")
+        sliced = node[0:2]
+        text, _ = sliced.render()
+        assert text == "12"
+
+    def test_getitem_int_node_slice_tail(self) -> None:
+        node = Text(123, "abc")
+        sliced = node[1:3]
+        text, _ = sliced.render()
+        assert text == "23"
+
+    def test_getitem_int_node_slice_after(self) -> None:
+        node = Text(123, "abc")
+        sliced = node[3:6]
+        text, _ = sliced.render()
+        assert text == "abc"
+
+    def test_getitem_float_node(self) -> None:
+        node = Text(1.5, "x")
+        sliced = node[0:3]
+        text, _ = sliced.render()
+        assert text == "1.5"
+
+    def test_getitem_full_slice_keeps_original_node(self) -> None:
+        node = Text(123, "abc")
+        sliced = node[:]
+        assert sliced._body == (123, "abc")

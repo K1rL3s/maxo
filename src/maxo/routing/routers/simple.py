@@ -2,6 +2,7 @@ from collections.abc import MutableMapping, MutableSequence
 from functools import partial
 from typing import Any
 
+from maxo.errors.routing import RouterAlreadyIncludedError
 from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces import BaseRouter, Observer
 from maxo.routing.interfaces.router import RouterState
@@ -18,10 +19,14 @@ from maxo.routing.signals.startup import AfterStartup, BeforeStartup
 from maxo.routing.utils.get_default_name import get_router_default_name
 from maxo.types import (
     BotAddedToChat,
+    BotAdminPermissionsChanged,
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
     ChatTitleChanged,
+    CommentCreated,
+    CommentEdited,
+    CommentRemoved,
     DialogCleared,
     DialogMuted,
     DialogRemoved,
@@ -39,10 +44,16 @@ from maxo.types.error_event import ErrorEvent
 class Router(BaseRouter):
     def __init__(self, name: str | None = None) -> None:
         self.bot_added_to_chat = UpdateObserver[BotAddedToChat]()
+        self.bot_admin_permissions_changed = UpdateObserver[
+            BotAdminPermissionsChanged
+        ]()
         self.bot_removed_from_chat = UpdateObserver[BotRemovedFromChat]()
         self.bot_started = UpdateObserver[BotStarted]()
         self.bot_stopped = UpdateObserver[BotStopped]()
         self.chat_title_changed = UpdateObserver[ChatTitleChanged]()
+        self.comment_created = UpdateObserver[CommentCreated]()
+        self.comment_edited = UpdateObserver[CommentEdited]()
+        self.comment_removed = UpdateObserver[CommentRemoved]()
         self.dialog_cleared = UpdateObserver[DialogCleared]()
         self.dialog_muted = UpdateObserver[DialogMuted]()
         self.dialog_removed = UpdateObserver[DialogRemoved]()
@@ -74,10 +85,14 @@ class Router(BaseRouter):
 
         self._observers: dict[Any, Observer[Any, Any, Any]] = {
             BotAddedToChat: self.bot_added_to_chat,
+            BotAdminPermissionsChanged: self.bot_admin_permissions_changed,
             BotRemovedFromChat: self.bot_removed_from_chat,
             BotStarted: self.bot_started,
             BotStopped: self.bot_stopped,
             ChatTitleChanged: self.chat_title_changed,
+            CommentCreated: self.comment_created,
+            CommentEdited: self.comment_edited,
+            CommentRemoved: self.comment_removed,
             DialogCleared: self.dialog_cleared,
             DialogMuted: self.dialog_muted,
             DialogRemoved: self.dialog_removed,
@@ -100,6 +115,7 @@ class Router(BaseRouter):
 
         self._name = name
         self._children_routers: MutableSequence[BaseRouter] = []
+        self._parent_router: BaseRouter | None = None
         self._state: RouterState = EmptyRouterState()
 
     def __repr__(self) -> str:
@@ -127,7 +143,11 @@ class Router(BaseRouter):
 
     def include(self, *routers: BaseRouter) -> None:
         self.state.ensure_include()
-        self.children_routers.extend(routers)
+        for router in routers:
+            if router.parent_router is not None:
+                raise RouterAlreadyIncludedError(router, router.parent_router)
+            router.parent_router = self
+            self.children_routers.append(router)
 
     async def trigger_child(self, ctx: Ctx) -> Any:
         for child_router in self.children_routers:
@@ -175,3 +195,11 @@ class Router(BaseRouter):
 
             observer.middleware.inner.state = EmptyMiddlewareManagerState()
             observer.middleware.outer.state = EmptyMiddlewareManagerState()
+
+    @property
+    def parent_router(self) -> BaseRouter | None:
+        return self._parent_router
+
+    @parent_router.setter
+    def parent_router(self, value: BaseRouter | None) -> None:
+        self._parent_router = value

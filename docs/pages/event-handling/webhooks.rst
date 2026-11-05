@@ -2,7 +2,7 @@
 Webhooks
 ========
 
-Вебхуки (Webhooks) - это мощный способ получения обновлений от API Max.ru. Вместо того, чтобы постоянно опрашивать сервер (как в :doc:`long-polling`), вы предоставляете URL-адрес (endpoint), на который сервер будет сам отправлять новые события.
+Вебхуки (Webhooks) - способ получения обновлений от API Max.ru. Вместо того, чтобы постоянно опрашивать сервер (как в :doc:`long-polling`), вы предоставляете URL-адрес (endpoint), на который сервер будет сам отправлять новые события.
 
 Этот метод является **предпочтительным для продакшн-среды**, так как он более эффективен и позволяет строить масштабируемые решения.
 
@@ -29,6 +29,64 @@ Webhooks
 
 Все эти компоненты работают вместе, чтобы обеспечить надежный и гибкий прием обновлений.
 
+Очистка старых подписок
+-----------------------
+
+Перед регистрацией нового вебхука можно удалить старые подписки через
+``Bot.clear_subscriptions()``. Метод получает текущий список и удаляет все URL
+параллельно:
+
+.. code-block:: python
+
+    await bot.clear_subscriptions()
+
+Чтобы сохранить нужные подписки, передайте их URL как ``active_urls`` - одной
+строкой или набором строк. Одновременно может работать несколько подписок,
+например основной вебхук бота и сервис статистики. Сравнение точное, поэтому
+URL должны совпадать с тем, что вернул ``get_subscriptions``:
+
+.. code-block:: python
+
+    result = await bot.clear_subscriptions(
+        active_urls="https://example.com/webhook",
+    )
+    print(len(result.removed), len(result.kept))
+
+    result = await bot.clear_subscriptions(
+        active_urls=[
+            "https://example.com/webhook",
+            "https://stats.example.com/webhook",
+        ],
+    )
+
+Метод возвращает :class:`~maxo.types.ClearSubscriptionsResult` с двумя списками
+:class:`~maxo.types.Subscription`: ``removed`` - удаленные подписки, ``kept`` -
+сохраненные по ``active_urls``.
+
+Если подписок нет, метод завершится без дополнительных запросов.
+
+Ошибки при очистке
+------------------
+
+Все запросы на удаление доводятся до конца, даже если часть из них падает.
+После этого метод кидает ``ExceptionGroup`` с ``UnsubscribeError`` по каждой
+подписке, которую удалить не вышло: в ошибке есть ``url``, исходное исключение
+лежит в ``error`` и в ``__cause__``. Ни одна ошибка не теряется - если среди
+них окажется ``BaseException`` (например, отмена), она попадет в ту же группу
+как есть, а сама группа станет ``BaseExceptionGroup``.
+
+.. code-block:: python
+
+    from maxo.errors import UnsubscribeError
+
+    try:
+        await bot.clear_subscriptions()
+    except* UnsubscribeError as errors:
+        for error in errors.exceptions:
+            print(error.url, error.error)
+
+Ошибка самого ``get_subscriptions`` не оборачивается и летит наружу как есть.
+
 Примеры использования
 ---------------------
 
@@ -49,7 +107,7 @@ Webhooks
             from maxo.enums import TextFormat
             from maxo.types import MessageCreated
             from maxo.routing.utils import collect_used_updates
-            from maxo.transport.webhook.adapters.aiohttp.adapter import AiohttpWebAdapter
+            from maxo.transport.webhook.adapters.aiohttp import AiohttpWebAdapter
             from maxo.transport.webhook.engines import SimpleEngine, WebhookEngine
             from maxo.transport.webhook.routing import StaticRouting
             from maxo.transport.webhook.security import Security, StaticSecretToken
@@ -105,7 +163,7 @@ Webhooks
             from maxo.enums import TextFormat
             from maxo.types import MessageCreated
             from maxo.routing.utils import collect_used_updates
-            from maxo.transport.webhook.adapters.fastapi.adapter import FastApiWebAdapter
+            from maxo.transport.webhook.adapters.fastapi import FastApiWebAdapter
             from maxo.transport.webhook.engines import SimpleEngine, WebhookEngine
             from maxo.transport.webhook.routing import StaticRouting
             from maxo.transport.webhook.security import Security, StaticSecretToken

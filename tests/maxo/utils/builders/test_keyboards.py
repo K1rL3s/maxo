@@ -4,6 +4,7 @@ import pytest
 
 from maxo.types.callback_button import CallbackButton
 from maxo.types.link_button import LinkButton
+from maxo.types.open_app_button import OpenAppButton
 from maxo.utils.builders import KeyboardBuilder
 
 
@@ -176,10 +177,18 @@ def test_return_self(keyboard_builder: KeyboardBuilder) -> None:
     assert keyboard_builder.add_callback("1", "1") is keyboard_builder
     assert keyboard_builder.add_message("1") is keyboard_builder
     assert keyboard_builder.add_link("1", "1") is keyboard_builder
-    assert keyboard_builder.add_open_app("1") is keyboard_builder
+    assert keyboard_builder.add_open_app("1", web_app="1") is keyboard_builder
     assert keyboard_builder.add_request_geo_location("1") is keyboard_builder
     assert keyboard_builder.add_request_contact("1") is keyboard_builder
     assert keyboard_builder.add_clipboard("1", "1") is keyboard_builder
 
     another_builder = KeyboardBuilder()
     assert keyboard_builder.attach(another_builder) is keyboard_builder
+
+
+def test_add_open_app_keeps_positional_order(keyboard_builder: KeyboardBuilder) -> None:
+    keyboard_builder.add_open_app("App", 5, "start", web_app="bot")
+
+    assert keyboard_builder.build() == [
+        [OpenAppButton(text="App", contact_id=5, payload="start", web_app="bot")],
+    ]

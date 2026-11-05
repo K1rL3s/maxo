@@ -1,3 +1,5 @@
+import asyncio
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 import pytest
@@ -10,6 +12,11 @@ from maxo.dialogs import (
     Window,
     setup_dialogs,
 )
+from maxo.dialogs.api.entities import AccessSettings
+from maxo.dialogs.api.exceptions import StackAccessDeniedError, UnknownIntent
+from maxo.dialogs.api.internal import FakeUser
+from maxo.dialogs.api.protocols import BaseDialogManager
+from maxo.dialogs.manager.bg_manager import BgManager, BgManagerFactoryImpl
 from maxo.dialogs.test_tools import BotClient, MockMessageManager
 from maxo.dialogs.test_tools.keyboard import InlineButtonTextLocator
 from maxo.dialogs.test_tools.memory_storage import JsonMemoryStorage
@@ -19,6 +26,8 @@ from maxo.enums import ChatType
 from maxo.fsm.state import State, StatesGroup
 from maxo.routing.filters import CommandStart
 from maxo.routing.signals import AfterStartup, BeforeStartup
+from maxo.types import ErrorEvent
+from tests.constants import NOW
 
 from .conftest import wait_for_messages
 
@@ -129,3 +138,106 @@ async def test_start_in_foreground_for_another_user_via_bg(
     )
     second_message = message_manager.one_message()
     assert second_message.body.text == "stub"
+
+
+SHARED_STACK_ID = "shared"
+
+BG_ACTIONS: dict[str, Callable[[BaseDialogManager], Awaitable[None]]] = {
+    "start": lambda manager: manager.start(MainSG.start),
+    "update": lambda manager: manager.update({"key": "value"}),
+    "switch_to": lambda manager: manager.switch_to(MainSG.start),
+    "done": lambda manager: manager.done(),
+}
+
+
+async def start_stack_for_first_user(
+    dp: Dispatcher,
+    client: BotClient,
+    message_manager: MockMessageManager,
+) -> BgManagerFactoryImpl:
+    await dp.feed_signal(BeforeStartup(), client.bot)
+    await dp.feed_signal(AfterStartup(), client.bot)
+
+    bg_factory = BgManagerFactoryImpl(dp)
+    owner = bg_factory.bg(client.bot, user_id=1, chat_id=-1, stack_id=SHARED_STACK_ID)
+    await owner.start(MainSG.start, access_settings=AccessSettings(user_ids=[1]))
+    await wait_for_messages(message_manager)
+    message_manager.reset_history()
+    return bg_factory
+
+
+@pytest.mark.parametrize("action", BG_ACTIONS)
+async def test_bg_action_skipped_for_forbidden_stack(
+    dp: Dispatcher,
+    client: BotClient,
+    message_manager: MockMessageManager,
+    action: str,
+) -> None:
+    errors: list[Exception] = []
+
+    async def on_error(event: ErrorEvent[Any, Any]) -> None:
+        errors.append(event.error)
+
+    dp.exception.handler(on_error)
+    bg_factory = await start_stack_for_first_user(dp, client, message_manager)
+
+    stranger = bg_factory.bg(
+        client.bot,
+        user_id=2,
+        chat_id=-1,
+        stack_id=SHARED_STACK_ID,
+    )
+    await BG_ACTIONS[action](stranger)
+    owner = bg_factory.bg(client.bot, user_id=1, chat_id=-1, stack_id=SHARED_STACK_ID)
+    await owner.update()
+    await wait_for_messages(message_manager)
+
+    assert errors == []
+    assert message_manager.one_message().body.text == "stub"
+
+
+async def test_fg_raises_for_forbidden_stack(
+    dp: Dispatcher,
+    client: BotClient,
+    message_manager: MockMessageManager,
+) -> None:
+    bg_factory = await start_stack_for_first_user(dp, client, message_manager)
+
+    stranger = bg_factory.bg(
+        client.bot,
+        user_id=2,
+        chat_id=-1,
+        stack_id=SHARED_STACK_ID,
+    )
+    with pytest.raises(StackAccessDeniedError):
+        async with asyncio.timeout(1), stranger.fg():
+            pass
+
+
+async def test_fg_raises_for_unknown_intent(
+    dp: Dispatcher,
+    client: BotClient,
+    message_manager: MockMessageManager,
+) -> None:
+    await start_stack_for_first_user(dp, client, message_manager)
+    stale = BgManager(
+        user=FakeUser(user_id=1, is_bot=False, first_name="", last_activity_time=NOW),
+        chat_id=-1,
+        bot=client.bot,
+        dp=dp,
+        intent_id="missing",
+        stack_id=SHARED_STACK_ID,
+        load=False,
+        chat_type=ChatType.CHAT,
+    )
+
+    async def enter_fg() -> None:
+        async with stale.fg():
+            pass
+
+    task = asyncio.create_task(enter_fg())
+    await asyncio.wait([task], timeout=1)
+
+    assert task.done(), "fg() завис"
+    with pytest.raises(UnknownIntent):
+        task.result()

@@ -123,6 +123,30 @@ SPEC: dict[str, Any] = {
                     },
                 },
             },
+            "User": {
+                "required": ["user_id", "last_activity_time", "name"],
+                "properties": {
+                    "user_id": {
+                        "type": "integer",
+                        "format": "int64",
+                    },
+                    "last_activity_time": {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Время последней активности",
+                    },
+                    "name": {
+                        "type": "string",
+                        "nullable": True,
+                        "description": "Устаревшее поле",
+                    },
+                },
+            },
+            "MessageBody": {"properties": {}},
+            "CommentMessageBody": {"properties": {}},
+            "LinkedMessage": {"properties": {}},
+            "CommentLinkedMessage": {"properties": {}},
+            "CommentMessage": {"properties": {}},
             "Attachment": {
                 "description": "Вложение",
                 "required": ["type"],
@@ -170,6 +194,9 @@ SPEC: dict[str, Any] = {
                     "propertyName": "update_type",
                     "mapping": {
                         "message_created": "#/components/schemas/MessageCreatedUpdate",
+                        "comment_created": "#/components/schemas/CommentCreatedUpdate",
+                        "comment_edited": "#/components/schemas/CommentEditedUpdate",
+                        "comment_removed": "#/components/schemas/CommentRemovedUpdate",
                     },
                 },
             },
@@ -182,6 +209,41 @@ SPEC: dict[str, Any] = {
                         "properties": {
                             "message": {"$ref": "#/components/schemas/Message"},
                             "user_locale": {"type": "string", "nullable": True},
+                        },
+                    },
+                ],
+            },
+            "CommentCreatedUpdate": {
+                "allOf": [
+                    {"$ref": "#/components/schemas/Update"},
+                    {
+                        "required": ["message"],
+                        "properties": {
+                            "message": {"$ref": "#/components/schemas/Message"},
+                        },
+                    },
+                ],
+            },
+            "CommentEditedUpdate": {
+                "allOf": [
+                    {"$ref": "#/components/schemas/Update"},
+                    {
+                        "required": ["message"],
+                        "properties": {
+                            "message": {"$ref": "#/components/schemas/Message"},
+                        },
+                    },
+                ],
+            },
+            "CommentRemovedUpdate": {
+                "allOf": [
+                    {"$ref": "#/components/schemas/Update"},
+                    {
+                        "required": ["chat_id", "message_id", "user_id"],
+                        "properties": {
+                            "chat_id": {"type": "integer", "format": "int64"},
+                            "message_id": {"type": "string"},
+                            "user_id": {"type": "integer", "format": "int64"},
                         },
                     },
                 ],

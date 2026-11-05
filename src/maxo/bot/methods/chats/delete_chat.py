@@ -1,8 +1,11 @@
+from typing_extensions import deprecated
+
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.methods.markers import Path
 from maxo.types.simple_query_result import SimpleQueryResult
 
 
+@deprecated("DELETE /chats/{chatId} нет в API MAX", stacklevel=2)
 class DeleteChat(MaxoMethod[SimpleQueryResult]):
     """
     Удаление группового чата

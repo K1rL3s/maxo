@@ -25,7 +25,7 @@ class DialogAction(Enum):
 
 
 class DialogUpdateEvent(BaseUpdate):
-    user: User
+    user: User | None
     recipient: Recipient
     action: DialogAction
     data: Any

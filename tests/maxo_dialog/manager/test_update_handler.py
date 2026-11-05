@@ -213,3 +213,25 @@ async def test_handle_dialog_start_event_with_none_show_mode(
     await handle_aiogd_update(event, mock_dialog_manager)
 
     assert mock_dialog_manager.show_mode == ShowMode.AUTO
+
+
+async def test_handle_dialog_fg_event_skips_cancelled_fg(
+    mock_dialog_manager: MagicMock,
+) -> None:
+    entered: Future[DialogManager] = Future()
+    entered.cancel()
+    event = DialogFgEvent(
+        user=MagicMock(),
+        recipient=MagicMock(),
+        action=DialogAction.FG,
+        data=None,
+        intent_id=None,
+        stack_id=None,
+        bot=MagicMock(),
+        entered=entered,
+        exited=Future(),
+    )
+
+    await handle_aiogd_update(event, mock_dialog_manager)
+
+    assert entered.cancelled()

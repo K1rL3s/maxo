@@ -1,8 +1,7 @@
 import importlib
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-
-from diagrams import Node
+from typing import TYPE_CHECKING
 
 from maxo.dialogs.dialog import Dialog
 from maxo.dialogs.setup import collect_dialogs
@@ -10,11 +9,14 @@ from maxo.dialogs.widgets.kbd import Back, Cancel, Group, Next, Start, SwitchTo
 from maxo.fsm import State
 from maxo.routing.interfaces import BaseRouter
 
+if TYPE_CHECKING:
+    from diagrams import Node
+
 ICON_PATH = (Path(__file__).parent / "icon.png").as_posix()
 
 
 def _widget_edges(
-    nodes: dict[State, Node],
+    nodes: dict[State, "Node"],
     dialog: Dialog,
     starts: list[tuple[State, State]],
     current_state: State,
@@ -61,7 +63,7 @@ def _widget_edges(
 
 
 def _walk_keyboard(
-    nodes: dict[State, Node],
+    nodes: dict[State, "Node"],
     dialog: Dialog,
     starts: list[tuple[State, State]],
     current_state: State,

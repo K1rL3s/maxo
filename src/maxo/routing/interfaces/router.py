@@ -59,3 +59,13 @@ class BaseRouter(Protocol):
     @abstractmethod
     async def trigger(self, ctx: Ctx) -> Any:
         raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def parent_router(self) -> "BaseRouter | None":
+        raise NotImplementedError
+
+    @parent_router.setter
+    @abstractmethod
+    def parent_router(self, value: "BaseRouter | None") -> None:
+        raise NotImplementedError

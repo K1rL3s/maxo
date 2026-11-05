@@ -4,6 +4,7 @@ import pytest
 
 from maxo.enums import ChatType
 from maxo.errors import AttributeIsEmptyError
+from maxo.omit import Omitted
 from maxo.types import (
     Message,
     MessageBody,
@@ -86,6 +87,7 @@ class TestMessageCallbackWithoutMessage:
             callback_id="cb",
             notification="ok",
             message=None,
+            disable_link_preview=Omitted(),
         )
 
 

@@ -31,3 +31,11 @@ class CycleRoutersError(MaxoError):
         details += "╰─<─╯"
 
         return details
+
+
+class RouterAlreadyIncludedError(MaxoError):
+    router: "BaseRouter"
+    parent_router: "BaseRouter"
+
+    def __str__(self) -> str:
+        return f"{self.router} is already included into {self.parent_router}"

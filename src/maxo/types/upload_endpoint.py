@@ -15,7 +15,7 @@ class UploadEndpoint(MaxoType):
     url: str
     """URL для загрузки медиафайла. Срок жизни ссылки не ограничен"""
 
-    token: Omittable[str] = Omitted()
+    token: Omittable[str | None] = Omitted()
     """Токен для отправки медиафайла во вложении к сообщению с помощью [POST /messages](https://dev.max.ru/docs-api/methods/POST/messages) или [PUT /messages](https://dev.max.ru/docs-api/methods/PUT/messages)"""
 
     @property

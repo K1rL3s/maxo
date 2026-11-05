@@ -65,17 +65,22 @@ class StorageProxy:
         key = self._stack_key(fixed_stack_id)
         await self.lock(key)
         data = await self.storage.get_data(key)
-        access_settings = self._default_access_settings(stack_id)
         if not data:
-            return Stack(_id=fixed_stack_id, access_settings=access_settings)
+            return Stack(
+                _id=fixed_stack_id,
+                access_settings=self._default_access_settings(stack_id),
+            )
 
         if "last_attachments" in data:
             data["last_attachments"] = _retort.load(
                 data["last_attachments"],
                 list[Attachments],
             )
+        data["access_settings"] = self._parse_access_settings(
+            data.pop("access_settings", None),
+        ) or self._default_access_settings(stack_id)
 
-        return Stack(access_settings=access_settings, **data)
+        return Stack(**data)
 
     async def save_context(self, context: Context | None) -> None:
         if not context:
@@ -119,6 +124,9 @@ class StorageProxy:
                 "last_attachments": _retort.dump(
                     stack.last_attachments,
                     list[Attachments],
+                ),
+                "access_settings": self._dump_access_settings(
+                    stack.access_settings,
                 ),
             }
             await self.storage.set_data(

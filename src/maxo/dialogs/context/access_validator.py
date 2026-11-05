@@ -28,7 +28,12 @@ class DefaultAccessValidator(StackAccessValidator):
             return True
         if access_settings.user_ids:
             user = ctx.get(EVENT_FROM_USER_KEY)
+            if user is not None:
+                user_id = user.id
+            else:
+                # Апдейт может нести только user_id, без объекта пользователя
+                user_id = update_context.user_id if update_context is not None else None
             # Пост в канале без user - не пройдёт user_ids, но не AttributeError
-            if user is None or user.id not in access_settings.user_ids:
+            if user_id not in access_settings.user_ids:
                 return False
         return True

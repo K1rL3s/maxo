@@ -6,7 +6,7 @@ from maxo.types.base import MaxoType
 class ContactAttachmentRequestPayload(MaxoType):
     """
     Args:
-        contact_id: ID контакта, если он зарегистирован в MAX
+        contact_id: ID контакта, если он зарегистрирован в MAX
         name: Имя контакта
         vcf_info: Полная информация о контакте в формате VCF
         vcf_phone: Телефон контакта в формате VCF
@@ -16,7 +16,7 @@ class ContactAttachmentRequestPayload(MaxoType):
     """Имя контакта"""
 
     contact_id: Omittable[int | None] = Omitted()
-    """ID контакта, если он зарегистирован в MAX"""
+    """ID контакта, если он зарегистрирован в MAX"""
     vcf_info: Omittable[str | None] = Omitted()
     """Полная информация о контакте в формате VCF"""
     vcf_phone: Omittable[str | None] = Omitted()

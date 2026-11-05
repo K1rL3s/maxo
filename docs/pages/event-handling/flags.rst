@@ -200,8 +200,14 @@
             if isinstance(child_router, Router):
                 yield from collect_commands(child_router)
 
-Полученный список можно передать в
-``bot.edit_my_commands(commands=...)``.
+``edit_my_commands`` принимает не строки, а объекты ``BotCommand``:
+
+.. code-block:: python
+
+    from maxo.types import BotCommand
+
+    names = sorted(set(collect_commands(dp)))
+    await bot.edit_my_commands(commands=[BotCommand(name=name) for name in names])
 
 Флаги в самом maxo
 ------------------

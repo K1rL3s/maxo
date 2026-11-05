@@ -13,11 +13,13 @@ from maxo.dialogs import (
 from maxo.dialogs.test_tools import BotClient, MockMessageManager
 from maxo.dialogs.test_tools.memory_storage import JsonMemoryStorage
 from maxo.dialogs.widgets.text import Format
+from maxo.enums import ChatAdminPermission, ChatType
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.state import State, StatesGroup
 from maxo.fsm.storages.memory import SimpleEventIsolation
 from maxo.routing.filters import CommandStart
 from maxo.routing.signals import AfterStartup, BeforeStartup
+from maxo.types import BotAdminPermissionsChanged
 
 
 class MainSG(StatesGroup):
@@ -92,3 +94,50 @@ async def test_my_chat_member_update(
     await client.bot_added_to_chat()
     first_message = message_manager.one_message()
     assert first_message.body.text == "stub"
+
+
+async def test_bot_admin_permissions_changed(
+    dp: Dispatcher,
+    client: BotClient,
+    message_manager: MockMessageManager,
+) -> None:
+    dp.bot_admin_permissions_changed.handler(start)
+
+    await dp.feed_signal(BeforeStartup(), client.bot)
+    await dp.feed_signal(AfterStartup(), client.bot)
+
+    await client.bot_admin_permissions_changed()
+    first_message = message_manager.one_message()
+    assert first_message.body.text == "stub"
+
+
+async def test_bot_admin_permissions_changed_flags(
+    dp: Dispatcher,
+    client: BotClient,
+) -> None:
+    events: list[BotAdminPermissionsChanged] = []
+
+    async def collect(
+        event: BotAdminPermissionsChanged,
+        dialog_manager: DialogManager,
+    ) -> None:
+        events.append(event)
+
+    dp.bot_admin_permissions_changed.handler(collect)
+
+    await dp.feed_signal(BeforeStartup(), client.bot)
+    await dp.feed_signal(AfterStartup(), client.bot)
+
+    channel = BotClient(dp, chat_id=-10, chat_type=ChatType.CHANNEL, bot=client.bot)
+    chat = BotClient(dp, chat_id=-20, chat_type=ChatType.CHAT, bot=client.bot)
+    await channel.bot_admin_permissions_changed(
+        permissions=[ChatAdminPermission.WRITE],
+        is_admin=False,
+    )
+    await chat.bot_admin_permissions_changed()
+
+    assert [event.is_channel for event in events] == [True, False]
+    assert events[0].permissions == [ChatAdminPermission.WRITE]
+    assert events[0].is_admin is False
+    assert events[1].is_admin is True
+    assert events[1].chat_id == -20

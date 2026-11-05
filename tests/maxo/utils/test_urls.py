@@ -1,6 +1,15 @@
+import re
+
+import pytest
+
 from maxo.enums import MessageLinkType
 from maxo.types import LinkedMessage, MessageBody
-from maxo.utils.link import id_to_message_url, url_to_message_id
+from maxo.utils.link import (
+    create_max_http_link,
+    create_max_link,
+    id_to_message_url,
+    url_to_message_id,
+)
 
 
 def test_id_to_message_url() -> None:
@@ -11,6 +20,46 @@ def test_id_to_message_url() -> None:
 def test_url_to_message_id() -> None:
     sequence_id = url_to_message_id("https://max.ru/c/-71196681472709/AZ1T1H0eHrQ")
     assert sequence_id == 116341337478799028
+
+
+def test_url_to_message_id_ignores_query_and_fragment() -> None:
+    sequence_id = url_to_message_id(
+        "https://max.ru/c/-71196681472709/AZ1T1H0eHrQ?x=1#frag",
+    )
+    assert sequence_id == 116341337478799028
+
+
+def test_url_to_message_id_ignores_trailing_slash() -> None:
+    sequence_id = url_to_message_id("https://max.ru/c/-71196681472709/AZ1T1H0eHrQ/")
+    assert sequence_id == 116341337478799028
+
+
+def test_url_to_message_id_rejects_garbage_characters() -> None:
+    url = "https://max.ru/c/1/!!!!!!!!"
+    expected = f"^{re.escape(f'Invalid message URL: {url!r}')}$"
+    with pytest.raises(ValueError, match=expected):
+        url_to_message_id(url)
+
+
+def test_url_to_message_id_rejects_wrong_decoded_length() -> None:
+    url = "https://max.ru/c/1/AAAA?x=1"
+    expected = f"^{re.escape(f'Invalid message URL: {url!r}')}$"
+    with pytest.raises(ValueError, match=expected):
+        url_to_message_id(url)
+
+
+def test_url_to_message_id_rejects_malformed_netloc() -> None:
+    url = "https://[::1"
+    expected = f"^{re.escape(f'Invalid message URL: {url!r}')}$"
+    with pytest.raises(ValueError, match=expected):
+        url_to_message_id(url)
+
+
+def test_url_to_message_id_rejects_non_ascii_segment() -> None:
+    url = "https://max.ru/c/1/\xe9"
+    expected = f"^{re.escape(f'Invalid message URL: {url!r}')}$"
+    with pytest.raises(ValueError, match=expected):
+        url_to_message_id(url)
 
 
 def test_linked_message_generated_url() -> None:
@@ -30,3 +79,30 @@ def test_linked_message_generated_url_no_chat_id() -> None:
         type=MessageLinkType.FORWARD,
     )
     assert linked_message.generated_url is None
+
+
+def test_create_max_link() -> None:
+    assert create_max_link("somepage") == "max://somepage"
+
+
+def test_create_max_link_with_query() -> None:
+    assert create_max_link("somepage", foo="bar") == "max://somepage?foo=bar"
+
+
+def test_create_max_link_with_fragment() -> None:
+    assert create_max_link("somepage", fragment_="frag") == "max://somepage#frag"
+
+
+def test_create_max_link_with_query_and_fragment() -> None:
+    link = create_max_link("somepage", fragment_="frag", foo="bar")
+    assert link == "max://somepage?foo=bar#frag"
+
+
+def test_create_max_http_link_with_fragment() -> None:
+    link = create_max_http_link("somepage", fragment_="frag")
+    assert link == "https://max.ru/somepage#frag"
+
+
+def test_create_max_http_link_with_query_and_fragment() -> None:
+    link = create_max_http_link("somepage", fragment_="frag", foo="bar")
+    assert link == "https://max.ru/somepage?foo=bar#frag"

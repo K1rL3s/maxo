@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 
 import pytest
+from unihttp_openapi_generator.ir.document import IRDocument
+from unihttp_openapi_generator.refs import RefResolver
 
 from butcher import overrides
 from butcher.profile import (
@@ -15,7 +17,7 @@ from butcher.profile import (
     ProfileError,
     build_profile,
 )
-from butcher.spec import load
+from butcher.spec import load, mark_deprecated_parameters
 from butcher.tests.conftest import SPEC
 
 
@@ -32,9 +34,7 @@ def _method(document: MaxoDocument, name: str) -> Method:
 
 
 def _build_document(tmp_path: Path, spec: object) -> MaxoDocument:
-    path = tmp_path / "spec.json"
-    path.write_text(json.dumps(spec), encoding="utf-8")
-    return build_profile(load(str(path)))
+    return build_profile(_load_ir(tmp_path, spec))
 
 
 def test_inheritance_keeps_only_own_fields(document: MaxoDocument) -> None:
@@ -45,6 +45,28 @@ def test_inheritance_keeps_only_own_fields(document: MaxoDocument) -> None:
     subtype = _model(document, "PhotoAttachment")
     assert subtype.base == "Attachment"
     assert {f.name for f in subtype.fields} == {"type", "payload"}
+
+
+def test_comment_models_override_swagger_bases(document: MaxoDocument) -> None:
+    assert _model(document, "CommentMessage").base == "Message"
+    assert _model(document, "CommentMessageBody").base == "MessageBody"
+    assert _model(document, "CommentLinkedMessage").base == "LinkedMessage"
+    assert _model(document, "CommentMessage").mixins == ("CommentMethodsFacade",)
+
+
+def test_comment_updates_get_facade_mixins(document: MaxoDocument) -> None:
+    assert _model(document, "CommentCreated").mixins == ("CommentMethodsFacade",)
+    assert _model(document, "CommentEdited").mixins == ("CommentMethodsFacade",)
+    assert _model(document, "CommentRemoved").mixins == ("ChatMethodsFacade",)
+
+
+def test_comment_updates_use_comment_message(document: MaxoDocument) -> None:
+    for name in ("CommentCreated", "CommentEdited"):
+        message = next(
+            field for field in _model(document, name).fields if field.name == "message"
+        )
+
+        assert message.annotation == "CommentMessage"
 
 
 def test_discriminator_becomes_enum(document: MaxoDocument) -> None:
@@ -92,6 +114,28 @@ def test_int64_timestamp_becomes_datetime(document: MaxoDocument) -> None:
     assert fields["seq"].annotation == "int"
 
 
+def test_user_last_activity_time_is_omittable(document: MaxoDocument) -> None:
+    field = next(
+        field
+        for field in _model(document, "User").fields
+        if field.name == "last_activity_time"
+    )
+
+    assert field.annotation == "datetime"
+    assert field.omittable
+    assert field.unsafe
+
+
+def test_user_name_is_omittable(document: MaxoDocument) -> None:
+    field = next(
+        field for field in _model(document, "User").fields if field.name == "name"
+    )
+
+    assert field.annotation == "str | None"
+    assert field.omittable
+    assert field.unsafe
+
+
 def test_base_reference_is_replaced_by_union_alias(document: MaxoDocument) -> None:
     attachments = next(
         f for f in _model(document, "Message").fields if f.name == "attachments"
@@ -107,7 +151,12 @@ def test_union_files_are_built_from_discriminator(document: MaxoDocument) -> Non
     assert names["MediaAttachments"] == ("PhotoAttachment", "VideoAttachment")
     assert names["Attachments"] == ("MediaAttachments",)
     updates = next(item for item in document.unions if item.module == "updates")
-    assert updates.aliases[0].members == ("MessageCreated",)
+    assert updates.aliases[0].members == (
+        "CommentCreated",
+        "CommentEdited",
+        "CommentRemoved",
+        "MessageCreated",
+    )
     assert updates.aliases[0].annotate
 
 
@@ -204,13 +253,18 @@ def test_model_field_override(
     monkeypatch.setitem(
         overrides.MODEL_FIELD_OVERRIDES,
         ("Message", "url"),
-        overrides.FieldOverride(omittable=True, comment="type: ignore[assignment]"),
+        overrides.FieldOverride(
+            ref="CommentMessage",
+            omittable=True,
+            comment="type: ignore[assignment]",
+        ),
     )
     path = tmp_path / "spec.json"
     path.write_text(json.dumps(SPEC), encoding="utf-8")
     document = build_profile(load(str(path)))
     url = next(f for f in _model(document, "Message").fields if f.name == "url")
     assert url.omittable
+    assert url.annotation == "CommentMessage | None"
     assert url.comment == "type: ignore[assignment]"
 
 
@@ -230,6 +284,23 @@ def test_method_field_type_override(
     document = build_profile(load(str(path)))
     text = next(f for f in _method(document, "SendMessage").fields if f.name == "text")
     assert text.annotation == "list[int]"
+
+
+def test_method_field_description_override(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setitem(
+        overrides.METHOD_FIELD_DESCRIPTIONS,
+        ("SendMessage", "text"),
+        "Описание только для отправки",
+    )
+    path = tmp_path / "spec.json"
+    path.write_text(json.dumps(SPEC), encoding="utf-8")
+    document = build_profile(load(str(path)))
+    text = next(f for f in _method(document, "SendMessage").fields if f.name == "text")
+
+    assert text.description == "Описание только для отправки"
 
 
 def test_unhandled_alias_is_rejected(tmp_path: Path) -> None:
@@ -346,3 +417,168 @@ def test_model_field_override_uses_explicit_inherited_field(tmp_path: Path) -> N
     assert fields["text"].omittable
     assert fields["text"].comment == "type: ignore[assignment]"
     assert fields["text"].unsafe
+
+
+def test_field_without_description_takes_inline_alias_description(
+    tmp_path: Path,
+) -> None:
+    spec = copy.deepcopy(SPEC)
+    spec["components"]["schemas"]["bigint"]["description"] = "Описание алиаса"
+    bigint = {"$ref": "#/components/schemas/bigint"}
+    spec["components"]["schemas"]["Message"]["properties"]["big"] = bigint
+    spec["components"]["schemas"]["Message"]["properties"]["nullable_big"] = {
+        "allOf": [bigint],
+        "nullable": True,
+    }
+    operation = spec["paths"]["/messages"]["post"]
+    operation["parameters"].append({"name": "to", "in": "query", "schema": bigint})
+    body = operation["requestBody"]["content"]["application/json"]["schema"]
+    body["properties"]["big"] = bigint
+
+    document = _build_document(tmp_path, spec)
+    fields = {f.name: f for f in _model(document, "Message").fields}
+    params = {f.name: f for f in _method(document, "SendMessage").fields}
+
+    assert fields["big"].description == "Описание алиаса"
+    assert fields["nullable_big"].description == "Описание алиаса"
+    assert params["to"].description == "Описание алиаса"
+    assert params["big"].description == "Описание алиаса"
+    assert params["from_"].description == "Время, начиная с которого нужны сообщения"
+
+
+def test_nullable_timestamp_keeps_none(tmp_path: Path) -> None:
+    spec = copy.deepcopy(SPEC)
+    spec["components"]["schemas"]["Message"]["properties"]["value"] = {
+        "type": "integer",
+        "format": "int64",
+        "nullable": True,
+        "description": "Unix timestamp в миллисекундах",
+    }
+
+    document = _build_document(tmp_path, spec)
+    value = next(
+        item for item in _model(document, "Message").fields if item.name == "value"
+    )
+
+    assert value.annotation == "datetime | None"
+
+
+def test_deprecated_method_override(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setitem(overrides.DEPRECATED_METHODS, "GetChat", "Метод удалён")
+
+    document = _build_document(tmp_path, SPEC)
+
+    assert _method(document, "GetChat").deprecated == "Метод удалён"
+    assert _method(document, "SendMessage").deprecated is None
+
+
+def test_deprecated_parameter_gets_note_in_description() -> None:
+    spec = {
+        "paths": {
+            "/messages": {
+                "parameters": [],
+                "get": {
+                    "parameters": [
+                        {"name": "from", "description": "Время", "deprecated": True},
+                        {"name": "to", "deprecated": True},
+                        {"name": "count", "description": "Количество"},
+                    ],
+                },
+            },
+        },
+    }
+
+    mark_deprecated_parameters(spec, RefResolver(spec))
+
+    params = spec["paths"]["/messages"]["get"]["parameters"]
+    assert params[0]["description"] == "Время\n\n_Устаревший параметр_"
+    assert params[1]["description"] == "_Устаревший параметр_"
+    assert params[2]["description"] == "Количество"
+
+
+def _parameter_descriptions(
+    document: IRDocument,
+    operation_id: str,
+) -> dict[str, str | None]:
+    operation = next(
+        item for item in document.operations if item.operation_id == operation_id
+    )
+    return {param.wire_name: param.description for param in operation.parameters}
+
+
+def _load_ir(tmp_path: Path, spec: object) -> IRDocument:
+    path = tmp_path / "spec.json"
+    path.write_text(json.dumps(spec), encoding="utf-8")
+    return load(str(path))
+
+
+def _query_parameter(name: str, description: str, **extra: object) -> dict[str, object]:
+    return {
+        "name": name,
+        "in": "query",
+        "description": description,
+        "schema": {"type": "integer"},
+        **extra,
+    }
+
+
+def _operation(operation_id: str, parameters: list[object]) -> dict[str, object]:
+    return {
+        "operationId": operation_id,
+        "parameters": parameters,
+        "responses": {"200": {"description": "OK"}},
+    }
+
+
+def test_deprecated_path_level_parameter_applies_to_operations(
+    tmp_path: Path,
+) -> None:
+    spec = {
+        "openapi": "3.0.0",
+        "info": {"title": "test", "version": "1"},
+        "paths": {
+            "/messages": {
+                "parameters": [_query_parameter("from", "Время", deprecated=True)],
+                "get": _operation("getMessages", []),
+                "delete": _operation(
+                    "deleteMessages",
+                    [_query_parameter("from", "Время")],
+                ),
+            },
+        },
+    }
+
+    document = _load_ir(tmp_path, spec)
+
+    assert _parameter_descriptions(document, "getMessages") == {
+        "from": "Время\n\n_Устаревший параметр_",
+    }
+    assert _parameter_descriptions(document, "deleteMessages") == {"from": "Время"}
+
+
+def test_deprecated_ref_parameter_is_resolved_and_marked_once(
+    tmp_path: Path,
+) -> None:
+    ref = {"$ref": "#/components/parameters/From"}
+    spec = {
+        "openapi": "3.0.0",
+        "info": {"title": "test", "version": "1"},
+        "components": {
+            "parameters": {"From": _query_parameter("from", "Время", deprecated=True)},
+        },
+        "paths": {
+            "/messages": {
+                "get": _operation("getMessages", [ref]),
+                "delete": _operation("deleteMessages", [ref]),
+            },
+        },
+    }
+
+    document = _load_ir(tmp_path, spec)
+
+    expected = {"from": "Время\n\n_Устаревший параметр_"}
+    assert _parameter_descriptions(document, "getMessages") == expected
+    assert _parameter_descriptions(document, "deleteMessages") == expected

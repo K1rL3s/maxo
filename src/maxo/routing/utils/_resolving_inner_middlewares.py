@@ -3,6 +3,7 @@ from collections.abc import MutableMapping, MutableSequence
 from typing import Any
 
 from maxo.routing.interfaces.middleware import BaseMiddleware
+from maxo.routing.interfaces.observer import Observer
 from maxo.routing.interfaces.router import BaseRouter
 from maxo.types.base import BaseUpdate
 
@@ -31,9 +32,9 @@ def _resolving_middlewares(
     router: BaseRouter,
     middlewares: MutableMapping[type[BaseUpdate], MutableSequence[BaseMiddleware[Any]]],
 ) -> None:
+    own_inners: dict[Observer[Any, Any, Any], tuple[BaseMiddleware[Any], ...]] = {}
     for update_tp, observer in router.observers.items():
-        new_inners = (*middlewares[update_tp],)
-        current_inners = (*observer.middleware.inner.middlewares,)
-
-        observer.middleware.inner.middlewares.extend(new_inners)
-        middlewares[update_tp].extend(current_inners)
+        if observer not in own_inners:
+            own_inners[observer] = (*observer.middleware.inner.middlewares,)
+            observer.middleware.inner.middlewares[:0] = middlewares[update_tp]
+        middlewares[update_tp].extend(own_inners[observer])

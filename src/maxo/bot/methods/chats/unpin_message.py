@@ -18,7 +18,7 @@ class UnpinMessage(MaxoMethod[SimpleQueryResult]):
     ```
 
     Args:
-        chat_id: ID группового чата или канала, в котором нужно открепить сообщение или пост
+        chat_id: ID группового чата или канала, в котором нужно открепить сообщение или пост. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)
 
     Источник: https://dev.max.ru/docs-api/methods/DELETE/chats/-chatId-/pin
     """
@@ -27,4 +27,4 @@ class UnpinMessage(MaxoMethod[SimpleQueryResult]):
     __method__ = "delete"
 
     chat_id: Path[int]
-    """ID группового чата или канала, в котором нужно открепить сообщение или пост"""
+    """ID группового чата или канала, в котором нужно открепить сообщение или пост. Как получить ID - [на странице «Получение ID чата или канала»](https://dev.max.ru/docs-api/use-cases/getting-chat-id)"""

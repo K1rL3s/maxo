@@ -1,13 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Self, dataclass_transform
+from typing import Any, ClassVar, dataclass_transform
 
 from maxo.enums.update_type import UpdateType
-from maxo.errors import AttributeIsEmptyError
-from maxo.omit import is_defined
-
-if TYPE_CHECKING:
-    from maxo import Bot
+from maxo.types.facades.base import BaseMethodsFacade
 
 
 @dataclass_transform(
@@ -38,34 +34,19 @@ class BaseMaxoType(metaclass=_MaxoTypeMetaClass):
     pass
 
 
-class BotMixin:
-    __slots__ = ("_bot",)
-
-    def __init__(self, bot: Optional["Bot"] = None) -> None:
-        self._bot = bot
-
-    @property
-    def bot(self) -> "Bot":
-        if is_defined(self._bot):
-            return self._bot
-
-        raise AttributeIsEmptyError(
-            obj=self,
-            attr="_bot",
-        )
-
-    @bot.setter
-    def bot(self, bot: Optional["Bot"]) -> None:
-        self._bot = bot
-
-    def as_(self, bot: Optional["Bot"]) -> Self:
-        self.bot = bot
-        return self
-
-
-class MaxoType(BaseMaxoType, BotMixin):
+# TODO: `MaxoType` наследует `BaseMethodsFacade` только ради слота `_bot` -
+# `bot`/`as_` не нужны большинству DTO (`User`, `Chat`, ...). Убрать это
+# наследование можно, сузив `_load_bot` в `serialization` до фасад-типов.
+#
+# Отдельная, большая проблема: `*MethodsFacade` подмешаны прямо в типы апдейтов
+# (`class BotStarted(MaxUpdate, ChatMethodsFacade)`), а те под метаклассом,
+# который конфликтует с `ABCMeta`. Поэтому фасады не могут быть ABC - отсюда
+# декоративные `@abstractmethod`, раздвоённые `if TYPE_CHECKING`-объявления полей
+# и `type: ignore[misc]` на апдейтах. Это лечится только выносом фасада из базы
+# типа (отдельный объект `update.facade` или `Protocol`), не строкой ниже.
+class MaxoType(BaseMaxoType, BaseMethodsFacade):
     def __post_init__(self) -> None:
-        BotMixin.__init__(self)
+        BaseMethodsFacade.__init__(self)
 
 
 class BaseUpdate(MaxoType):
@@ -77,8 +58,8 @@ class MaxUpdate(BaseUpdate):
     Базовый класс для всех апдейтов из Макса.
 
     У всех апдейтов есть тип (`type`, `update_type`) и время (`timestamp`).
-    Фасад (`facade`) объединяет методы для работы с апдейтом,
-    например, отправить сообщение или ответить на колбэк.
+    Методы для работы с апдейтом (например, отправить сообщение или ответить
+    на колбэк) подмешаны в сам апдейт через `*MethodsFacade`.
     """
 
     type: ClassVar[UpdateType]
