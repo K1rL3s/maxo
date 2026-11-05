@@ -154,7 +154,8 @@ payload входящих и отправленных видео и аудио, �
 
 - `src/maxo/serialization.py` - `TAG_PROVIDERS`, регистрация полиморфных типов
   в retort. Union-алиасы генерируются, а эта таблица - нет.
-- `src/maxo/bot/warming_up.py` - кортежи `_types` и `_methods`.
+- `src/maxo/bot/warming_up.py` - кортеж методов `_METHOD_ROOTS`, полноту
+  проверяет `tests/maxo/bot/test_warming_up.py`.
 - `src/maxo/serialization.py` - `TypesWithFormat` и `TypesWithLinkPreview`,
   методы, которым подставляются `BotDefaults`.
 - `src/maxo/types/facades/attachments.py` - `MEDIA_ATTACHMENT_FACTORIES`,
