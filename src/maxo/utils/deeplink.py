@@ -47,6 +47,13 @@ if TYPE_CHECKING:
 BAD_PATTERN = re.compile(r"[^a-zA-Z0-9-_]")
 
 PAYLOAD_MAX_LEN = 128
+STARTAPP_PAYLOAD_MAX_LEN = 512
+
+PAYLOAD_MAX_LENGTHS: dict[Literal["start", "startgroup", "startapp"], int] = {
+    "start": PAYLOAD_MAX_LEN,
+    "startgroup": PAYLOAD_MAX_LEN,
+    "startapp": STARTAPP_PAYLOAD_MAX_LEN,
+}
 
 
 def create_start_link(
@@ -98,8 +105,9 @@ def create_deep_link(
             "Pass `encode=True` or encode payload manually.",
         )
 
-    if len(payload) > PAYLOAD_MAX_LEN:
-        raise ValueError(f"Payload must be up to {PAYLOAD_MAX_LEN} characters long.")
+    payload_max_len = PAYLOAD_MAX_LENGTHS[link_type]
+    if len(payload) > payload_max_len:
+        raise ValueError(f"Payload must be up to {payload_max_len} characters long.")
 
     if not app_name:
         deep_link = create_max_http_link(username, **{cast(str, link_type): payload})
