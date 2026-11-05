@@ -14,8 +14,12 @@ from .fixtures import DummyBoundRequest, DummyRequest
         ("my-secret", "my-secret", True),
         ("my-secret", "wrong-secret", False),
         ("my-secret", None, False),
+        ("my-secret", "секрет-секрет", False),
+        ("my-secret", "my-secret\n", False),
+        ("my-secret", "my-secret\udcff", False),
+        ("my-secret", "x" * 1000, False),
     ],
-    ids=["match", "mismatch", "none"],
+    ids=["match", "mismatch", "none", "non-ascii", "newline", "surrogate", "too-long"],
 )
 async def test_security_secret_token(
     secret_token: str,

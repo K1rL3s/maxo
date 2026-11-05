@@ -44,9 +44,9 @@ class StaticSecretToken(SecretToken):
         bound_request: BoundRequest[Any],
     ) -> bool:
         incoming = bound_request.headers.get(self.secret_header)
-        if incoming is None:
+        if incoming is None or not SECRET_TOKEN_PATTERN.fullmatch(incoming):
             return False
-        return compare_digest(incoming, self._token)
+        return compare_digest(incoming.encode("ascii"), self._token.encode("ascii"))
 
     def secret_token(self, bot: Bot) -> str:
         return self._token
