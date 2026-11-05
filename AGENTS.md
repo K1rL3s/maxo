@@ -108,6 +108,8 @@ Long polling / webhook -> Dispatcher -> Router tree
 - `Dispatcher` - корневой `Router`; `Router.include(...)` задаёт порядок обхода.
   Первый обработавший update останавливает поиск.
 - Фильтры бывают на observer'е (для всех его handler'ов) и на handler'е.
+- Фильтр пишет в копию `ctx`: записи попадают в общий `ctx`, только если
+  фильтр прошёл (`_run_isolated` в `routing/filters/logic.py`).
 - `UNHANDLED` - ни один handler не подошёл, update идёт в дочерние роутеры.
   `SkipHandler` - пропустить текущий handler и искать дальше в том же
   observer'е, к дочерним роутерам update не идёт.
