@@ -106,6 +106,9 @@ API отвечает 400 `Field 'webApp' cannot be null`. Тип оставле�
 - `GetUpdates` - объявление класса с `slots=False` и метод `make_response`
   (терпимость к незагружаемым апдейтам).
 - `UploadMedia.validate_response` - в ручном файле, генерацией не затирается.
+- `AddMembers.validate_response` - пустой метод (с импортом
+  `HTTPResponse`): MAX отвечает на этот метод частичным результатом при
+  `success: false`, а `MaxoMethod.validate_response` иначе поднял бы ошибку.
 
 ## Докстринги, испорченные спекой
 

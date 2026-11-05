@@ -44,9 +44,7 @@ from unihttp.method import BaseMethod
 from unihttp.middlewares import AsyncMiddleware
 from unihttp.serialize import RequestDumper, ResponseLoader
 
-from maxo import loggers
 from maxo.__meta__ import __version__
-from maxo.bot.methods import AddMembers  # type: ignore[deprecated]
 from maxo.bot.middlewares import AttachmentNotReadyRetryMiddleware, AuthMiddleware
 from maxo.bot.upload import UploadConfig, resumable_upload
 from maxo.errors.api import raise_api_error
@@ -153,28 +151,6 @@ class MaxApiClient(AiohttpAsyncClient):
 
     def handle_error(self, response: HTTPResponse, method: BaseMethod[Any]) -> Never:
         raise_api_error(response.status_code, response.data)
-
-    def validate_response(
-        self,
-        response: HTTPResponse,
-        method: BaseMethod[Any],
-    ) -> None:
-        if (
-            response.ok
-            and isinstance(response.data, dict)
-            and (
-                response.data.get("error_code")
-                or response.data.get("success", None) is False
-            )
-        ):
-            if isinstance(method, AddMembers):
-                # AddMembers возвращает частичный результат при success=false.
-                return
-            loggers.bot_session.warning(
-                "Patch the status code from %d to 400 due to an error on the MAX API",
-                response.status_code,
-            )
-            response.status_code = 400
 
     async def download(
         self,
