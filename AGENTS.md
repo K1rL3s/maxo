@@ -151,8 +151,9 @@ Long polling / webhook -> Dispatcher -> Router tree
   или с `error_code` в 400. Исключение - `AddMembers`: он отдаёт частичный результат, и это
   поведение не меняй без отдельного теста и документации.
 - Заголовки `X-Max-Client-Name`, `X-Max-Client-Version` и
-  `X-Max-Client-Runtime` повторяют телеметрию официального Go-клиента
-  (max-messenger/max-bot-api-client-go#173); в документации MAX их нет. Как
+  `X-Max-Client-Runtime` повторяют телеметрию официальных Go- и TS-клиентов
+  (max-messenger/max-bot-api-client-go#173,
+  max-messenger/max-bot-api-client-ts#321); в документации MAX их нет. Как
   и `Authorization` с `User-Agent`, они не перезаписывают заголовки, заданные
   в пользовательской `ClientSession`.
 - `Bot.download` принимает URL или `AttachmentPayload` и пишет в файл либо
