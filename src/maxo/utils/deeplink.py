@@ -49,9 +49,8 @@ BAD_PATTERN = re.compile(r"[^a-zA-Z0-9-_]")
 PAYLOAD_MAX_LEN = 128
 STARTAPP_PAYLOAD_MAX_LEN = 512
 
-PAYLOAD_MAX_LENGTHS: dict[Literal["start", "startgroup", "startapp"], int] = {
+PAYLOAD_MAX_LENGTHS: dict[Literal["start", "startapp"], int] = {
     "start": PAYLOAD_MAX_LEN,
-    "startgroup": PAYLOAD_MAX_LEN,
     "startapp": STARTAPP_PAYLOAD_MAX_LEN,
 }
 
@@ -75,14 +74,12 @@ def create_startapp_link(
     bot: "Bot",
     payload: str,
     encode: bool = False,
-    app_name: str | None = None,
     encoder: Callable[[bytes], bytes] | None = None,
 ) -> str:
     return create_deep_link(
         username=cast(str, bot.state.info.username),
         link_type="startapp",
         payload=payload,
-        app_name=app_name,
         encode=encode,
         encoder=encoder,
     )
@@ -90,9 +87,8 @@ def create_startapp_link(
 
 def create_deep_link(
     username: str,
-    link_type: Literal["start", "startgroup", "startapp"],
+    link_type: Literal["start", "startapp"],
     payload: str,
-    app_name: str | None = None,
     encode: bool = False,
     encoder: Callable[[bytes], bytes] | None = None,
 ) -> str:
@@ -109,13 +105,4 @@ def create_deep_link(
     if len(payload) > payload_max_len:
         raise ValueError(f"Payload must be up to {payload_max_len} characters long.")
 
-    if not app_name:
-        deep_link = create_max_http_link(username, **{cast(str, link_type): payload})
-    else:
-        deep_link = create_max_http_link(
-            username,
-            app_name,
-            **{cast(str, link_type): payload},
-        )
-
-    return deep_link
+    return create_max_http_link(username, **{cast(str, link_type): payload})

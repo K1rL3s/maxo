@@ -58,9 +58,8 @@ def test_create_startapp_link() -> None:
     link = deeplink.create_startapp_link(
         bot=cast("Bot", bot),
         payload="test",
-        app_name="testapp",
     )
-    assert link == "https://max.ru/testbot/testapp?startapp=test"
+    assert link == "https://max.ru/testbot?startapp=test"
 
 
 def test_create_startapp_link_long_payload() -> None:
@@ -93,17 +92,5 @@ def test_create_start_link_keeps_short_limit() -> None:
         deeplink.create_deep_link(
             username="testbot",
             link_type="start",
-            payload="a" * 129,
-        )
-
-
-def test_create_startgroup_link_keeps_short_limit() -> None:
-    with pytest.raises(
-        ValueError,
-        match="Payload must be up to 128 characters long",
-    ):
-        deeplink.create_deep_link(
-            username="testbot",
-            link_type="startgroup",
             payload="a" * 129,
         )
