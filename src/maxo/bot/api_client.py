@@ -28,6 +28,7 @@ OR OTHER DEALINGS IN THE SOFTWARE.
 import io
 import json
 import pathlib
+import platform
 import ssl
 from collections.abc import AsyncGenerator, Callable
 from typing import Any, BinaryIO, Never
@@ -55,6 +56,11 @@ from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import InputFile
 
 _CA_CERT_PATH = (pathlib.Path(__file__).parent / "russiantrustedca.pem").resolve()
+_CLIENT_HEADERS = {
+    "X-Max-Client-Name": "maxo",
+    "X-Max-Client-Version": __version__,
+    "X-Max-Client-Runtime": f"python{platform.python_version()}",
+}
 
 
 class MaxApiClient(AiohttpAsyncClient):
@@ -272,3 +278,5 @@ def _apply_auth_headers(session: ClientSession, token: str) -> None:
         session.headers[AUTHORIZATION] = token
     if USER_AGENT not in session.headers:
         session.headers[USER_AGENT] = f"{SERVER_SOFTWARE} maxo/{__version__}"
+    for name, value in _CLIENT_HEADERS.items():
+        session.headers.setdefault(name, value)
