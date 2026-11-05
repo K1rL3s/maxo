@@ -1,4 +1,3 @@
-import ast
 import asyncio
 import difflib
 import json
@@ -9,8 +8,9 @@ import re
 from collections.abc import Awaitable
 from dataclasses import dataclass
 from hashlib import sha256
+from html.parser import HTMLParser
 from pathlib import Path
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import urlsplit
 
 from aiohttp import ClientSession, ClientTimeout
 
@@ -36,9 +36,35 @@ except ModuleNotFoundError:
 else:
     AIOGRAM_INSTALLED = True
 
-DOCS_URL = "https://dev.max.ru/docs-api"
-DIFF_FILE_NAME = "max-bot-api-openapi.diff"
-STATE_FILE_NAME = "max-bot-api-openapi.json"
+SITE_URL = "https://dev.max.ru"
+DOCS_URL = f"{SITE_URL}/docs-api"
+INDEX_URL = f"{SITE_URL}/index.json"
+DIFF_FILE_NAME = "max-bot-api-docs.diff"
+STATE_FILE_NAME = "max-bot-api-docs.json"
+PAGE_PATH_RE = re.compile(r"^/docs-api/(?:methods/[A-Z]+/.+|objects/[^/]+)/$")
+MIN_PAGES = 40
+PAGE_DELAY = 1.0
+LINE_BREAK_TAGS = frozenset(
+    {
+        "blockquote",
+        "br",
+        "div",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "li",
+        "ol",
+        "p",
+        "pre",
+        "table",
+        "tr",
+        "ul",
+    },
+)
+SKIPPED_TAGS = frozenset({"script", "style", "svg"})
 VALUE_PREVIEW_LIMIT = 160
 MAX_RETRY_DELAY = 86_400
 MAX_BACKOFF_EXPONENT = 16
@@ -48,10 +74,6 @@ REQUEST_HEADERS = {
         "Chrome/140.0.0.0 Safari/537.36"
     ),
 }
-JSON_PARSE_RE = re.compile(r"JSON\.parse\('((?:\\.|[^'\\])*)'\)")
-CHUNK_RE = re.compile(
-    r"(?:src|href)=[\"']([^\"']*/_next/static/chunks/[^\"']+\.js)[\"']",
-)
 logger = logging.getLogger(__name__)
 
 type JsonValue = None | bool | int | float | str | list[JsonValue] | JsonObject
@@ -101,21 +123,6 @@ def load_settings() -> Settings:
         state_path=state_path,
         pending_path=state_path.with_name(f".{state_path.name}.delivery.json"),
     )
-
-
-def extract_openapi_json(javascript: str) -> JsonObject | None:
-    for match in JSON_PARSE_RE.finditer(javascript):
-        try:
-            decoded: object = ast.literal_eval(f"'{match.group(1)}'")
-            if not isinstance(decoded, str):
-                continue
-            value: JsonValue = json.loads(decoded)
-        except (json.JSONDecodeError, SyntaxError, ValueError):
-            continue
-
-        if isinstance(value, dict) and "openapi" in value:
-            return value
-    return None
 
 
 def serialize_json(value: JsonValue) -> str:
@@ -224,37 +231,6 @@ def save_delivered(path: Path, digest: str, delivered: set[str]) -> None:
     save_state(path, serialize_json(data))
 
 
-async def fetch_openapi(session: ClientSession) -> JsonObject:
-    async with session.get(DOCS_URL) as response:
-        response.raise_for_status()
-        html = await response.text()
-
-    embedded = extract_openapi_json(html)
-    if embedded is not None:
-        return embedded
-
-    chunk_urls = dict.fromkeys(
-        urljoin(DOCS_URL, path) for path in CHUNK_RE.findall(html)
-    )
-    for url in chunk_urls:
-        parsed_url = urlsplit(url)
-        if parsed_url.scheme != "https" or parsed_url.hostname != "dev.max.ru":
-            logger.warning("Пропущен чанк с недоверенного URL: %s", url)
-            continue
-        async with session.get(url) as response:
-            response.raise_for_status()
-            javascript = await response.text()
-
-        if '"openapi"' not in javascript:
-            continue
-        spec = extract_openapi_json(javascript)
-        if spec is not None:
-            return spec
-        logger.warning("Не удалось извлечь OpenAPI из чанка %s", url)
-
-    raise RuntimeError("OpenAPI-спецификация не найдена")
-
-
 async def publish_max(token: str, chat_id: int, diff: str, message: str) -> None:
     async with MaxBot(token) as bot:
         attachments = await AttachmentsFacade(bot).build_attachments(
@@ -328,11 +304,11 @@ async def publish_update(
 
 
 async def check_for_update(session: ClientSession, settings: Settings) -> None:
-    current = serialize_json(await fetch_openapi(session))
+    current = serialize_json(await fetch_site_pages(session))
     if not settings.state_path.exists():
         save_state(settings.state_path, current)
         settings.pending_path.unlink(missing_ok=True)
-        logger.info("Начальное состояние OpenAPI сохранено")
+        logger.info("Начальное состояние документации сохранено")
         return
 
     previous = settings.state_path.read_text(encoding="utf-8")
@@ -343,13 +319,14 @@ async def check_for_update(session: ClientSession, settings: Settings) -> None:
     diff, added, removed, changed = build_diff(previous, current)
     logger.info("%s", diff)
     message = (
-        f"OpenAPI Max Bot API обновлён\nИзменения: +{added} / -{removed} / ~{changed}"
+        f"Документация Max Bot API обновлена\n"
+        f"Страницы: +{added} / -{removed} / ~{changed}"
     )
     digest = sha256(current.encode(), usedforsecurity=False).hexdigest()
     await publish_update(settings, diff, message, digest)
     save_state(settings.state_path, current)
     settings.pending_path.unlink(missing_ok=True)
-    logger.info("OpenAPI обновлён: +%d / -%d / ~%d", added, removed, changed)
+    logger.info("Документация обновлена: +%d / -%d / ~%d", added, removed, changed)
 
 
 async def main() -> None:
@@ -367,7 +344,7 @@ async def main() -> None:
                 raise
             except Exception:
                 failures += 1
-                logger.exception("Не удалось проверить OpenAPI")
+                logger.exception("Не удалось проверить документацию")
                 delay = max(
                     settings.interval,
                     min(
@@ -381,6 +358,82 @@ async def main() -> None:
                 failures = 0
                 delay = settings.interval
             await asyncio.sleep(delay)
+
+
+class MainTextParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.found_main = False
+        self.in_main = False
+        self.skipped = 0
+        self.parts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "main":
+            self.found_main = self.in_main = True
+        elif tag in SKIPPED_TAGS:
+            self.skipped += 1
+        if tag in LINE_BREAK_TAGS:
+            self.parts.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "main":
+            self.in_main = False
+        elif tag in SKIPPED_TAGS and self.skipped:
+            self.skipped -= 1
+        if tag in LINE_BREAK_TAGS:
+            self.parts.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if self.in_main and not self.skipped:
+            self.parts.append(data)
+
+    def lines(self) -> list[str]:
+        text = "".join(self.parts)
+        return [" ".join(line.split()) for line in text.splitlines() if line.strip()]
+
+
+def extract_page_text(html: str) -> list[str]:
+    parser = MainTextParser()
+    parser.feed(html)
+    parser.close()
+    if not parser.found_main:
+        raise RuntimeError("На странице нет <main>")
+    return parser.lines()
+
+
+def select_page_paths(index: JsonValue) -> list[str]:
+    if not isinstance(index, list):
+        raise TypeError("index.json не список страниц")
+    paths: set[str] = set()
+    for item in index:
+        permalink = item.get("permalink") if isinstance(item, dict) else None
+        if isinstance(permalink, str):
+            paths.add(urlsplit(permalink).path)
+    pages = sorted(path for path in paths if PAGE_PATH_RE.match(path))
+    if len(pages) < MIN_PAGES:
+        raise RuntimeError(
+            f"В index.json {len(pages)} страниц методов и объектов, "
+            f"ожидалось не меньше {MIN_PAGES}",
+        )
+    return pages
+
+
+async def fetch_text(session: ClientSession, url: str) -> str:
+    async with session.get(url) as response:
+        response.raise_for_status()
+        return await response.text()
+
+
+async def fetch_site_pages(session: ClientSession) -> JsonObject:
+    index: JsonValue = json.loads(await fetch_text(session, INDEX_URL))
+    pages: JsonObject = {}
+    for path in select_page_paths(index):
+        await asyncio.sleep(PAGE_DELAY)
+        lines: list[JsonValue] = []
+        lines.extend(extract_page_text(await fetch_text(session, SITE_URL + path)))
+        pages[path] = lines
+    return pages
 
 
 if __name__ == "__main__":
