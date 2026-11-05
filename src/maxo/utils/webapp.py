@@ -57,7 +57,7 @@ class WebAppUser(MaxoType):
 class WebAppInitData(MaxoType):
     ip: str | None = None
     query_id: str | None = None
-    chat: WebAppChat
+    chat: WebAppChat | None = None
     user: WebAppUser
     auth_date: str | None = None
     hash: str
@@ -66,7 +66,9 @@ class WebAppInitData(MaxoType):
 
 def check_webapp_signature(token: str, init_data: str) -> bool:
     try:
-        parsed_data = dict(parse_qsl(init_data, strict_parsing=True))
+        parsed_data = dict(
+            parse_qsl(init_data, keep_blank_values=True, strict_parsing=True),
+        )
     except ValueError:
         # Init data is not a valid query string
         return False
@@ -99,13 +101,16 @@ def parse_webapp_init_data(
     *,
     loads: Callable[..., Any] = json.loads,
 ) -> WebAppInitData:
-    result = dict(parse_qsl(init_data))
+    result = dict(parse_qsl(init_data, keep_blank_values=True))
     try:
-        chat_data = _loads(loads, result.pop("chat"))
+        chat = None
+        if "chat" in result:
+            chat_data = _loads(loads, result.pop("chat"))
+            chat = WebAppChat(**_known_fields(WebAppChat, chat_data))
         user_data = _loads(loads, result.pop("user"))
         return WebAppInitData(
             **_known_fields(WebAppInitData, result),
-            chat=WebAppChat(**_known_fields(WebAppChat, chat_data)),
+            chat=chat,
             user=WebAppUser(**_known_fields(WebAppUser, user_data)),
         )
     except (AttributeError, KeyError, TypeError) as e:
