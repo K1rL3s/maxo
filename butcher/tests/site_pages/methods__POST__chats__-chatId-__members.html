@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="ru">
+<body>
+<main><p class="md-source-link">
+    <a href="/docs-api/methods/POST/chats/-chatId-/members/index.md" target="_blank" rel="noopener" title="Открыть как Markdown">Показать в MD-формате
+    </a>
+  </p>
+
+    <h1 id="page-title">Добавление участников в групповой чат</h1>
+  <blockquote class="accent"  style="background: var(--callout-info)" >
+  Для корректной работы ваших чат-ботов и мини-приложений направляйте запросы на домен <code>platform-api2.max.ru</code> вместо <code>platform-api.max.ru</code>. Также убедитесь, что добавили сертификат Минцифры в список доверенных
+</blockquote>
+
+<blockquote class="accent"  style="background: var(--callout-info)" >
+  <strong>С 9 сентября 2026</strong> ограничена работа метода <code>POST /chats/{chatId}/members</code>
+</blockquote>
+
+<p class="request"><span class="POST">POST</span><code>/chats/{chatId}/members</code></p>
+
+<p>Добавляет участников в групповой чат</p>
+<p>Бот, чей токен <code>access_token</code> используется для авторизации, должен быть администратором этого чата с соответствующим правом <code>add_remove_members</code>. Чтобы получить информацию о правах бота, используйте <a
+  href="/docs-api/methods/GET/chats/-chatId-/members/admins/"><code>GET /chats/-chatId-/members/admins</code></a>. Подробнее о правах - в описании <a
+  href="/docs-api/methods/POST/chats/-chatId-/members/admins/#%d0%94%d0%be%d1%81%d1%82%d1%83%d0%bf%d0%bd%d1%8b%d0%b5%20%d0%bf%d1%80%d0%b0%d0%b2%d0%b0%20%d0%b0%d0%b4%d0%bc%d0%b8%d0%bd%d0%b8%d1%81%d1%82%d1%80%d0%b0%d1%82%d0%be%d1%80%d0%b0"><code>POST /chats/{chatId}/members/admins</code></a></p>
+<blockquote>
+<p>Добавить подписчиков в канал с помощью этого метода нельзя</p>
+</blockquote>
+<p><strong>Пример запроса</strong>:
+<div class="code-card" data-code-card>
+  <div class="code-card__header">
+    <div class="code-card__lang">BASH</div>
+    <button
+      class="code-card__copy"
+      type="button"
+      data-code-copy
+      aria-label="Скопировать код"
+    >
+      <span class="code-card__copy-text">Скопировать</span>
+
+    </button>
+  </div>
+  <div class="code-card__body"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-BASH" data-lang="BASH"><span class="line"><span class="cl">curl -X POST <span class="s2">&#34;https://platform-api2.max.ru/chats/{chatId}/members&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Authorization: {access_token}&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{
+</span></span></span><span class="line"><span class="cl"><span class="s1">  &#34;user_ids&#34;: [&#34;{user_id_1}&#34;, &#34;{user_id_2}&#34;]
+</span></span></span><span class="line"><span class="cl"><span class="s1">}&#39;</span></span></span></code></pre></div></div></div>
+</p>
+<h2 id="Авторизация" class="linked-heading">
+  <a class="linked-heading__link" href="#%d0%90%d0%b2%d1%82%d0%be%d1%80%d0%b8%d0%b7%d0%b0%d1%86%d0%b8%d1%8f" aria-label="Ссылка на раздел">
+
+  </a>
+  <span class="linked-heading__text"><span>Авторизация</span></span>
+</h2></p>
+<div class="api-params">
+
+</p>
+<div class="api-param">
+  <div class="api-param__row">
+    <div class="api-param__left">
+      <span class="api-param__name">access_token</span>
+      <div class="api-param__meta"><span class="api-param__type">apiKey</span></div>
+    </div>
+    <div class="api-param__desc"><blockquote>
+<p>Передача токена через query-параметры больше не поддерживается - используйте заголовок <code>Authorization: &lt;token&gt;</code></p>
+</blockquote>
+<p>Токен для вызова HTTP-запросов присваивается при создании бота - его можно найти на <a
+  href="https://business.max.ru/self" rel="external">платформе</a> в разделе <strong>Чат-боты</strong>. Выберите необходимого бота и нажмите <strong>⋮</strong> → <strong>Настройки</strong> → значок копирования справа от поля с токеном</p>
+<p>Если вы верифицировали профиль и создали бота в <a
+  href="https://max.ru/business_bot?startapp" rel="external">мини-приложении «MAX для бизнеса»</a>, получить токен можно там же или в <a
+  href="https://max.ru/business_bot" rel="external">боте «MAX для бизнеса»</a> с помощью команды <strong>Получить токен</strong></p>
+<p>Рекомендуем не разглашать токен посторонним, чтобы они не получили доступ к управлению ботом.
+Токен может быть отозван за нарушение Правил платформы</p>
+
+    </div>
+  </div>
+</div>
+<p>
+
+</div>
+<p>
+
+<h2 id="Параметры" class="linked-heading">
+  <a class="linked-heading__link" href="#%d0%9f%d0%b0%d1%80%d0%b0%d0%bc%d0%b5%d1%82%d1%80%d1%8b" aria-label="Ссылка на раздел">
+
+  </a>
+  <span class="linked-heading__text"><span>Параметры</span></span>
+</h2></p>
+<div class="api-params">
+
+</p>
+<div class="api-param">
+  <div class="api-param__row">
+    <div class="api-param__left">
+      <span class="api-param__name">chatId</span>
+      <div class="api-param__meta"><span class="api-param__type">integer &lt;int64&gt;</span><span class="api-param__pattern">\-?\d&#43;</span></div>
+    </div>
+    <div class="api-param__desc">ID группового чата. Как получить ID - <a
+  href="/docs-api/use-cases/getting-chat-id/">на странице «Получение ID чата или канала»</a>
+    </div>
+  </div>
+</div>
+<p>
+
+</div>
+<p>
+
+<h2 id="Тело запроса" class="linked-heading">
+  <a class="linked-heading__link" href="#%d0%a2%d0%b5%d0%bb%d0%be%20%d0%b7%d0%b0%d0%bf%d1%80%d0%be%d1%81%d0%b0" aria-label="Ссылка на раздел">
+
+  </a>
+  <span class="linked-heading__text"><span>Тело запроса</span></span>
+</h2></p>
+<div class="api-params">
+
+</p>
+<div class="api-param">
+  <div class="api-param__row">
+    <div class="api-param__left">
+      <span class="api-param__name">user_ids</span>
+      <div class="api-param__meta"><span class="api-param__type">integer []</span></div>
+    </div>
+    <div class="api-param__desc">Массив ID пользователей, которых вы хотите добавить в групповой чат. В одном запросе можно передать максимум 100 идентификаторов
+    </div>
+  </div>
+</div>
+<p>
+
+</div>
+<p>
+
+<h2 id="Результат" class="linked-heading">
+  <a class="linked-heading__link" href="#%d0%a0%d0%b5%d0%b7%d1%83%d0%bb%d1%8c%d1%82%d0%b0%d1%82" aria-label="Ссылка на раздел">
+
+  </a>
+  <span class="linked-heading__text"><span>Результат</span></span>
+</h2></p>
+<div class="api-params">
+
+</p>
+<div class="api-param">
+  <div class="api-param__row">
+    <div class="api-param__left">
+      <span class="api-param__name">success</span>
+      <div class="api-param__meta"><span class="api-param__type">boolean</span></div>
+    </div>
+    <div class="api-param__desc"><code>true</code>, если запрос был успешным, <code>false</code> - в противном случае
+    </div>
+  </div>
+</div>
+<p>
+
+</p>
+<div class="api-param">
+  <div class="api-param__row">
+    <div class="api-param__left">
+      <span class="api-param__name">message</span>
+      <div class="api-param__meta"><span class="api-param__type">string</span><span class="api-param__optional">optional</span></div>
+    </div>
+    <div class="api-param__desc">Сообщение об ошибке
+    </div>
+  </div>
+</div>
+<p>
+
+</p>
+<div class="api-param">
+  <div class="api-param__row">
+    <div class="api-param__left">
+      <span class="api-param__name">failed_user_ids</span>
+      <div class="api-param__meta"><span class="api-param__type">integer[] Nullable</span><span class="api-param__optional">optional</span></div>
+    </div>
+    <div class="api-param__desc">ID пользователей, которых не удалось добавить в групповой чат
+    </div>
+  </div>
+</div>
+<p>
+
+</p>
+<div class="api-param api-param--collapsible">
+  <div class="api-param__row">
+    <div class="api-param__left">
+      <span class="api-param__name">failed_user_details<button class="api-param__toggle" type="button" data-api-param-toggle aria-label="Развернуть вложенные поля"></button></span>
+      <div class="api-param__meta"><span class="api-param__type">FailedUserDetails[] Nullable</span><span class="api-param__optional">optional</span></div>
+    </div>
+    <div class="api-param__desc">Подробное объяснение, почему пользователь не был добавлен в групповой чат
+    </div>
+  </div>
+</div>
+<p>
+
+</p>
+<div class="api-param-children">
+
+</p>
+<div class="api-param">
+  <div class="api-param__row">
+    <div class="api-param__left">
+      <span class="api-param__name">error_code</span>
+      <div class="api-param__meta"><span class="api-param__type">string</span></div>
+    </div>
+    <div class="api-param__desc"><p>Код ошибки</p>
+<p>Возможные значения:</p>
+<ul>
+<li>
+<p><code>add.participant.privacy</code> - ошибки конфиденциальности при добавлении пользователей</p>
+</li>
+<li>
+<p><code>add.participant.not.found</code> - пользователи не найдены</p>
+</li>
+</ul>
+
+    </div>
+  </div>
+</div>
+<p>
+
+</p>
+<div class="api-param">
+  <div class="api-param__row">
+    <div class="api-param__left">
+      <span class="api-param__name">user_ids</span>
+      <div class="api-param__meta"><span class="api-param__type">integer[]</span></div>
+    </div>
+    <div class="api-param__desc">ID пользователей с данной ошибкой
+    </div>
+  </div>
+</div>
+<p>
+
+</div><p>
+
+</div>
+<p>
+
+<h2 id="Коды ответов" class="linked-heading">
+  <a class="linked-heading__link" href="#%d0%9a%d0%be%d0%b4%d1%8b%20%d0%be%d1%82%d0%b2%d0%b5%d1%82%d0%be%d0%b2" aria-label="Ссылка на раздел">
+
+  </a>
+  <span class="linked-heading__text"><span>Коды ответов</span></span>
+</h2><div class="table">
+<table><thead><tr><th>Код</th><th>Описание</th></tr></thead><tbody><tr><td><code>200</code></td><td>Успешный или неуспешный результат</td></tr><tr><td><code>401</code></td><td>Ошибка авторизации. Токен <code>access_token</code> указан некорректно или недействителен</td></tr><tr><td><code>403</code></td><td>Ошибка доступа. У вас нет прав на доступ к этому ресурсу</td></tr><tr><td><code>404</code></td><td>Запрашиваемый ресурс не найден</td></tr><tr><td><code>500</code></td><td>Внутренняя ошибка сервера</td></tr></tbody>
+</table>
+</div>
+</main>
+</body>
+</html>

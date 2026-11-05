@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ru">
+<body>
+<main><p class="md-source-link">
+    <a href="/docs-api/objects/User/index.md" target="_blank" rel="noopener" title="Открыть как Markdown">Показать в MD-формате
+    </a>
+  </p>
+
+    <h1 id="page-title">User</h1>
+  <p>Объект, описывающий один из вариантов наследования:</p>
+<ul>
+<li><a
+  href="/docs-api/objects/User/"><code>User</code></a> - объект содержит общую информацию о пользователе или боте без аватара</li>
+<li><a
+  href="/docs-api/objects/UserWithPhoto/"><code>UserWithPhoto</code></a> - объект с общей информацией о пользователе или боте, дополнительно содержит URL аватара и описание</li>
+<li><a
+  href="/docs-api/objects/BotInfo/"><code>BotInfo</code></a> - объект включает общую информацию о боте, URL аватара и описание. Дополнительно содержит список команд, поддерживаемых ботом. Возвращается только при вызове метода <a
+  href="/docs-api/methods/GET/me/"><code>GET /me</code></a></li>
+<li><a
+  href="/docs-api/objects/ChatMember/"><code>ChatMember</code></a> - объект включает общую информацию о пользователе или боте, URL аватара и описание при его наличии. Дополнительно содержит данные для пользователей-участников чата. Возвращается только при вызове некоторых методов группы <code>/chats</code>, например <a
+  href="/docs-api/methods/GET/chats/-chatId-/members/"><code>GET /chats/{chatId}/members</code></a></li>
+</ul>
+</p>
+<div class="api-params">
+
+</p>
+<div class="api-param">
+  <div class="api-param__row">
+    <div class="api-param__left">
+      <span class="api-param__name">user_id</span>
+      <div class="api-param__meta"><span class="api-param__type">integer &lt;int64&gt;</span></div>
+    </div>
+    <div class="api-param__desc">Идентификатор пользователя или бота
+    </div>
+  </div>
+</div>
+<p>
+
+</p>
+<div class="api-param">
+  <div class="api-param__row">
+    <div class="api-param__left">
+      <span class="api-param__name">first_name</span>
+      <div class="api-param__meta"><span class="api-param__type">string</span></div>
+    </div>
+    <div class="api-param__desc">Отображаемое имя пользователя или бота
+    </div>
+  </div>
+</div>
+<p>
+
+</p>
+<div class="api-param">
+  <div class="api-param__row">
+    <div class="api-param__left">
+      <span class="api-param__name">last_name</span>
+      <div class="api-param__meta"><span class="api-param__type">string Nullable</span><span class="api-param__optional">optional</span></div>
+    </div>
+    <div class="api-param__desc">Отображаемая фамилия пользователя. Для ботов это поле не возвращается
+    </div>
+  </div>
+</div>
+<p>
+
+</p>
+<div class="api-param">
+  <div class="api-param__row">
+    <div class="api-param__left">
+      <span class="api-param__name">username</span>
+      <div class="api-param__meta"><span class="api-param__type">string Nullable</span></div>
+    </div>
+    <div class="api-param__desc">Никнейм бота или уникальное публичное имя пользователя. В случае с пользователем может быть <code>null</code>, если тот недоступен или имя не задано
+    </div>
+  </div>
+</div>
+<p>
+
+</p>
+<div class="api-param">
+  <div class="api-param__row">
+    <div class="api-param__left">
+      <span class="api-param__name">is_bot</span>
+      <div class="api-param__meta"><span class="api-param__type">boolean</span></div>
+    </div>
+    <div class="api-param__desc"><code>true</code>, если это бот
+    </div>
+  </div>
+</div>
+<p>
+
+</p>
+<div class="api-param">
+  <div class="api-param__row">
+    <div class="api-param__left">
+      <span class="api-param__name">last_activity_time</span>
+      <div class="api-param__meta"><span class="api-param__type">integer &lt;int64&gt;</span></div>
+    </div>
+    <div class="api-param__desc">Время последней активности пользователя или бота в MAX (Unix timestamp в миллисекундах). Если пользователь отключил в настройках профиля мессенджера MAX возможность видеть, что он в сети онлайн, поле может не возвращаться
+    </div>
+  </div>
+</div>
+<p>
+
+</p>
+<div class="api-param">
+  <div class="api-param__row">
+    <div class="api-param__left">
+      <span class="api-param__name">name</span>
+      <div class="api-param__meta"><span class="api-param__type">string Nullable</span></div>
+    </div>
+    <div class="api-param__desc"><em>Устаревшее поле, скоро будет удалено</em>
+    </div>
+  </div>
+</div>
+<p>
+
+</div>
+<p>
+
+<h2 id="Пример объекта" class="linked-heading">
+  <a class="linked-heading__link" href="#%d0%9f%d1%80%d0%b8%d0%bc%d0%b5%d1%80%20%d0%be%d0%b1%d1%8a%d0%b5%d0%ba%d1%82%d0%b0" aria-label="Ссылка на раздел">
+
+  </a>
+  <span class="linked-heading__text"><span>Пример объекта</span></span>
+</h2><div class="json-example" data-json-example>
+  <div class="json-example__header">
+    <div class="json-example__lang">JSON</div>
+    <button
+      class="json-example__copy"
+      type="button"
+      data-json-copy
+      aria-label="Скопировать код"
+    >
+      <span class="json-example__copy-text">Скопировать</span>
+
+    </button>
+  </div>
+  <div class="json-example__body">
+    <pre class="json-example__fallback">{
+    &#34;user_id&#34;: 0,
+    &#34;first_name&#34;: &#34;string&#34;,
+    &#34;last_name&#34;: &#34;string&#34;,
+    &#34;username&#34;: &#34;string&#34;,
+    &#34;is_bot&#34;: true,
+    &#34;last_activity_time&#34;: 0,
+    &#34;name&#34;: &#34;string&#34;
+}</pre>
+
+  </div>
+</div>
+</main>
+</body>
+</html>
