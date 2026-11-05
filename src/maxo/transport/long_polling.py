@@ -132,22 +132,23 @@ class LongPolling:
                     drop_pending_updates=drop_pending_updates,
                 )
 
-                with contextlib.suppress(KeyboardInterrupt):
-                    async with asyncio.TaskGroup() as tg:
-                        async for update in updates_poller:
-                            tg.create_task(  # type: ignore[unused-awaitable]
-                                dispatcher.feed_max_update(update, bot),
-                            )
+                try:
+                    with contextlib.suppress(KeyboardInterrupt):
+                        async with asyncio.TaskGroup() as tg:
+                            async for update in updates_poller:
+                                tg.create_task(  # type: ignore[unused-awaitable]
+                                    dispatcher.feed_max_update(update, bot),
+                                )
+                finally:
+                    await dispatcher.feed_signal(BeforeShutdown(), bot)
 
-                await dispatcher.feed_signal(BeforeShutdown(), bot)
+                    loggers.dispatcher.info(
+                        "Polling stop for @%s bot id=%s",
+                        bot.state.info.username,
+                        bot.state.info.user_id,
+                    )
 
-                loggers.dispatcher.info(
-                    "Polling stop for @%s bot id=%s",
-                    bot.state.info.username,
-                    bot.state.info.user_id,
-                )
-
-        await dispatcher.feed_signal(AfterShutdown())
+                    await dispatcher.feed_signal(AfterShutdown(), bot)
 
     async def _get_updates(
         self,
