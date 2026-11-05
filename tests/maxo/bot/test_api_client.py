@@ -67,8 +67,7 @@ async def api_client() -> AsyncIterator[MaxApiClient]:
 
 async def test_api_client_init(api_client: MaxApiClient) -> None:
     assert api_client._token == TOKEN
-    assert "Authorization" in api_client._session.headers
-    assert api_client._session.headers["Authorization"] == TOKEN
+    assert "Authorization" not in api_client._session.headers
     assert "User-Agent" in api_client._session.headers
 
 
@@ -76,7 +75,7 @@ async def test_api_client_registers_attachment_retry_middleware(
     api_client: MaxApiClient,
 ) -> None:
     assert isinstance(
-        api_client.middleware[-1],
+        api_client.middleware[-2],
         AttachmentNotReadyRetryMiddleware,
     )
 
@@ -92,7 +91,7 @@ async def test_api_client_keeps_user_middleware_outer() -> None:
     )
     try:
         assert client.middleware[0] is user_middleware
-        assert isinstance(client.middleware[-1], AttachmentNotReadyRetryMiddleware)
+        assert isinstance(client.middleware[-2], AttachmentNotReadyRetryMiddleware)
     finally:
         await client.close()
 
@@ -197,7 +196,7 @@ async def test_new_upload_session_uses_dedicated_connector(
     try:
         assert session.connector is not None
         assert session.connector.limit == 1
-        assert session.headers["Authorization"] == TOKEN
+        assert "Authorization" not in session.headers
         assert "User-Agent" in session.headers
     finally:
         await session.close()
