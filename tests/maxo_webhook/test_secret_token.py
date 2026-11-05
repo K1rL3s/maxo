@@ -44,3 +44,17 @@ async def test_security_get_secret_token(
 ) -> None:
     sec = Security(secret_token=secret_token)
     assert await sec.get_secret_token(bot=bot) == expected
+
+
+@pytest.mark.parametrize("token", ["your_secret", "a_b-C9", "_____", "a" * 256])
+def test_static_secret_token_accepts_allowed_characters(token: str, bot: Bot) -> None:
+    assert StaticSecretToken(token).secret_token(bot) == token
+
+
+@pytest.mark.parametrize(
+    "token",
+    ["abcde\n", "\nabcde", "abcd", "a" * 257, "abc de", "abc.de", "секрет-секрет"],
+)
+def test_static_secret_token_rejects_invalid_tokens(token: str) -> None:
+    with pytest.raises(ValueError, match="Invalid secret token format"):
+        StaticSecretToken(token)
