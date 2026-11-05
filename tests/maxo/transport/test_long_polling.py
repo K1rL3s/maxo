@@ -17,6 +17,7 @@ from maxo.bot.state import RunningBotState
 from maxo.errors import UnsubscribeError
 from maxo.omit import Omitted
 from maxo.routing.dispatcher import Dispatcher
+from maxo.routing.signals.shutdown import AfterShutdown, BeforeShutdown
 from maxo.routing.signals.update import MaxoUpdate
 from maxo.transport.long_polling import LongPolling
 from maxo.types import (
@@ -105,6 +106,20 @@ async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
     nothing: tuple[Any, ...] = ()
     for update in nothing:
         yield update
+
+
+async def hanging_updates(**_kwargs: Any) -> AsyncIterator[Any]:
+    await asyncio.sleep(60)
+    nothing: tuple[Any, ...] = ()
+    for update in nothing:
+        yield update
+
+
+def make_unsubscribe_error_group() -> ExceptionGroup[UnsubscribeError]:
+    return ExceptionGroup(
+        "Не удалось удалить WebHook-подписки",
+        [UnsubscribeError(url="https://example.com/webhook", error=ValueError("boom"))],
+    )
 
 
 async def test_handles_load_error_and_skips_update(
@@ -366,8 +381,6 @@ async def test_start_clears_subscriptions_before_after_startup(
     long_polling: LongPolling,
     mock_bot: Bot,
 ) -> None:
-    # Падение очистки не должно оставлять приложение со сработавшими
-    # startup-хуками и несработавшими shutdown.
     fired: list[str] = []
 
     @mock_dispatcher.before_startup()
@@ -378,10 +391,15 @@ async def test_start_clears_subscriptions_before_after_startup(
     async def _after_startup() -> None:
         fired.append("after_startup")
 
-    failure = ExceptionGroup(
-        "Не удалось удалить WebHook-подписки",
-        [UnsubscribeError(url="https://example.com/webhook", error=ValueError("boom"))],
-    )
+    @mock_dispatcher.before_shutdown()
+    async def _before_shutdown() -> None:
+        fired.append("before_shutdown")
+
+    @mock_dispatcher.after_shutdown()
+    async def _after_shutdown() -> None:
+        fired.append("after_shutdown")
+
+    failure = make_unsubscribe_error_group()
 
     with (
         patch.object(long_polling, "_get_updates", side_effect=empty_updates),
@@ -394,7 +412,158 @@ async def test_start_clears_subscriptions_before_after_startup(
             clear_subscriptions=True,
         )
 
+    assert fired == ["before_startup", "before_shutdown", "after_shutdown"]
+
+
+async def test_start_skips_shutdown_signals_when_bot_never_started(
+    mock_dispatcher: Dispatcher,
+) -> None:
+    fired: list[str] = []
+
+    @mock_dispatcher.before_startup()
+    async def _before_startup() -> None:
+        fired.append("before_startup")
+
+    @mock_dispatcher.before_shutdown()
+    async def _before_shutdown() -> None:
+        fired.append("before_shutdown")
+
+    @mock_dispatcher.after_shutdown()
+    async def _after_shutdown() -> None:
+        fired.append("after_shutdown")
+
+    fresh_bot = make_bot()
+    error = RuntimeError("network is unreachable")
+    long_polling = LongPolling(dispatcher=mock_dispatcher)
+
+    with (
+        patch.object(Bot, "get_my_info", new=AsyncMock(side_effect=error)),
+        pytest.raises(RuntimeError, match="network is unreachable"),
+    ):
+        # `fresh_bot` is a real `Bot`, not the `mock_bot` fixture used
+        # elsewhere in this file - `auto_close_bot=True` (the default) so its
+        # aiohttp session gets closed even though startup never completed.
+        await long_polling.start(fresh_bot)
+
     assert fired == ["before_startup"]
+
+
+async def test_start_feeds_bot_to_after_shutdown(
+    mock_dispatcher: Dispatcher,
+    long_polling: LongPolling,
+    mock_bot: Bot,
+    mock_get_subscriptions: AsyncMock,
+) -> None:
+    real_feed_signal = mock_dispatcher.feed_signal
+
+    with (
+        patch.object(
+            mock_dispatcher,
+            "feed_signal",
+            new=AsyncMock(side_effect=real_feed_signal),
+        ) as feed_signal,
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates),
+    ):
+        await long_polling.start(mock_bot, auto_close_bot=False)
+
+    feed_signal.assert_any_call(ANY, mock_bot)
+    shutdown_calls = [
+        call_args
+        for call_args in feed_signal.call_args_list
+        if isinstance(call_args.args[0], (BeforeShutdown, AfterShutdown))
+    ]
+    assert shutdown_calls == [
+        call(ANY, mock_bot),
+        call(ANY, mock_bot),
+    ]
+    assert isinstance(shutdown_calls[0].args[0], BeforeShutdown)
+    assert isinstance(shutdown_calls[1].args[0], AfterShutdown)
+
+
+async def test_start_fires_shutdown_signals_when_polling_task_is_cancelled(
+    mock_dispatcher: Dispatcher,
+    long_polling: LongPolling,
+    mock_bot: Bot,
+    mock_get_subscriptions: AsyncMock,
+) -> None:
+    order: list[str] = []
+
+    @mock_dispatcher.before_shutdown()
+    async def _before_shutdown() -> None:
+        order.append("before_shutdown")
+
+    @mock_dispatcher.after_shutdown()
+    async def _after_shutdown() -> None:
+        order.append("after_shutdown")
+
+    with patch.object(long_polling, "_get_updates", side_effect=hanging_updates):
+        task = asyncio.create_task(
+            long_polling.start(mock_bot, auto_close_bot=False),
+        )
+        await asyncio.sleep(0.1)
+        task.cancel()
+
+        with pytest.raises(CancelledError):
+            await task
+
+    assert order == ["before_shutdown", "after_shutdown"]
+
+
+async def test_cancelled_error_survives_a_failing_before_shutdown_handler(
+    mock_dispatcher: Dispatcher,
+    long_polling: LongPolling,
+    mock_bot: Bot,
+    mock_get_subscriptions: AsyncMock,
+) -> None:
+    before_shutdown_ran = False
+
+    @mock_dispatcher.before_shutdown()
+    async def _before_shutdown() -> None:
+        nonlocal before_shutdown_ran
+        before_shutdown_ran = True
+        raise AttributeError("boom")
+
+    with patch.object(long_polling, "_get_updates", side_effect=hanging_updates):
+        task = asyncio.create_task(
+            long_polling.start(mock_bot, auto_close_bot=False),
+        )
+        await asyncio.sleep(0.1)
+        task.cancel()
+
+        with pytest.raises(CancelledError):
+            await task
+
+    assert before_shutdown_ran
+
+
+async def test_exception_group_survives_a_failing_after_shutdown_handler(
+    mock_dispatcher: Dispatcher,
+    long_polling: LongPolling,
+    mock_bot: Bot,
+) -> None:
+    after_shutdown_ran = False
+
+    @mock_dispatcher.after_shutdown()
+    async def _after_shutdown() -> None:
+        nonlocal after_shutdown_ran
+        after_shutdown_ran = True
+        raise AttributeError("boom")
+
+    failure = make_unsubscribe_error_group()
+
+    with (
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates),
+        patch.object(Bot, "clear_subscriptions", new=AsyncMock(side_effect=failure)),
+        pytest.raises(ExceptionGroup) as excinfo,
+    ):
+        await long_polling.start(
+            mock_bot,
+            auto_close_bot=False,
+            clear_subscriptions=True,
+        )
+
+    assert after_shutdown_ran
+    assert excinfo.value is failure
 
 
 async def test_start_warns_about_subscriptions_when_not_cleared(
