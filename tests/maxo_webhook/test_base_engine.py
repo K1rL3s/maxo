@@ -5,10 +5,16 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from adaptix.load_error import LoadError
+from aiohttp import web
+from aiohttp.pytest_plugin import AiohttpClient
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from maxo import Bot, Dispatcher, loggers
 from maxo.routing.signals import MaxoUpdate
+from maxo.transport.webhook.adapters.aiohttp.adapter import AiohttpWebAdapter
 from maxo.transport.webhook.adapters.base_adapter import BoundRequest, WebAdapter
+from maxo.transport.webhook.adapters.fastapi.adapter import FastApiWebAdapter
 from maxo.transport.webhook.engines.base import WebhookEngine
 from maxo.transport.webhook.routing import StaticRouting
 from maxo.transport.webhook.security import Security
@@ -400,3 +406,65 @@ async def test_handle_request_rejects_unverified_unloadable_update() -> None:
     )
 
     assert await engine.handle_request(request) == (403, {"detail": "Forbidden"})
+
+
+NOT_UTF8_BODY = b"\x80abc"
+
+
+class NotUtf8BoundRequest(DummyBoundRequest):
+    async def json(self) -> dict[str, Any]:
+        raise UnicodeDecodeError("utf-8", NOT_UTF8_BODY, 0, 1, "invalid start byte")
+
+
+async def test_handle_request_returns_400_for_non_utf8_body(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    engine = DummyEngine(Dispatcher(), DummyAdapter(), bot=make_bot())
+
+    with caplog.at_level(logging.WARNING, logger=loggers.webhook.name):
+        response = await engine.handle_request(NotUtf8BoundRequest())
+
+    assert response == (400, {"detail": "Bad request"})
+    assert [r.levelno for r in caplog.records] == [logging.WARNING]
+    assert caplog.records[0].exc_info is None
+
+
+async def test_aiohttp_non_utf8_body_gets_400(
+    aiohttp_client: AiohttpClient,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    engine = DummyEngine(Dispatcher(), AiohttpWebAdapter(), bot=Bot("token"))
+    app = web.Application()
+    engine.register(app)
+    client = await aiohttp_client(app)
+    caplog.clear()
+
+    with caplog.at_level(logging.WARNING, logger=loggers.webhook.name):
+        response = await client.post(
+            "/webhook",
+            data=NOT_UTF8_BODY,
+            headers={"Content-Type": "application/json"},
+        )
+
+    assert response.status == 400
+    assert await response.json() == {"detail": "Bad request"}
+    assert [r.levelno for r in caplog.records] == [logging.WARNING]
+
+
+def test_fastapi_non_utf8_body_gets_400(caplog: pytest.LogCaptureFixture) -> None:
+    engine = DummyEngine(Dispatcher(), FastApiWebAdapter(), bot=Bot("token"))
+    app = FastAPI()
+    engine.register(app)
+    client = TestClient(app)
+    caplog.clear()
+
+    with caplog.at_level(logging.WARNING, logger=loggers.webhook.name):
+        response = client.post(
+            "/webhook",
+            content=NOT_UTF8_BODY,
+            headers={"Content-Type": "application/json"},
+        )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Bad request"}
+    assert [r.levelno for r in caplog.records] == [logging.WARNING]

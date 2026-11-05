@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from json import JSONDecodeError
 from typing import Any
 
 from adaptix.load_error import LoadError
@@ -97,7 +96,7 @@ class WebhookEngine(ABC):
 
         try:
             raw_update = await bound_request.json()
-        except JSONDecodeError:
+        except ValueError:
             loggers.webhook.warning(
                 "Вебхук %s: тело запроса не является корректным JSON",
                 self.routing.path,
