@@ -1,5 +1,6 @@
 import dataclasses
 import typing
+from datetime import UTC, datetime
 
 import pytest
 from adaptix.load_error import LoadError
@@ -9,6 +10,7 @@ from maxo.bot.defaults import BotDefaults
 from maxo.bot.methods import (
     AnswerOnCallback,
     EditMessage,
+    GetComments,
     GetMembers,
     GetMessages,
     GetUpdates,
@@ -16,7 +18,7 @@ from maxo.bot.methods import (
     SendMessage,
 )
 from maxo.bot.methods.base import MaxoMethod
-from maxo.enums import ChatAdminPermission, TextFormat
+from maxo.enums import ChatAdminPermission, TextFormat, VideoType
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_omitted
 from maxo.serialization import (
@@ -26,12 +28,14 @@ from maxo.serialization import (
     create_retort_with_bot,
 )
 from maxo.types import (
+    AudioAttachment,
     BotAdminPermissionsChanged,
     BotStarted,
     CommentCreated,
     CommentEdited,
     CommentMessage,
     CommentRemoved,
+    FileAttachment,
     Message,
     MessageCreated,
     NewMessageBody,
@@ -39,6 +43,7 @@ from maxo.types import (
     UpdateList,
     UploadMediaResult,
     User,
+    VideoAttachment,
     VideoAttachmentDetails,
     VideoThumbnail,
 )
@@ -480,3 +485,119 @@ def test_retort_loads_open_app_button_without_web_app() -> None:
     assert isinstance(button, OpenAppButton)
     assert button.contact_id == 5
     assert is_omitted(button.web_app)
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ({"video_type": "video_message"}, VideoType.VIDEO_MESSAGE),
+        ({"video_type": "video"}, VideoType.VIDEO),
+        ({"video_type": None}, None),
+        ({}, Omitted()),
+    ],
+)
+def test_retort_loads_video_type(
+    raw: dict[str, str | None],
+    expected: Omittable[VideoType | None],
+) -> None:
+    retort = create_retort(warming_up=False)
+
+    video = retort.load(
+        {"type": "video", "payload": {"url": "url", "token": "token"}, **raw},
+        VideoAttachment,
+    )
+
+    assert video.video_type == expected
+
+
+@pytest.mark.parametrize(
+    ("attachment_type", "payload", "expected"),
+    [
+        ("video", {"id": 16922062446427}, 16922062446427),
+        ("audio", {"id": 16190153253039}, 16190153253039),
+        ("video", {"id": None}, None),
+        ("video", {}, Omitted()),
+    ],
+)
+def test_retort_loads_media_payload_id(
+    attachment_type: str,
+    payload: dict[str, int | None],
+    expected: Omittable[int | None],
+) -> None:
+    retort = create_retort(warming_up=False)
+
+    attachment = retort.load(
+        {
+            "type": attachment_type,
+            "payload": {"url": "url", "token": "token", **payload},
+        },
+        AudioAttachment | VideoAttachment,
+    )
+
+    assert attachment.payload.id == expected
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        ({"fileId": 5399066140}, 5399066140),
+        ({"fileId": None}, None),
+        ({}, Omitted()),
+    ],
+)
+def test_retort_loads_file_payload_file_id(
+    payload: dict[str, int | None],
+    expected: Omittable[int | None],
+) -> None:
+    retort = create_retort(warming_up=False)
+
+    attachment = retort.load(
+        {
+            "type": "file",
+            "payload": {"url": "url", "token": "token", **payload},
+            "filename": "probe.txt",
+            "size": 6,
+        },
+        FileAttachment,
+    )
+
+    assert attachment.payload.file_id == expected
+    assert attachment.payload.id == expected
+
+
+def test_update_survives_dump_load_roundtrip() -> None:
+    retort = create_retort(warming_up=False)
+    data = {
+        "update_type": "message_created",
+        "timestamp": 1234567890123,
+        "message": {
+            "body": {"seq": 1, "mid": "m", "text": "hi"},
+            "recipient": {"chat_id": 1, "chat_type": "dialog"},
+            "timestamp": 1234567890123,
+        },
+    }
+
+    update = retort.load(data, MessageCreated)
+    dumped = retort.dump(update, MessageCreated)
+
+    assert dumped["timestamp"] == 1234567890123
+    assert retort.load(dumped, MessageCreated) == update
+
+
+def test_query_datetime_is_dumped_in_milliseconds() -> None:
+    moment = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
+
+    data = create_retort(warming_up=False).dump(
+        GetComments(message_id="mid", after=moment),
+    )
+
+    assert data["query"]["after"] == 1767323045000
+
+
+@pytest.mark.parametrize("timestamp", [136565933883, 1092578636909, 2165829603319])
+def test_datetime_dump_restores_loaded_milliseconds(timestamp: int) -> None:
+    retort = create_retort(warming_up=False)
+
+    moment = retort.load(timestamp, datetime)
+
+    assert retort.dump(moment, datetime) == timestamp

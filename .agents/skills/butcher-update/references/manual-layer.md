@@ -57,6 +57,7 @@ dev.max.ru, `GET /chats` там объявлен неподдерживаемы�
 | `Callback`         | `id`, `data`, `unsafe_data`                                                               |
 | `CallbackButton`   | `callback_data`                                                                            |
 | `Chat`             | `id`                                                                                       |
+| `FileAttachmentPayload` | `id` (алиас `file_id`, как `MediaAttachmentPayload.id`)                               |
 | `MarkupElement`    | `offset` (алиас `from_`) - на нём держатся `utils/formatting.py`, `utils/text_decorations.py` |
 | `Message`          | `message` (нужен `MessageMethodsFacade`, без него класс абстрактный)                        |
 | `MessageBody`      | `id`, `keyboard`, `reply_markup`, `photo`, `video`, `audio`, `file`, `sticker`, `contact`, `share`, `location`, `_unparse_entities`, `html_text`, `md_text`, `attachment_type`, `content_type` |
@@ -134,6 +135,21 @@ API отвечает 400 `Field 'webApp' cannot be null`. Тип оставле�
 с ними. В `max-swagger.json` они дописаны и в `User`, иначе adaptix молча
 отбрасывает аватар.
 
+`VideoAttachment.video_type` и enum `VideoType` (`video`, `video_message`) нет
+ни в одной публикации, но MAX присылает поле во входящих видео: его добавил
+официальный Go-клиент (max-messenger/max-bot-api-client-go#172). Поле и схема
+`VideoType` дописаны в `max-swagger.json`, поле - `nullable`, как соседние
+поля видео.
+
+`MediaAttachmentPayload.id` нет ни в одной публикации, но MAX присылает его в
+payload входящих и отправленных видео и аудио, одинаковый для одного медиафайла
+в разных сообщениях. Поле дописано в `max-swagger.json` необязательным и
+`nullable`. У файла вместо него приходит `fileId` в camelCase: в
+`max-swagger.json` у `FileAttachmentPayload` дописано свойство `fileId`, butcher
+генерирует из него `file_id`, а wire-имя задаёт
+`name_mapping(FileAttachmentPayload, map={"file_id": "fileId"})` в
+`serialization.py`, как у `UploadMediaResult`.
+
 ## Реестры и compat-слои, о которых легко не узнать
 
 Генерация их не трогает, но по ним расходится ручная регистрация новых
@@ -141,7 +157,8 @@ API отвечает 400 `Field 'webApp' cannot be null`. Тип оставле�
 
 - `src/maxo/serialization.py` - `TAG_PROVIDERS`, регистрация полиморфных типов
   в retort. Union-алиасы генерируются, а эта таблица - нет.
-- `src/maxo/bot/warming_up.py` - кортежи `_types` и `_methods`.
+- `src/maxo/bot/warming_up.py` - кортеж методов `_METHOD_ROOTS`, полноту
+  проверяет `tests/maxo/bot/test_warming_up.py`.
 - `src/maxo/serialization.py` - `TypesWithFormat` и `TypesWithLinkPreview`,
   методы, которым подставляются `BotDefaults`.
 - `src/maxo/types/facades/attachments.py` - `MEDIA_ATTACHMENT_FACTORIES`,

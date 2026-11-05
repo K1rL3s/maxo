@@ -1,4 +1,5 @@
 import io
+import platform
 from collections.abc import AsyncIterator
 from http.cookies import SimpleCookie
 from pathlib import Path
@@ -12,6 +13,7 @@ from unihttp.clients.aiohttp import AiohttpAsyncClient
 from unihttp.exceptions import NetworkError, RequestTimeoutError
 from unihttp.http import HTTPResponse
 
+from maxo.__meta__ import __version__
 from maxo.bot.api_client import MaxApiClient
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.middlewares import AttachmentNotReadyRetryMiddleware
@@ -64,8 +66,7 @@ async def api_client() -> AsyncIterator[MaxApiClient]:
 
 async def test_api_client_init(api_client: MaxApiClient) -> None:
     assert api_client._token == TOKEN
-    assert "Authorization" in api_client._session.headers
-    assert api_client._session.headers["Authorization"] == TOKEN
+    assert "Authorization" not in api_client._session.headers
     assert "User-Agent" in api_client._session.headers
 
 
@@ -73,7 +74,7 @@ async def test_api_client_registers_attachment_retry_middleware(
     api_client: MaxApiClient,
 ) -> None:
     assert isinstance(
-        api_client.middleware[-1],
+        api_client.middleware[-2],
         AttachmentNotReadyRetryMiddleware,
     )
 
@@ -89,7 +90,7 @@ async def test_api_client_keeps_user_middleware_outer() -> None:
     )
     try:
         assert client.middleware[0] is user_middleware
-        assert isinstance(client.middleware[-1], AttachmentNotReadyRetryMiddleware)
+        assert isinstance(client.middleware[-2], AttachmentNotReadyRetryMiddleware)
     finally:
         await client.close()
 
@@ -194,7 +195,7 @@ async def test_new_upload_session_uses_dedicated_connector(
     try:
         assert session.connector is not None
         assert session.connector.limit == 1
-        assert session.headers["Authorization"] == TOKEN
+        assert "Authorization" not in session.headers
         assert "User-Agent" in session.headers
     finally:
         await session.close()
@@ -373,3 +374,31 @@ async def test_handle_error_falls_back_to_status_group(
 
     with pytest.raises(error_class):
         api_client.handle_error(response, MaxoMethod())
+
+
+async def test_api_client_sends_client_headers(api_client: MaxApiClient) -> None:
+    upload_session = api_client._new_upload_session()
+    try:
+        for headers in (api_client._session.headers, upload_session.headers):
+            assert headers["X-Max-Client-Name"] == "maxo"
+            assert headers["X-Max-Client-Version"] == __version__
+            assert headers["X-Max-Client-Runtime"] == (
+                f"python{platform.python_version()}"
+            )
+    finally:
+        await upload_session.close()
+
+
+async def test_api_client_keeps_custom_client_headers() -> None:
+    retort = Retort()
+    session = ClientSession(headers={"X-Max-Client-Name": "my-bot"})
+    client = MaxApiClient(
+        token=TOKEN,
+        request_dumper=retort,
+        response_loader=retort,
+        session=session,
+    )
+    try:
+        assert client._session.headers["X-Max-Client-Name"] == "my-bot"
+    finally:
+        await client.close()

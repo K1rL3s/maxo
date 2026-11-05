@@ -3,15 +3,17 @@ from typing import Any
 import pytest
 
 from maxo.enums import ChatType
-from maxo.routing.ctx import Ctx
+from maxo.routing.ctx import CTX_KEY, Ctx
 from maxo.routing.dispatcher import Dispatcher
-from maxo.routing.filters import BaseFilter
+from maxo.routing.filters import AlwaysFalseFilter, BaseFilter
 from maxo.routing.routers.simple import Router
 from maxo.routing.sentinels import UNHANDLED, SkipHandler
 from maxo.routing.signals import BeforeStartup
 from maxo.types import Message, MessageBody, Recipient, User
 from maxo.types.message_created import MessageCreated
 from tests.constants import NOW
+
+from .conftest import SelfRefWritingFalseFilter, WritingFalseFilter, WritingFilter
 
 
 @pytest.fixture
@@ -335,6 +337,122 @@ async def test_handler_no_filters_runs_handler(ctx: Ctx) -> None:
 
     assert result == "OK"
     assert ctx["execution_order"] == ["handler"]
+
+
+async def test_failed_handler_filter_chain_does_not_leak_ctx(ctx: Ctx) -> None:
+    dp = Dispatcher()
+
+    leaked: dict[str, bool] = {}
+
+    async def fallback_handler(_: Any, ctx: Ctx) -> str:
+        leaked["command"] = "command" in ctx
+        return "OK"
+
+    dp.message_created.handler(handler, WritingFilter(), AlwaysFalseFilter())
+    dp.message_created.handler(fallback_handler)
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert leaked["command"] is False
+    assert "command" not in ctx
+
+
+async def test_failed_child_router_filter_does_not_leak_ctx(ctx: Ctx) -> None:
+    dp = Dispatcher()
+    first_child = Router("first_child")
+    second_child = Router("second_child")
+    dp.include(first_child)
+    dp.include(second_child)
+
+    leaked: dict[str, bool] = {}
+
+    async def fallback_handler(_: Any, ctx: Ctx) -> str:
+        leaked["command"] = "command" in ctx
+        return "OK"
+
+    first_child.message_created.filter(WritingFilter(), AlwaysFalseFilter())
+    first_child.message_created.handler(handler)
+    second_child.message_created.handler(fallback_handler)
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert leaked["command"] is False
+    assert "command" not in ctx
+
+
+async def test_failed_single_handler_filter_does_not_leak_ctx(ctx: Ctx) -> None:
+    dp = Dispatcher()
+
+    leaked: dict[str, bool] = {}
+
+    async def fallback_handler(_: Any, ctx: Ctx) -> str:
+        leaked["command"] = "command" in ctx
+        return "OK"
+
+    dp.message_created.handler(handler, WritingFalseFilter())
+    dp.message_created.handler(fallback_handler)
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert leaked["command"] is False
+    assert "command" not in ctx
+
+
+async def test_failed_filter_does_not_leak_ctx_through_self_reference(ctx: Ctx) -> None:
+    dp = Dispatcher()
+
+    leaked: dict[str, bool] = {}
+
+    async def fallback_handler(_: Any, ctx: Ctx) -> str:
+        leaked["command"] = "command" in ctx
+        return "OK"
+
+    dp.message_created.handler(handler, SelfRefWritingFalseFilter())
+    dp.message_created.handler(fallback_handler)
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert leaked["command"] is False
+    assert "command" not in ctx
+    assert ctx[CTX_KEY] is ctx
+
+
+async def test_failed_single_child_router_filter_does_not_leak_ctx(ctx: Ctx) -> None:
+    dp = Dispatcher()
+    first_child = Router("first_child")
+    second_child = Router("second_child")
+    dp.include(first_child)
+    dp.include(second_child)
+
+    leaked: dict[str, bool] = {}
+
+    async def fallback_handler(_: Any, ctx: Ctx) -> str:
+        leaked["command"] = "command" in ctx
+        return "OK"
+
+    first_child.message_created.filter(WritingFalseFilter())
+    first_child.message_created.handler(handler)
+    second_child.message_created.handler(fallback_handler)
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert leaked["command"] is False
+    assert "command" not in ctx
 
 
 async def test_skip_handler_in_parent_falls_through_to_child(ctx: Ctx) -> None:

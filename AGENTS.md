@@ -108,6 +108,8 @@ Long polling / webhook -> Dispatcher -> Router tree
 - `Dispatcher` - корневой `Router`; `Router.include(...)` задаёт порядок обхода.
   Первый обработавший update останавливает поиск.
 - Фильтры бывают на observer'е (для всех его handler'ов) и на handler'е.
+- Фильтр пишет в копию `ctx`: записи попадают в общий `ctx`, только если
+  фильтр прошёл (`_run_isolated` в `routing/filters/logic.py`).
 - `UNHANDLED` - ни один handler не подошёл, update идёт в дочерние роутеры.
   `SkipHandler` - пропустить текущий handler и искать дальше в том же
   observer'е, к дочерним роутерам update не идёт.
@@ -150,6 +152,12 @@ Long polling / webhook -> Dispatcher -> Router tree
   `User-Agent`, маппинг ошибок API и превращает HTTP 200 с `"success": false`
   или с `error_code` в 400. Исключение - `AddMembers`: он отдаёт частичный результат, и это
   поведение не меняй без отдельного теста и документации.
+- Заголовки `X-Max-Client-Name`, `X-Max-Client-Version` и
+  `X-Max-Client-Runtime` повторяют телеметрию официальных Go- и TS-клиентов
+  (max-messenger/max-bot-api-client-go#173,
+  max-messenger/max-bot-api-client-ts#321); в документации MAX их нет. Как
+  и `Authorization` с `User-Agent`, они не перезаписывают заголовки, заданные
+  в пользовательской `ClientSession`.
 - `Bot.download` принимает URL или `AttachmentPayload` и пишет в файл либо
   возвращает `BinaryIO`.
 

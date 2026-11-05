@@ -1,6 +1,7 @@
 from typing import Self
 
 from maxo.enums.attachment_type import AttachmentType
+from maxo.enums.video_type import VideoType
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined, is_not_omitted
 from maxo.types.attachment import Attachment
@@ -17,6 +18,7 @@ class VideoAttachment(Attachment):
         payload:
         thumbnail: Миниатюра видео
         type:
+        video_type: Тип видео: обычное видео или видеосообщение
         width: Ширина видео
     """
 
@@ -30,6 +32,8 @@ class VideoAttachment(Attachment):
     """Высота видео"""
     thumbnail: Omittable[VideoThumbnail | None] = Omitted()
     """Миниатюра видео"""
+    video_type: Omittable[VideoType | None] = Omitted()
+    """Тип видео: обычное видео или видеосообщение"""
     width: Omittable[int | None] = Omitted()
     """Ширина видео"""
 
@@ -100,6 +104,16 @@ class VideoAttachment(Attachment):
         raise AttributeIsEmptyError(
             obj=self,
             attr="thumbnail",
+        )
+
+    @property
+    def unsafe_video_type(self) -> VideoType:
+        if is_defined(self.video_type):
+            return self.video_type
+
+        raise AttributeIsEmptyError(
+            obj=self,
+            attr="video_type",
         )
 
     @property
