@@ -1,5 +1,6 @@
 import dataclasses
 import typing
+from datetime import UTC, datetime
 
 import pytest
 from adaptix.load_error import LoadError
@@ -9,6 +10,7 @@ from maxo.bot.defaults import BotDefaults
 from maxo.bot.methods import (
     AnswerOnCallback,
     EditMessage,
+    GetComments,
     GetMembers,
     GetMessages,
     GetUpdates,
@@ -561,3 +563,41 @@ def test_retort_loads_file_payload_file_id(
 
     assert attachment.payload.file_id == expected
     assert attachment.payload.id == expected
+
+
+def test_update_survives_dump_load_roundtrip() -> None:
+    retort = create_retort(warming_up=False)
+    data = {
+        "update_type": "message_created",
+        "timestamp": 1234567890123,
+        "message": {
+            "body": {"seq": 1, "mid": "m", "text": "hi"},
+            "recipient": {"chat_id": 1, "chat_type": "dialog"},
+            "timestamp": 1234567890123,
+        },
+    }
+
+    update = retort.load(data, MessageCreated)
+    dumped = retort.dump(update, MessageCreated)
+
+    assert dumped["timestamp"] == 1234567890123
+    assert retort.load(dumped, MessageCreated) == update
+
+
+def test_query_datetime_is_dumped_in_milliseconds() -> None:
+    moment = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
+
+    data = create_retort(warming_up=False).dump(
+        GetComments(message_id="mid", after=moment),
+    )
+
+    assert data["query"]["after"] == 1767323045000
+
+
+@pytest.mark.parametrize("timestamp", [136565933883, 1092578636909, 2165829603319])
+def test_datetime_dump_restores_loaded_milliseconds(timestamp: int) -> None:
+    retort = create_retort(warming_up=False)
+
+    moment = retort.load(timestamp, datetime)
+
+    assert retort.dump(moment, datetime) == timestamp
