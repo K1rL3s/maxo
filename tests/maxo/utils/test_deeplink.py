@@ -28,12 +28,12 @@ def test_create_deep_link_invalid_payload() -> None:
 def test_create_deep_link_long_payload() -> None:
     with pytest.raises(
         ValueError,
-        match=f"Payload must be up to {deeplink.PAYLOAD_MAX_LEN} characters long.",
+        match="Payload must be up to 128 characters long",
     ):
         deeplink.create_deep_link(
             username="testbot",
             link_type="start",
-            payload="a" * (deeplink.PAYLOAD_MAX_LEN + 1),
+            payload="a" * 129,
         )
 
 
@@ -64,7 +64,7 @@ def test_create_startapp_link() -> None:
 
 
 def test_create_startapp_link_long_payload() -> None:
-    payload = "a" * deeplink.STARTAAPP_PAYLOAD_MAX_LEN
+    payload = "a" * 512
     link = deeplink.create_deep_link(
         username="testbot",
         link_type="startapp",
@@ -76,37 +76,34 @@ def test_create_startapp_link_long_payload() -> None:
 def test_create_startapp_link_payload_too_long() -> None:
     with pytest.raises(
         ValueError,
-        match=(
-            "Payload must be up to "
-            f"{deeplink.STARTAAPP_PAYLOAD_MAX_LEN} characters long."
-        ),
+        match="Payload must be up to 512 characters long",
     ):
         deeplink.create_deep_link(
             username="testbot",
             link_type="startapp",
-            payload="a" * (deeplink.STARTAAPP_PAYLOAD_MAX_LEN + 1),
+            payload="a" * 513,
         )
 
 
 def test_create_start_link_keeps_short_limit() -> None:
     with pytest.raises(
         ValueError,
-        match=f"Payload must be up to {deeplink.PAYLOAD_MAX_LEN} characters long.",
+        match="Payload must be up to 128 characters long",
     ):
         deeplink.create_deep_link(
             username="testbot",
             link_type="start",
-            payload="a" * (deeplink.PAYLOAD_MAX_LEN + 1),
+            payload="a" * 129,
         )
 
 
 def test_create_startgroup_link_keeps_short_limit() -> None:
     with pytest.raises(
         ValueError,
-        match=f"Payload must be up to {deeplink.PAYLOAD_MAX_LEN} characters long.",
+        match="Payload must be up to 128 characters long",
     ):
         deeplink.create_deep_link(
             username="testbot",
             link_type="startgroup",
-            payload="a" * (deeplink.PAYLOAD_MAX_LEN + 1),
+            payload="a" * 129,
         )

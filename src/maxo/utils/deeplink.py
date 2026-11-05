@@ -47,12 +47,12 @@ if TYPE_CHECKING:
 BAD_PATTERN = re.compile(r"[^a-zA-Z0-9-_]")
 
 PAYLOAD_MAX_LEN = 128
-STARTAAPP_PAYLOAD_MAX_LEN = 512
+STARTAPP_PAYLOAD_MAX_LEN = 512
 
 PAYLOAD_MAX_LENGTHS: dict[Literal["start", "startgroup", "startapp"], int] = {
     "start": PAYLOAD_MAX_LEN,
     "startgroup": PAYLOAD_MAX_LEN,
-    "startapp": STARTAAPP_PAYLOAD_MAX_LEN,
+    "startapp": STARTAPP_PAYLOAD_MAX_LEN,
 }
 
 
