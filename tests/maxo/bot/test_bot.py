@@ -476,9 +476,12 @@ async def test_download_goes_to_file_host_without_token(tmp_path: Path) -> None:
 
         result = await bot.download(url)
         await bot.download(url, destination=tmp_path / "file.bin")
+        from_payload = await bot.download(AttachmentPayload(url=url))
 
     assert result is not None
     assert result.read() == b"payload"
+    assert from_payload is not None
+    assert from_payload.read() == b"payload"
     assert (tmp_path / "file.bin").read_bytes() == b"payload"
     assert "Authorization" not in seen
     assert seen["X-Max-Client-Name"] == CLIENT_HEADERS["X-Max-Client-Name"]
