@@ -24,12 +24,10 @@ def build_ssl_context() -> ssl.SSLContext:
 
 
 def _file_host_session(*, limit: int = _DEFAULT_LIMIT) -> "ClientSession":
-    """Сессия файловых хостов: без токена, с заголовками клиента maxo."""
     from aiohttp import ClientSession, TCPConnector  # noqa: PLC0415
 
     from maxo.bot.middlewares.auth import CLIENT_HEADERS  # noqa: PLC0415
 
-    # ponytail: a session per call, as upstream; share one when media is redone
     return ClientSession(
         connector=TCPConnector(ssl=build_ssl_context(), limit=limit),
         headers=CLIENT_HEADERS,
