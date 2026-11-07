@@ -13,6 +13,7 @@ from maxo.bot.middlewares.auth import CLIENT_HEADERS
 from maxo.bot.upload import UploadConfig, UploadMethod
 from maxo.errors import MaxBotApiError, UnsubscribeError
 from maxo.types import (
+    AttachmentPayload,
     BotInfo,
     GetSubscriptionsResult,
     SimpleQueryResult,
