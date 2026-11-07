@@ -6,21 +6,20 @@ from typing import TYPE_CHECKING, cast
 
 from maxo.enums import TextFormat
 from maxo.omit import Omittable, Omitted
-from maxo.types.facades.subscription import SubscriptionMethodsFacade
+from maxo.types.facades.attachments import AttachmentsFacade, MediaInput
 
 if TYPE_CHECKING:
     from maxo.types.attachments import Attachments, AttachmentsRequests
     from maxo.types.buttons import InlineButtons
     from maxo.types.chat import Chat
     from maxo.types.chat_members_list import ChatMembersList
-    from maxo.types.media_input import MediaInput
     from maxo.types.message import Message
     from maxo.types.message_list import MessageList
     from maxo.types.new_message_link import NewMessageLink
     from maxo.types.simple_query_result import SimpleQueryResult
 
 
-class ChatMethodsFacade(SubscriptionMethodsFacade):
+class ChatMethodsFacade(AttachmentsFacade):
     __slots__ = ()
 
     if TYPE_CHECKING:
@@ -39,7 +38,7 @@ class ChatMethodsFacade(SubscriptionMethodsFacade):
         media: Sequence[MediaInput] | None = None,
         attachments: Sequence[AttachmentsRequests] | None = None,
     ) -> Message:
-        prepared_attachments = await self.bot.build_attachments(
+        prepared_attachments = await self.build_attachments(
             base=attachments or [],
             keyboard=keyboard,
             files=media,

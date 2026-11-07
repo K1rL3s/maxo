@@ -4,11 +4,15 @@ import pytest
 
 from maxo import Bot, Router
 from maxo.enums import ChatType
-from maxo.errors import RoutingFrozenError
 from maxo.routing.ctx import Ctx
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.events import ErrorEvent, MaxoUpdate
 from maxo.routing.filters import BaseFilter
+from maxo.routing.middlewares.state import (
+    EmptyMiddlewareManagerState,
+    StartedMiddlewareManagerState,
+)
+from maxo.routing.observers.state import EmptyObserverState, StartedObserverState
 from maxo.routing.sentinels import SkipHandler
 from maxo.routing.signals import (
     AfterShutdown,
@@ -119,36 +123,36 @@ async def test_included_router_signals() -> None:
     ]
 
 
-async def _noop_handler(_: MessageCreated) -> None:
-    return None
-
-
-async def test_routers_tree_is_frozen_between_startup_and_shutdown() -> None:
+async def test_included_router_observers_state() -> None:
+    # ruff: noqa: E721
     dp = Dispatcher()
     deep_router = Router()
     deeper_router = Router()
+
     dp.include(deep_router)
     deep_router.include(deeper_router)
-    routers = (dp, deep_router, deeper_router)
+
+    for router in (dp, deep_router, deeper_router):
+        for observer in router.observers.values():
+            assert type(observer.state) == EmptyObserverState
+            assert type(observer.middleware.inner.state) == EmptyMiddlewareManagerState
 
     await dp.feed_signal(BeforeStartup())
 
-    for router in routers:
-        with pytest.raises(RoutingFrozenError, match="Can't add handler after startup"):
-            router.message_created.handler(_noop_handler)
-        with pytest.raises(RoutingFrozenError, match="Can't add filter after startup"):
-            router.message_created.filter()
-        with pytest.raises(RoutingFrozenError, match="Can't add middleware"):
-            router.message_created.middleware.outer.add()
-        with pytest.raises(RoutingFrozenError, match="Routers can't be included"):
-            router.include(Router())
+    for router in (dp, deep_router, deeper_router):
+        for observer in router.observers.values():
+            assert type(observer.state) == StartedObserverState
+            assert (
+                type(observer.middleware.inner.state) == StartedMiddlewareManagerState
+            )
 
     await dp.feed_signal(AfterStartup())
     await dp.feed_signal(BeforeShutdown())
 
-    for router in routers:
-        router.message_created.handler(_noop_handler)
-        router.message_created.middleware.inner.add()
+    for router in (dp, deep_router, deeper_router):
+        for observer in router.observers.values():
+            assert type(observer.state) == EmptyObserverState
+            assert type(observer.middleware.inner.state) == EmptyMiddlewareManagerState
 
     await dp.feed_signal(AfterShutdown())
 

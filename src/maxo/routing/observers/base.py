@@ -10,12 +10,13 @@ from collections.abc import (
 from contextlib import contextmanager
 from typing import Any, TypeVar, cast
 
-from maxo._internal.freezable import Freezable
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters.logic import combine_filters
 from maxo.routing.flags import HANDLER_KEY
 from maxo.routing.interfaces import Filter, Handler, Observer
+from maxo.routing.interfaces.observer import ObserverState
 from maxo.routing.middlewares.manager import MiddlewareManager, MiddlewareManagerFacade
+from maxo.routing.observers.state import EmptyObserverState
 from maxo.routing.sentinels import UNHANDLED, SkipHandler
 from maxo.types.base import BaseUpdate
 
@@ -26,10 +27,11 @@ _HandlerT = TypeVar("_HandlerT", bound=Handler[Any, Any])
 _HandlerFnT = TypeVar("_HandlerFnT", bound=Callable[..., Coroutine[Any, Any, Any]])
 
 
-class BaseObserver(Freezable, Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
+class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
     _filter: Filter[_UpdateT]
     _handlers: MutableSequence[_HandlerT]
     _middleware: MiddlewareManagerFacade[_UpdateT]
+    _state: ObserverState
 
     __slots__ = (
         "_filter",
@@ -37,21 +39,22 @@ class BaseObserver(Freezable, Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
         "_inner_middleware",
         "_middleware",
         "_outer_middleware",
+        "_state",
     )
 
     def __init__(self) -> None:
-        super().__init__()
         self._handlers = []
         self._filter = combine_filters()
         self._middleware = MiddlewareManagerFacade()
+        self._state = EmptyObserverState()
 
-    def freeze(self) -> None:
-        super().freeze()
-        self._middleware.freeze()
+    @property
+    def state(self) -> ObserverState:
+        return self._state
 
-    def unfreeze(self) -> None:
-        super().unfreeze()
-        self._middleware.unfreeze()
+    @state.setter
+    def state(self, value: ObserverState) -> None:
+        self._state = value
 
     @property
     def handlers(self) -> Sequence[_HandlerT]:
@@ -79,7 +82,7 @@ class BaseObserver(Freezable, Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
         return wrapper
 
     def filter(self, *filters: Filter[_UpdateT]) -> None:
-        self._ensure_not_frozen("Can't add filter after startup")
+        self._state.ensure_add_filter()
 
         self._filter = combine_filters(*filters)
 

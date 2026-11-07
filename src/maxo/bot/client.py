@@ -23,27 +23,16 @@ def build_ssl_context() -> ssl.SSLContext:
     return context
 
 
-def default_media_client(
-    *,
-    ssl_context: ssl.SSLContext | None = None,
-    limit: int = _DEFAULT_LIMIT,
-    timeout: "ClientTimeout | None" = None,
-    session: "ClientSession | None" = None,
-) -> "AiohttpAsyncClient":
-    """
-    Клиент файловых хостов: без общего таймаута, загрузка 2 ГиБ идёт минутами.
+def _file_host_session(*, limit: int = _DEFAULT_LIMIT) -> "ClientSession":
+    """Сессия файловых хостов: без токена, с заголовками клиента maxo."""
+    from aiohttp import ClientSession, TCPConnector  # noqa: PLC0415
 
-    Зависший ответ всё равно ловит `sock_read`.
-    """
-    from aiohttp import ClientTimeout  # noqa: PLC0415
+    from maxo.bot.middlewares.auth import CLIENT_HEADERS  # noqa: PLC0415
 
-    if session is None and timeout is None:
-        timeout = ClientTimeout(total=None, sock_connect=30, sock_read=300)
-    return default_client(
-        ssl_context=ssl_context,
-        limit=limit,
-        timeout=timeout,
-        session=session,
+    # ponytail: a session per call, as upstream; share one when media is redone
+    return ClientSession(
+        connector=TCPConnector(ssl=build_ssl_context(), limit=limit),
+        headers=CLIENT_HEADERS,
     )
 
 

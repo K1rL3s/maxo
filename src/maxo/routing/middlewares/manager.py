@@ -1,9 +1,12 @@
 from collections.abc import Awaitable, Callable, MutableSequence
 from typing import Any, Generic, TypeVar, cast
 
-from maxo._internal.freezable import Freezable
 from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
+from maxo.routing.middlewares.state import (
+    EmptyMiddlewareManagerState,
+    MiddlewareManagerState,
+)
 from maxo.types.base import BaseUpdate
 
 _ReturnT = TypeVar("_ReturnT")
@@ -22,14 +25,15 @@ def _partial_middleware(
     return wrapper
 
 
-class MiddlewareManager(Freezable, Generic[_UpdateT]):
+class MiddlewareManager(Generic[_UpdateT]):
     middlewares: MutableSequence[BaseMiddleware[_UpdateT]]
+    state: MiddlewareManagerState
 
-    __slots__ = ("middlewares",)
+    __slots__ = ("middlewares", "state")
 
     def __init__(self) -> None:
-        super().__init__()
         self.middlewares = []
+        self.state = EmptyMiddlewareManagerState()
 
     # Подражание aiogram: возвращаем декоратор, чтобы работал привычный
     # `@router.message_created.outer_middleware()`
@@ -41,7 +45,7 @@ class MiddlewareManager(Freezable, Generic[_UpdateT]):
         return self.register
 
     def add(self, *middlewares: BaseMiddleware[_UpdateT]) -> None:
-        self._ensure_not_frozen("Can't add middleware after startup")
+        self.state.ensure_add_middleware()
         self.middlewares.extend(middlewares)
 
     def register(
@@ -81,14 +85,6 @@ class MiddlewareManagerFacade(Generic[_UpdateT]):
     @property
     def outer(self) -> MiddlewareManager[_UpdateT]:
         return self._outer
-
-    def freeze(self) -> None:
-        self._inner.freeze()
-        self._outer.freeze()
-
-    def unfreeze(self) -> None:
-        self._inner.unfreeze()
-        self._outer.unfreeze()
 
     # Подражание aiogram,
     # чтобы по `router.message_created.middleware(MyMiddleware())`

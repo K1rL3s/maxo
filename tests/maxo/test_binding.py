@@ -1,8 +1,11 @@
 import dataclasses
+import inspect
 
 from maxo import types
+from maxo.bot import methods
 from maxo.bot.defaults import BotDefaults, apply_defaults
 from maxo.bot.methods import AnswerOnCallback, EditMessage, GetMyInfo, SendMessage
+from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.warming_up import _LOADED_ROOTS, _METHOD_ROOTS
 from maxo.enums import TextFormat
 from maxo.omit import is_defined, is_omitted
@@ -121,6 +124,29 @@ def test_warm_roots_cover_every_top_level_load() -> None:
     assert returning <= set(_LOADED_ROOTS)
     assert Updates in _LOADED_ROOTS
     assert list[Attachments] in _LOADED_ROOTS
+
+
+def _exported_methods() -> set[type[MaxoMethod[object]]]:
+    exported = (getattr(methods, name) for name in methods.__all__)
+    return {
+        value
+        for value in exported
+        if inspect.isclass(value)
+        and issubclass(value, MaxoMethod)
+        and value is not MaxoMethod
+    }
+
+
+def test_every_exported_method_is_a_warm_root() -> None:
+    missing = _exported_methods() - set(_METHOD_ROOTS)
+
+    assert not missing, sorted(method.__name__ for method in missing)
+
+
+def test_warm_roots_are_exported_methods() -> None:
+    extra = set(_METHOD_ROOTS) - _exported_methods()
+
+    assert not extra, sorted(method.__name__ for method in extra)
 
 
 def test_defaults_land_in_dumped_request() -> None:

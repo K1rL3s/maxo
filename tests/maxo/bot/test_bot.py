@@ -1,17 +1,16 @@
 import asyncio
 from asyncio import CancelledError
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from aiohttp import ClientSession
-from unihttp.http import UploadFile
+from aiohttp import web
+from aiohttp.test_utils import TestServer
 
 from maxo.bot.bot import Bot
-from maxo.bot.client import default_media_client
-from maxo.bot.media import Media
-from maxo.bot.methods.upload.upload_media import UploadMedia
 from maxo.bot.middlewares import AuthMiddleware
-from maxo.bot.upload import ProcessingConfig, UploadConfig, UploadMethod
+from maxo.bot.middlewares.auth import CLIENT_HEADERS
+from maxo.bot.upload import UploadConfig, UploadMethod
 from maxo.errors import MaxBotApiError, UnsubscribeError
 from maxo.types import (
     BotInfo,
@@ -53,19 +52,17 @@ def test_default_upload_config_is_not_shared() -> None:
     first = make_bot()
     second = make_bot()
 
-    first.media.config.method = UploadMethod.SINGLE
+    first.upload_config.method = UploadMethod.SINGLE
 
-    assert second.media.config.method is UploadMethod.AUTO
-    assert first.media.config is not second.media.config
+    assert second.upload_config.method is UploadMethod.AUTO
+    assert first.upload_config is not second.upload_config
 
 
-def test_explicit_media_and_processing_are_preserved() -> None:
-    media = Media(config=UploadConfig(method=UploadMethod.RESUMABLE))
-    processing = ProcessingConfig(not_ready_max_retries=1)
-    bot = make_bot(media=media, processing=processing)
+def test_explicit_upload_config_is_preserved() -> None:
+    config = UploadConfig(method=UploadMethod.RESUMABLE)
+    bot = make_bot(upload_config=config)
 
-    assert bot.media is media
-    assert bot._processing is processing
+    assert bot.upload_config is config
 
 
 async def test_bot_close(mock_bot: Bot, mock_client: AsyncMock) -> None:
@@ -453,76 +450,35 @@ async def test_clear_subscriptions_handles_an_empty_list(bot: Bot) -> None:
     assert result.kept == []
 
 
-async def test_media_uses_given_client_without_token() -> None:
-    """File-host uploads go through the `Media` client, not the API one, and
-    without a token: the `Media` chain has no `AuthMiddleware`."""
-    api, media_client = AsyncMock(), AsyncMock()
-    bot = make_bot(client=api, media=Media(media_client))
-
-    await bot.media.call_method(
-        UploadMedia(
-            upload_url="https://fu.example/upload",
-            file=UploadFile(file=b"data", filename="f.bin"),
-        ),
-    )
-
-    assert bot.media.client is media_client
-    api.call_method.assert_not_awaited()
-    used = media_client.call_method.await_args.kwargs["middleware"]
-    assert used == bot.media.middleware
-    assert not any(isinstance(m, AuthMiddleware) for m in used)
-
-
-async def test_bot_calls_only_the_api_client() -> None:
-    """`Bot` has no client choice: everything called through it goes to the API."""
-    api, media_client = AsyncMock(), AsyncMock()
+async def test_bot_calls_the_api_client_with_token() -> None:
+    api = AsyncMock()
     api.call_method.return_value = make_bot_info()
-    bot = make_bot(client=api, media=Media(media_client))
+    bot = make_bot(client=api)
 
     await bot.get_my_info()
 
-    media_client.call_method.assert_not_awaited()
     used = api.call_method.await_args.kwargs["middleware"]
     assert any(isinstance(m, AuthMiddleware) for m in used)
 
 
-async def test_close_closes_only_own_clients() -> None:
-    external = AsyncMock()
-    bot = make_bot(media=Media(external))
-    own_api = bot.client
+async def test_download_goes_to_file_host_without_token(tmp_path: Path) -> None:
+    seen: dict[str, str] = {}
 
-    with patch.object(own_api, "close", new_callable=AsyncMock) as close_api:
-        await bot.close()
+    async def handler(request: web.Request) -> web.Response:
+        seen.update(request.headers)
+        return web.Response(body=b"payload")
 
-    close_api.assert_awaited_once()
-    external.close.assert_not_awaited()
+    app = web.Application()
+    app.router.add_get("/file.bin", handler)
+    async with TestServer(app) as server:
+        bot = make_bot()
+        url = str(server.make_url("/file.bin"))
 
+        result = await bot.download(url)
+        await bot.download(url, destination=tmp_path / "file.bin")
 
-async def test_own_media_client_is_closed_with_bot() -> None:
-    bot = make_bot()
-    media_client = bot.media.client
-
-    with patch.object(media_client, "close", new_callable=AsyncMock) as close_media:
-        await bot.close()
-
-    close_media.assert_awaited_once()
-
-
-async def test_default_media_client_has_no_total_timeout() -> None:
-    client = default_media_client()
-    try:
-        timeout = client._session.timeout
-        assert timeout.total is None
-        assert timeout.sock_read is not None
-    finally:
-        await client.close()
-
-
-async def test_default_media_client_takes_own_session() -> None:
-    """The session is replaceable, e.g. with an aiohttp session behind a proxy."""
-    session = ClientSession()
-    client = default_media_client(session=session)
-    try:
-        assert client._session is session
-    finally:
-        await client.close()
+    assert result is not None
+    assert result.read() == b"payload"
+    assert (tmp_path / "file.bin").read_bytes() == b"payload"
+    assert "Authorization" not in seen
+    assert seen["X-Max-Client-Name"] == CLIENT_HEADERS["X-Max-Client-Name"]

@@ -1,7 +1,7 @@
 from typing import Any
 
 from unihttp.http import HTTPResponse
-from unihttp.method import BaseMethod, StreamMethod
+from unihttp.method import BaseMethod
 
 from maxo.errors.api import raise_api_error
 from maxo.types.base import MaxoType
@@ -24,10 +24,3 @@ class MaxoMethod[MethodResultT](BaseMethod[MethodResultT], MaxoType):
 
     def on_error(self, response: HTTPResponse[Any]) -> None:
         raise_api_error(response.status_code, response.data)
-
-
-class MaxoStreamMethod(StreamMethod, MaxoType):
-    """Базовый метод для стриминговых методов Bot API Max."""
-
-    def on_error(self, response: HTTPResponse[Any]) -> None:
-        raise_api_error(response.status_code, None)

@@ -8,6 +8,12 @@ from unihttp.middlewares import AsyncHandler, AsyncMiddleware
 from maxo.__meta__ import __version__
 
 USER_AGENT = f"Python/{platform.python_version()} maxo/{__version__}"
+CLIENT_HEADERS = {
+    "User-Agent": USER_AGENT,
+    "X-Max-Client-Name": "maxo",
+    "X-Max-Client-Version": __version__,
+    "X-Max-Client-Runtime": f"python{platform.python_version()}",
+}
 
 
 class UserAgentMiddleware(AsyncMiddleware):
@@ -18,7 +24,8 @@ class UserAgentMiddleware(AsyncMiddleware):
         request: HTTPRequest,
         next_handler: AsyncHandler,
     ) -> HTTPResponse[Any]:
-        request.header.setdefault("User-Agent", USER_AGENT)
+        for name, value in CLIENT_HEADERS.items():
+            request.header.setdefault(name, value)
         return await next_handler(request)
 
 

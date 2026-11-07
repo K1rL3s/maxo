@@ -71,7 +71,6 @@ from .location_attachment_request import LocationAttachmentRequest
 from .markup_element import MarkupElement
 from .markup_elements import MarkupElements
 from .media_attachment_payload import MediaAttachmentPayload
-from .media_input import MediaInput
 from .message import Message
 from .message_body import MessageBody
 from .message_button import MessageButton
@@ -83,6 +82,7 @@ from .message_removed import MessageRemoved
 from .message_stat import MessageStat
 from .modify_members_result import ModifyMembersResult
 from .monospaced_markup import MonospacedMarkup
+from .new_comment_body import NewCommentBody
 from .new_message_body import NewMessageBody
 from .new_message_link import NewMessageLink
 from .open_app_button import OpenAppButton
@@ -198,7 +198,6 @@ __all__ = (
     "MediaAttachmentPayload",
     "MediaAttachments",
     "MediaAttachmentsRequests",
-    "MediaInput",
     "Message",
     "MessageBody",
     "MessageButton",
@@ -210,6 +209,7 @@ __all__ = (
     "MessageStat",
     "ModifyMembersResult",
     "MonospacedMarkup",
+    "NewCommentBody",
     "NewMessageBody",
     "NewMessageLink",
     "OpenAppButton",

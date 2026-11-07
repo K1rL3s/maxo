@@ -174,7 +174,7 @@ async def test_send_message_minimal(
     mock_bot: MagicMock,
 ) -> None:
     with patch.object(
-        facade.bot,
+        facade,
         "build_attachments",
         new_callable=AsyncMock,
     ) as mock_build:
@@ -200,7 +200,7 @@ async def test_send_message_with_all_params(
     mock_bot: MagicMock,
 ) -> None:
     with patch.object(
-        facade.bot,
+        facade,
         "build_attachments",
         new_callable=AsyncMock,
     ) as mock_build:
@@ -239,7 +239,7 @@ async def test_send_message_with_all_params(
 
 async def test_send_message_without_attachments(facade: MockChatFacade) -> None:
     with patch.object(
-        facade.bot,
+        facade,
         "build_attachments",
         new_callable=AsyncMock,
     ) as mock_build:
@@ -252,7 +252,7 @@ async def test_send_message_without_attachments(facade: MockChatFacade) -> None:
 
 async def test_send_message_with_keyboard_only(facade: MockChatFacade) -> None:
     with patch.object(
-        facade.bot,
+        facade,
         "build_attachments",
         new_callable=AsyncMock,
     ) as mock_build:

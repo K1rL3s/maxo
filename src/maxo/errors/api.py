@@ -64,20 +64,14 @@ class MaxBotBadGatewayError(MaxBotServerError): ...
 class MaxBotServiceUnavailableError(MaxBotServerError): ...
 
 
-class MaxBotResponseError(MaxoError):
-    """
-    В ответе API нет данных, без которых maxo не может продолжить.
-
-    Например, токена загруженного файла. Скорее всего, MAX поменял формат.
-    """
-
-    method: str
-    detail: str = ""
-    raw_data: Any = None
+class RetvalReturnedError(MaxoError):
+    """Сервер загрузки ответил `<retval>1</retval>` вместо токена."""
 
     def __str__(self) -> str:
-        text = f"Неожиданный ответ {self.method}"
-        return f"{text}: {self.detail}" if self.detail else text
+        return (
+            "Сервер загрузки вернул <retval>1</retval> вместо токена, "
+            "используйте token из ответа POST /uploads"
+        )
 
 
 _ERRORS_BY_STATUS: dict[int, type[MaxBotApiError]] = {

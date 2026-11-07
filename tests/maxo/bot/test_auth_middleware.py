@@ -5,7 +5,7 @@ from unihttp.http import HTTPRequest
 
 from maxo.bot import Bot
 from maxo.bot.middlewares import AuthMiddleware, UserAgentMiddleware
-from maxo.bot.middlewares.auth import USER_AGENT
+from maxo.bot.middlewares.auth import CLIENT_HEADERS, USER_AGENT
 from tests.constants import TOKEN
 
 
@@ -64,6 +64,8 @@ async def test_user_agent_is_set_and_explicit_one_kept() -> None:
     request = _request("messages")
     await UserAgentMiddleware().handle(request, AsyncMock())
     assert request.header["User-Agent"] == USER_AGENT
+    for name, value in CLIENT_HEADERS.items():
+        assert request.header[name] == value
 
     request = _request("messages")
     request.header["User-Agent"] = "custom"

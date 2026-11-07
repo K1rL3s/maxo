@@ -2,12 +2,18 @@ from collections.abc import MutableMapping, MutableSequence
 from functools import partial
 from typing import Any
 
-from maxo._internal.freezable import Freezable
 from maxo.errors.routing import RouterAlreadyIncludedError
 from maxo.routing.ctx import Ctx
 from maxo.routing.events import ErrorEvent
 from maxo.routing.interfaces import BaseRouter, Observer
+from maxo.routing.interfaces.router import RouterState
+from maxo.routing.middlewares.state import (
+    EmptyMiddlewareManagerState,
+    StartedMiddlewareManagerState,
+)
 from maxo.routing.observers import SignalObserver, UpdateObserver
+from maxo.routing.observers.state import EmptyObserverState, StartedObserverState
+from maxo.routing.routers.state import EmptyRouterState, StartedRouterState
 from maxo.routing.sentinels import UNHANDLED
 from maxo.routing.signals.shutdown import AfterShutdown, BeforeShutdown
 from maxo.routing.signals.startup import AfterStartup, BeforeStartup
@@ -35,9 +41,8 @@ from maxo.types import (
 )
 
 
-class Router(Freezable, BaseRouter):
+class Router(BaseRouter):
     def __init__(self, name: str | None = None) -> None:
-        super().__init__()
         self.bot_added_to_chat = UpdateObserver[BotAddedToChat]()
         self.bot_admin_permissions_changed = UpdateObserver[
             BotAdminPermissionsChanged
@@ -69,12 +74,12 @@ class Router(Freezable, BaseRouter):
         ]()
 
         self.before_startup = SignalObserver[BeforeStartup]()
-        self.before_startup.handler(self._on_before_startup)
+        self.before_startup.handler(self._emit_before_startup_handler)
 
         self.after_startup = SignalObserver[AfterStartup]()
 
         self.before_shutdown = SignalObserver[BeforeShutdown]()
-        self.before_shutdown.handler(self._on_before_shutdown)
+        self.before_shutdown.handler(self._emit_before_shutdown_handler)
 
         self.after_shutdown = SignalObserver[AfterShutdown]()
 
@@ -111,9 +116,18 @@ class Router(Freezable, BaseRouter):
         self._name = name
         self._children_routers: MutableSequence[BaseRouter] = []
         self._parent_router: BaseRouter | None = None
+        self._state: RouterState = EmptyRouterState()
 
     def __repr__(self) -> str:
         return f"<Router {self._name!r}>"
+
+    @property
+    def state(self) -> RouterState:
+        return self._state
+
+    @state.setter
+    def state(self, value: RouterState) -> None:
+        self._state = value
 
     @property
     def name(self) -> str:
@@ -128,7 +142,7 @@ class Router(Freezable, BaseRouter):
         return self._children_routers
 
     def include(self, *routers: BaseRouter) -> None:
-        self._ensure_not_frozen("Routers can't be included after startup")
+        self.state.ensure_include()
         for router in routers:
             if router.parent_router is not None:
                 raise RouterAlreadyIncludedError(router, router.parent_router)
@@ -162,21 +176,25 @@ class Router(Freezable, BaseRouter):
             return await self.trigger_child(ctx)
         return result
 
-    def freeze(self) -> None:
-        super().freeze()
+    async def _emit_before_startup_handler(
+        self,
+    ) -> None:
+        self._state = StartedRouterState()
+
         for observer in self.observers.values():
-            observer.freeze()
+            observer.state = StartedObserverState()
 
-    def unfreeze(self) -> None:
-        super().unfreeze()
+            observer.middleware.inner.state = StartedMiddlewareManagerState()
+            observer.middleware.outer.state = StartedMiddlewareManagerState()
+
+    async def _emit_before_shutdown_handler(self) -> None:
+        self._state = EmptyRouterState()
+
         for observer in self.observers.values():
-            observer.unfreeze()
+            observer.state = EmptyObserverState()
 
-    async def _on_before_startup(self) -> None:
-        self.freeze()
-
-    async def _on_before_shutdown(self) -> None:
-        self.unfreeze()
+            observer.middleware.inner.state = EmptyMiddlewareManagerState()
+            observer.middleware.outer.state = EmptyMiddlewareManagerState()
 
     @property
     def parent_router(self) -> BaseRouter | None:

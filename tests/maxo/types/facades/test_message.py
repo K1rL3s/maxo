@@ -1,10 +1,8 @@
-from types import MethodType
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from maxo.bot.bot import Bot
 from maxo.enums import ChatType, MessageLinkType
 from maxo.omit import Omitted
 from maxo.types import (
@@ -58,7 +56,6 @@ def bot() -> MagicMock:
     bot.send_message = AsyncMock(return_value=SendMessageResult(message=sent))
     bot.edit_message = AsyncMock(return_value=SimpleQueryResult(success=True))
     bot.delete_message = AsyncMock(return_value=SimpleQueryResult(success=True))
-    bot.build_attachments = MethodType(Bot.build_attachments, bot)
     bot.get_message_by_id = AsyncMock(return_value=sent)
     return bot
 

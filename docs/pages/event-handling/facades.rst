@@ -40,7 +40,7 @@
 
 .. code-block:: python
 
-    from maxo.types import MediaInput
+    from maxo.types.facades.attachments import MediaInput
 
 Загрузка файла
 ~~~~~~~~~~~~~~
@@ -52,48 +52,35 @@
     photo = BufferedInputFile.image(content, "photo.jpg")
     await update.send_media(media=photo, text="Новое фото")
 
-Фасады загружают файлы через ``bot.build_attachments``. Без апдейта, например
-из фоновой задачи, вызывайте бота напрямую: ``await bot.build_attachments(...)``
-или ``await bot.upload(file)``, подробнее - на странице :doc:`../botapi/bot`.
-
-Настройки загрузки на файловый хост собраны в ``maxo.bot.UploadConfig`` и
-передаются в ``Media(config=...)``, а сам ``Media`` - в ``Bot(media=...)``.
-Способ выбирается полем ``method``
+Все настройки загрузки собраны в ``maxo.bot.UploadConfig`` и передаются в
+``Bot(upload_config=...)``. Способ выбирается полем ``method``
 (``maxo.bot.UploadMethod``):
 
-- ``AUTO`` (по умолчанию) - видео и аудио от ``resumable_threshold`` грузятся
-  частями, остальное - одним запросом.
-- ``RESUMABLE`` - видео и аудио всегда частями.
+- ``AUTO`` (по умолчанию) - большие файлы грузятся resumable-протоколом
+  (частями), мелкие - одним запросом. Порог - ``resumable_threshold``.
+- ``RESUMABLE`` - всегда частями.
 - ``SINGLE`` - всегда одним multipart-запросом.
 
-Файлы и изображения всегда уходят одним запросом. Сервер файлов принимает так
-и файлы больше 2 ГиБ, а загрузку частями держит только на одном соединении и
-теряет после любой ошибки. Видео и аудио частями грузятся надёжнее: упавший
-кусок отправляется повторно.
-
-``FSInputFile`` при загрузке одним запросом читается с диска потоком и не
-держится в памяти целиком, поэтому для больших файлов предпочитайте его.
-``BufferedInputFile`` и собственные ``InputFile`` передаются целиком из памяти.
-
-В ``UploadConfig`` также задаются размер куска и ретраи загрузки частями.
-Ожидание обработки файла сервером - модель задержки и ретраи отправки при
-``attachment.not.ready`` - настраивается отдельно, через
-``maxo.bot.ProcessingConfig`` в ``Bot(processing=...)``. Для больших файлов
-повышайте ``not_ready_max_retries`` - сервер
+В ``UploadConfig`` также задаются размер куска и ретраи resumable-загрузки,
+ретраи отправки при ``attachment.not.ready`` и модель ожидания обработки файла
+сервером. Для больших файлов повышайте ``not_ready_max_retries`` - сервер
 обрабатывает многогигабайтные файлы дольше.
+
+Resumable-загрузка читает файл по кускам и отправляет их последовательными
+запросами. Для ``FSInputFile`` это значит, что большой файл стримится прямо с
+диска и не держится в памяти целиком - так снимается лимит на размер (обычный
+однозапросный аплоад падает на файлах около 2 ГБ). Для больших файлов
+предпочитайте ``FSInputFile``:
 
 .. code-block:: python
 
     from maxo import Bot
-    from maxo.bot import Media, ProcessingConfig, UploadConfig, UploadMethod
+    from maxo.bot import UploadConfig, UploadMethod
     from maxo.utils.upload_media import FSInputFile
 
     # AUTO - значение по умолчанию; для очень больших файлов даём больше ретраев
-    bot = Bot(
-        token,
-        media=Media(config=UploadConfig(method=UploadMethod.AUTO)),
-        processing=ProcessingConfig(not_ready_max_retries=30),
-    )
+    config = UploadConfig(method=UploadMethod.AUTO, not_ready_max_retries=30)
+    bot = Bot(token, upload_config=config)
 
     video = FSInputFile.video("/path/to/large_video.mp4")
     await update.send_media(media=video, text="Большое видео")
@@ -188,3 +175,7 @@
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: maxo.types.facades.attachments
+   :members:
+   :undoc-members:
+   :show-inheritance:

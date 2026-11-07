@@ -1,4 +1,5 @@
 import dataclasses
+from datetime import UTC, datetime
 
 import pytest
 from adaptix.load_error import LoadError
@@ -8,6 +9,7 @@ from maxo.bot.defaults import METHODS_WITH_DEFAULTS, BotDefaults, apply_defaults
 from maxo.bot.methods import (
     AnswerOnCallback,
     EditMessage,
+    GetComments,
     GetMembers,
     GetMessages,
     GetUpdates,
@@ -15,25 +17,28 @@ from maxo.bot.methods import (
     SendMessage,
 )
 from maxo.bot.methods.base import MaxoMethod
-from maxo.bot.methods.markers import Header, Path, Query
-from maxo.enums import ChatAdminPermission, TextFormat
+from maxo.enums import ChatAdminPermission, TextFormat, VideoType
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_omitted
 from maxo.serialization import get_retort
 from maxo.types import (
+    AudioAttachment,
     BotAdminPermissionsChanged,
     BotStarted,
     CommentCreated,
     CommentEdited,
     CommentMessage,
     CommentRemoved,
+    FileAttachment,
     Message,
     MessageCreated,
+    NewCommentBody,
     NewMessageBody,
     OpenAppButton,
     UpdateList,
     UploadMediaResult,
     User,
+    VideoAttachment,
     VideoAttachmentDetails,
     VideoThumbnail,
 )
@@ -410,6 +415,84 @@ def test_retort_loads_open_app_button_without_web_app() -> None:
     assert is_omitted(button.web_app)
 
 
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ({"video_type": "video_message"}, VideoType.VIDEO_MESSAGE),
+        ({"video_type": "video"}, VideoType.VIDEO),
+        ({"video_type": None}, None),
+        ({}, Omitted()),
+    ],
+)
+def test_retort_loads_video_type(
+    raw: dict[str, str | None],
+    expected: Omittable[VideoType | None],
+) -> None:
+    retort = get_retort()
+
+    video = retort.load(
+        {"type": "video", "payload": {"url": "url", "token": "token"}, **raw},
+        VideoAttachment,
+    )
+
+    assert video.video_type == expected
+
+
+@pytest.mark.parametrize(
+    ("attachment_type", "payload", "expected"),
+    [
+        ("video", {"id": 16922062446427}, 16922062446427),
+        ("audio", {"id": 16190153253039}, 16190153253039),
+        ("video", {"id": None}, None),
+        ("video", {}, Omitted()),
+    ],
+)
+def test_retort_loads_media_payload_id(
+    attachment_type: str,
+    payload: dict[str, int | None],
+    expected: Omittable[int | None],
+) -> None:
+    retort = get_retort()
+
+    attachment = retort.load(
+        {
+            "type": attachment_type,
+            "payload": {"url": "url", "token": "token", **payload},
+        },
+        AudioAttachment | VideoAttachment,
+    )
+
+    assert attachment.payload.id == expected
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        ({"fileId": 5399066140}, 5399066140),
+        ({"fileId": None}, None),
+        ({}, Omitted()),
+    ],
+)
+def test_retort_loads_file_payload_file_id(
+    payload: dict[str, int | None],
+    expected: Omittable[int | None],
+) -> None:
+    retort = get_retort()
+
+    attachment = retort.load(
+        {
+            "type": "file",
+            "payload": {"url": "url", "token": "token", **payload},
+            "filename": "probe.txt",
+            "size": 6,
+        },
+        FileAttachment,
+    )
+
+    assert attachment.payload.file_id == expected
+    assert attachment.payload.id == expected
+
+
 def test_update_survives_dump_load_roundtrip() -> None:
     retort = get_retort()
     data = {
@@ -474,8 +557,9 @@ def test_types_with_defaults_match_declared_fields() -> None:
         }
 
     owning = owners("format") | owners("disable_link_preview")
-    # `NewMessageBody` is reached through `AnswerOnCallback.message`
-    assert owning == {*METHODS_WITH_DEFAULTS, NewMessageBody}
+    # `NewMessageBody` is reached through `AnswerOnCallback.message`;
+    # `NewCommentBody` is in no method: comment methods spread it into fields
+    assert owning == {*METHODS_WITH_DEFAULTS, NewMessageBody, NewCommentBody}
 
 
 def test_retort_loads_user_without_last_activity_time() -> None:
@@ -490,24 +574,20 @@ def test_retort_loads_user_without_last_activity_time() -> None:
         _ = user.unsafe_last_activity_time
 
 
-class _HeaderMethod(MaxoMethod[bool]):
-    __url__ = "things/{thing_id}"
-    __method__ = "post"
+def test_query_datetime_is_dumped_in_milliseconds() -> None:
+    moment = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
 
-    thing_id: Path[int]
-    x_request_id: Header[str]
-    content_type: Header[str] = "text/plain"
-    page_size: Query[int] = 10
-
-
-def test_header_fields_take_http_names() -> None:
-    """`x_request_id: Header[str]` уходит как `x-request-id`: в Python поле
-    не может содержать дефис, а заголовок с `_` - другой заголовок."""
-    request = _HeaderMethod(thing_id=1, x_request_id="abc").build_http_request(
-        get_retort(),
+    data = get_retort().dump(
+        GetComments(message_id="mid", after=moment),
     )
 
-    assert request.header == {"x-request-id": "abc", "content-type": "text/plain"}
-    # Other markers keep their names
-    assert request.url == "things/1"
-    assert request.query == {"page_size": 10}
+    assert data["query"]["after"] == 1767323045000
+
+
+@pytest.mark.parametrize("timestamp", [136565933883, 1092578636909, 2165829603319])
+def test_datetime_dump_restores_loaded_milliseconds(timestamp: int) -> None:
+    retort = get_retort()
+
+    moment = retort.load(timestamp, datetime)
+
+    assert retort.dump(moment, datetime) == timestamp

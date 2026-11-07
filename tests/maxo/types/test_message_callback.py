@@ -1,9 +1,7 @@
-from types import MethodType
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from maxo.bot.bot import Bot
 from maxo.enums import ChatType
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omitted
@@ -32,7 +30,6 @@ def bot() -> MagicMock:
     bot.send_message = AsyncMock(return_value=SendMessageResult(message=sent))
     bot.edit_message = AsyncMock(return_value=SimpleQueryResult(success=True))
     bot.delete_message = AsyncMock(return_value=SimpleQueryResult(success=True))
-    bot.build_attachments = MethodType(Bot.build_attachments, bot)
     bot.answer_on_callback = AsyncMock(return_value=SimpleQueryResult(success=True))
     return bot
 

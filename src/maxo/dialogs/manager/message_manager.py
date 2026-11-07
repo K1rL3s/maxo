@@ -30,7 +30,8 @@ from maxo.types import (
     PhotoAttachmentRequest,
     VideoAttachmentRequest,
 )
-from maxo.types.media_input import MediaInput
+from maxo.types.base import FacadeMaxoType
+from maxo.types.facades.attachments import AttachmentsFacade, MediaInput
 from maxo.utils.upload_media import FSInputFile
 
 SEND_METHODS = {
@@ -45,6 +46,11 @@ INPUT_MEDIA_TYPES: dict[Any, Any] = {}
 _INVALID_QUERY_ID_MSG = (
     "query is too old and response timeout expired or query id is invalid"
 )
+
+
+# temp
+class _AttachmentsBuilder(FacadeMaxoType, AttachmentsFacade):
+    pass
 
 
 def _combine(sent_message: NewMessage, message_result: Message) -> OldMessage:
@@ -321,7 +327,7 @@ class MessageManager(MessageManagerProtocol):
             for item in media
             if (converted := self._convert_media(item)) is not None
         ]
-        return await bot.build_attachments(
+        return await _AttachmentsBuilder(_bot=bot).build_attachments(
             base=[],
             keyboard=keyboard,
             files=converted_media,

@@ -12,7 +12,7 @@ from unihttp.serializers.adaptix.serialize import DEFAULT_RETORT
 
 from maxo._internal.adaptix import concat_provider, has_tag_provider, is_subclass
 from maxo.bot.methods.base import MaxoMethod
-from maxo.bot.methods.markers import HeaderMarker, QueryMarker
+from maxo.bot.methods.markers import QueryMarker
 from maxo.enums import (
     AttachmentRequestType,
     AttachmentType,
@@ -46,6 +46,7 @@ from maxo.types import (
     EmphasizedMarkup,
     FacadeMaxoType,
     FileAttachment,
+    FileAttachmentPayload,
     FileAttachmentRequest,
     HeadingMarkup,
     HighlightedMarkup,
@@ -204,7 +205,7 @@ def create_retort() -> Retort:
                 for_marker(QueryMarker, P[list[str]] | P[list[int]]),
                 lambda seq: ",".join(str(el) for el in seq),
             ),
-            dumper(P[datetime], lambda time: int(time.timestamp() * 1000)),
+            dumper(P[datetime], lambda time: round(time.timestamp() * 1000)),
             dumper(
                 P[AttachmentsRequests | Attachments],
                 lambda x: x.to_request() if isinstance(x, Attachments) else x,
@@ -212,18 +213,10 @@ def create_retort() -> Retort:
             ),
             loader(P[datetime], _load_datetime),
             name_mapping(UploadMediaResult, map={"file_id": "fileId"}),
-            name_mapping(
-                is_subclass(MaxoMethod),
-                map=[
-                    (
-                        for_marker(HeaderMarker),
-                        lambda _s, f: str(f.id).replace("_", "-"),
-                    ),
-                ],
-            ),
             name_mapping(is_subclass(FacadeMaxoType), skip=["_bot"]),
             loader(P[is_subclass(FacadeMaxoType)]._bot, lambda v: v),  # noqa: SLF001
             dumper(P[is_subclass(FacadeMaxoType)]._bot, lambda v: v),  # noqa: SLF001
+            name_mapping(FileAttachmentPayload, map={"file_id": "fileId"}),
         ],
     )
 

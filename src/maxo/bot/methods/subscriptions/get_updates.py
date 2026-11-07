@@ -56,22 +56,20 @@ class GetUpdates(MaxoMethod[UpdateList], slots=False):
         response: HTTPResponse[Any],
         response_loader: ResponseLoader,
     ) -> UpdateList:
-        raw = response.data
-        if not isinstance(raw, dict):
+        try:
             return super().make_response(response, response_loader)
-
-        updates: list[Updates] = []
-        for raw_update in raw.get("updates", []):
-            try:
-                # `Updates` is a union alias, mypy doesn't take it as `type`
-                updates.append(response_loader.load(raw_update, Updates))  # type: ignore[arg-type]
-            except LoadError:
-                loggers.methods.warning(
-                    "Пропуск незагружаемого апдейта. Сообщите об этой ошибке в "
-                    "https://github.com/K1rL3s/maxo/issues. Тело апдейта: %s",
-                    raw_update,
-                    exc_info=True,
-                )
-        # `int | None` is a union too, same mypy limitation
-        marker = response_loader.load(raw.get("marker"), int | None)  # type: ignore[arg-type]
-        return UpdateList(updates=updates, marker=marker)
+        except LoadError:
+            raw = response.data
+            marker = raw.get("marker")
+            updates: list[Updates] = []
+            for raw_upd in raw.get("updates", []):
+                try:
+                    updates.append(response_loader.load(raw_upd, Updates))  # type: ignore[arg-type]
+                except LoadError:
+                    loggers.methods.warning(
+                        "Пропуск незагружаемого апдейта. Сообщите об этой ошибке в "
+                        "https://github.com/K1rL3s/maxo/issues. Тело апдейта: %s",
+                        raw_upd,
+                        exc_info=True,
+                    )
+            return UpdateList(updates=updates, marker=marker)

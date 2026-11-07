@@ -59,6 +59,7 @@ from maxo.types import (
     MessageRemoved,
     MessageStat,
     ModifyMembersResult,
+    NewCommentBody,
     NewMessageBody,
     NewMessageLink,
     OpenAppButton,
@@ -1445,6 +1446,7 @@ def test_comment_accessors() -> None:
         sender=sender,
         stat=MessageStat(views=5),
     )
+    new_body = NewCommentBody(format=TextFormat.HTML)
 
     assert body.unsafe_markup == []
     assert body.unsafe_text == "Текст"
@@ -1456,7 +1458,14 @@ def test_comment_accessors() -> None:
     assert comment.unsafe_link is link
     assert comment.unsafe_sender is sender
     assert comment.unsafe_stat == MessageStat(views=5)
+    assert new_body.unsafe_format is TextFormat.HTML
 
+    with pytest.raises(AttributeIsEmptyError):
+        _ = new_body.unsafe_link
+    with pytest.raises(AttributeIsEmptyError):
+        _ = new_body.unsafe_text
+    with pytest.raises(AttributeIsEmptyError):
+        _ = NewCommentBody().unsafe_format
     with pytest.raises(AttributeIsEmptyError):
         _ = CommentMessageBody(mid="comment", seq=1).unsafe_markup
     with pytest.raises(AttributeIsEmptyError):

@@ -7,13 +7,13 @@ from maxo.enums import MessageLinkType, TextFormat
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
 from maxo.types.attachments import Attachments, AttachmentsRequests
+from maxo.types.facades.attachments import MediaInput
 from maxo.types.facades.chat import ChatMethodsFacade
 from maxo.types.new_message_link import NewMessageLink
 from maxo.utils.helpers.calculating import calculate_chat_id_and_user_id
 
 if TYPE_CHECKING:
     from maxo.types.buttons import InlineButtons
-    from maxo.types.media_input import MediaInput
     from maxo.types.message import Message
     from maxo.types.simple_query_result import SimpleQueryResult
 
@@ -86,7 +86,7 @@ class MessageMethodsFacade(ChatMethodsFacade):
             chat_type=recipient.chat_type,
         )
 
-        attachments = await self.bot.build_attachments(
+        attachments = await self.build_attachments(
             base=attachments or [],
             keyboard=keyboard,
             files=media,
@@ -215,7 +215,7 @@ class MessageMethodsFacade(ChatMethodsFacade):
             # Для случая, когда не надо редачить аттачменты
             prepared_attachments = None
         else:
-            prepared_attachments = await self.bot.build_attachments(
+            prepared_attachments = await self.build_attachments(
                 base=attachments or [],
                 keyboard=keyboard,
                 files=media,

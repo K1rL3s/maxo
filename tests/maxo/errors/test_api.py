@@ -8,7 +8,6 @@ from maxo.errors import (
     MaxBotForbiddenError,
     MaxBotMethodNotAllowedError,
     MaxBotNotFoundError,
-    MaxBotResponseError,
     MaxBotServerError,
     MaxBotServiceUnavailableError,
     MaxBotTooManyRequestsError,
@@ -83,10 +82,3 @@ def test_raise_api_error_reads_dict_body() -> None:
     assert (error.code, error.error, error.message) == ("proto.payload", "", "1")
     assert error.status_code == 400
     assert error.raw_data is data
-
-
-def test_response_error_str() -> None:
-    assert str(MaxBotResponseError(method="GetChat")) == "Неожиданный ответ GetChat"
-    assert str(MaxBotResponseError(method="UploadMedia", detail="нет токена")) == (
-        "Неожиданный ответ UploadMedia: нет токена"
-    )

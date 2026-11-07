@@ -20,7 +20,6 @@ SKIP_SCHEMAS: frozenset[str] = frozenset(
         "BotPatch",
         "CallbackAnswer",
         "ChatPatch",
-        "NewCommentBody",
         "PinMessageBody",
         "PhotoTokens",
         "SubscriptionRequestBody",
@@ -365,7 +364,6 @@ TYPES_EXTRA_EXPORTS: tuple[ExtraExport, ...] = (
         module="clear_subscriptions_result",
         names=("ClearSubscriptionsResult",),
     ),
-    ExtraExport(module="media_input", names=("MediaInput",)),
     ExtraExport(module="upload_media_result", names=("UploadMediaResult",)),
 )
 

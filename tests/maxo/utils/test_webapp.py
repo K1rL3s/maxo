@@ -108,7 +108,7 @@ def test_parse_webapp_init_data_ignores_unknown_fields() -> None:
 
     assert parsed_data.hash == "x"
     assert parsed_data.user.id == 1
-    assert parsed_data.chat.id == 2
+    assert parsed_data.chat == WebAppChat(id=2, type="DIALOG")
 
 
 @pytest.mark.parametrize(
@@ -170,3 +170,26 @@ def test_safe_parse_webapp_init_data_docs_example() -> None:
         auth_date="1771409719",
         hash=hash_.hexdigest(),
     )
+
+
+def test_safe_parse_webapp_init_data_keeps_signed_blank_field() -> None:
+    init_data = generate_test_init_data(TOKEN, {**TEST_DATA, "start_param": ""})
+
+    assert safe_parse_webapp_init_data(TOKEN, init_data).start_param == ""
+
+
+def test_safe_parse_webapp_init_data_without_chat() -> None:
+    data = {key: value for key, value in TEST_DATA.items() if key != "chat"}
+    init_data = generate_test_init_data(TOKEN, data)
+
+    assert safe_parse_webapp_init_data(TOKEN, init_data).chat is None
+
+
+@pytest.mark.parametrize(
+    ("old", "new"),
+    [("start_param=&", "start_param=x&"), ("start_param=&", "")],
+)
+def test_check_webapp_signature_tampered_blank_field(old: str, new: str) -> None:
+    init_data = generate_test_init_data(TOKEN, {**TEST_DATA, "start_param": ""})
+
+    assert check_webapp_signature(TOKEN, init_data.replace(old, new)) is False

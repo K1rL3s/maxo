@@ -11,8 +11,6 @@ from unihttp.markers import (
     PathMarker,
     Query,
     QueryMarker,
-    Raw,
-    RawMarker,
 )
 
 __all__ = (
@@ -28,6 +26,4 @@ __all__ = (
     "PathMarker",
     "Query",
     "QueryMarker",
-    "Raw",
-    "RawMarker",
 )

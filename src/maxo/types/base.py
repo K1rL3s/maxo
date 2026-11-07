@@ -55,18 +55,19 @@ class _MaxoTypeMetaClass(type):
 
 class MaxoType(metaclass=_MaxoTypeMetaClass):
     """
-    Base of all maxo dataclasses. Holds no bot.
+    База всех dataclass'ов maxo. Бота не хранит.
 
-    Subclasses become `@dataclass(slots=True, kw_only=True)` automatically;
-    `class X(MaxoType, slots=False)` disables slots.
+    Наследники сами становятся `@dataclass(slots=True, kw_only=True)`;
+    `class X(MaxoType, slots=False)` отключает слоты.
     """
 
 
 class FacadeMaxoType(MaxoType):
     """
-    Type that holds the bot: updates and messages.
+    Тип, который хранит бота: апдейты и сообщения.
 
-    `_bot` is a field, so `dataclasses.replace` and `copy` keep it
+    `_bot` - поле dataclass, поэтому `dataclasses.replace` и `copy` его
+    сохраняют.
     """
 
     _bot: "Bot | None" = field(default=None, repr=False, compare=False)
@@ -82,14 +83,14 @@ class FacadeMaxoType(MaxoType):
         )
 
     def as_(self, bot: "Bot | None") -> Self:
-        """Bind the bot to self and every nested `FacadeMaxoType`."""
+        """Привязывает бота к себе и ко всем вложенным `FacadeMaxoType`."""
         from maxo.types.binding import bind_bot  # noqa: PLC0415
 
         return bind_bot(self, bot)
 
 
 class BaseUpdate(MaxoType):
-    """Routing event: MAX update, signal or error."""
+    """Событие роутинга: апдейт MAX, сигнал или ошибка."""
 
 
 class MaxUpdate(BaseUpdate, FacadeMaxoType):

@@ -6,8 +6,8 @@ from maxo.enums import MessageLinkType, TextFormat
 from maxo.omit import Omittable, Omitted, is_defined
 from maxo.types.attachments import AttachmentsRequests
 from maxo.types.buttons import InlineButtons
+from maxo.types.facades.attachments import MediaInput
 from maxo.types.facades.message import MessageMethodsFacade
-from maxo.types.media_input import MediaInput
 from maxo.types.new_message_link import NewMessageLink
 from maxo.types.simple_query_result import SimpleQueryResult
 
