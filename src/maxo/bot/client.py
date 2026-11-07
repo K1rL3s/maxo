@@ -51,7 +51,6 @@ def default_client(
     `ssl_context`, `limit` и `timeout` настраивают создаваемую здесь сессию,
     поэтому вместе со своей `session` они дают `TypeError`.
     """
-    # Lazy: importing aiohttp costs ~0.4s, keep it out of `import maxo`
     from aiohttp import ClientSession, TCPConnector  # noqa: PLC0415
     from unihttp.clients.aiohttp import AiohttpAsyncClient  # noqa: PLC0415
 
