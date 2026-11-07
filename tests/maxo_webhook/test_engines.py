@@ -130,3 +130,19 @@ class TestSimpleEngine:
             dispatcher.feed_signal.await_args_list[1].args[0],
             AfterShutdown,
         )
+
+    async def test_on_shutdown_closes_bot_when_signal_fails(
+        self,
+        engine: SimpleEngine,
+        dispatcher: Dispatcher,
+        bot: MagicMock,
+    ) -> None:
+        dispatcher.feed_signal = AsyncMock(  # type: ignore[method-assign]
+            side_effect=ValueError("after_shutdown failed"),
+        )
+        bot.close = AsyncMock()
+
+        with pytest.raises(ValueError, match="after_shutdown failed"):
+            await engine.on_shutdown(app=MagicMock())
+
+        bot.close.assert_awaited_once()
