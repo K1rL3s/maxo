@@ -173,6 +173,15 @@ def test_bind_reaches_whole_tree_from_root() -> None:
     assert update.message._bot is None
 
 
+def test_bind_descends_into_dict_values() -> None:
+    bot = make_bot()
+    update = get_retort().load(UPDATE, Updates)
+
+    bind_bot({"key": update}, bot)
+
+    assert update.message.bot is bot
+
+
 def test_replace_keeps_bot() -> None:
     # The bot is a field, so `dataclasses.replace` keeps it.
     bot = make_bot()

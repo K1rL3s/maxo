@@ -381,6 +381,20 @@ def test_retort_loads_file_id_of_upload_result() -> None:
     assert result.file_id == 3343344796
 
 
+@pytest.mark.parametrize(
+    ("timestamp", "expected"),
+    [
+        (10**20, datetime.max.replace(tzinfo=UTC)),
+        (-(10**20), datetime.min.replace(tzinfo=UTC)),
+    ],
+)
+def test_retort_clamps_out_of_range_timestamp(
+    timestamp: int,
+    expected: datetime,
+) -> None:
+    assert get_retort().load(timestamp, datetime) == expected
+
+
 def test_retort_loads_open_app_button_without_web_app() -> None:
     retort = get_retort()
 

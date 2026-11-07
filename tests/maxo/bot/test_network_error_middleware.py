@@ -40,6 +40,7 @@ async def test_wraps_transport_errors(
     # Наружу торчит только maxo-ошибка, исходная лежит в __cause__.
     assert isinstance(exc_info.value, MaxoError)
     assert exc_info.value.__cause__ is raised
+    assert str(exc_info.value) == str(raised)
 
 
 async def test_passes_response_through() -> None:
