@@ -482,3 +482,8 @@ async def test_download_goes_to_file_host_without_token(tmp_path: Path) -> None:
     assert (tmp_path / "file.bin").read_bytes() == b"payload"
     assert "Authorization" not in seen
     assert seen["X-Max-Client-Name"] == CLIENT_HEADERS["X-Max-Client-Name"]
+
+
+async def test_call_method_stream_is_not_supported() -> None:
+    with pytest.raises(NotImplementedError, match=r"bot\.download"):
+        await make_bot().call_method_stream(MagicMock())

@@ -4,11 +4,11 @@ import json
 import pathlib
 from collections.abc import Iterable, Sequence
 from types import TracebackType
-from typing import TYPE_CHECKING, BinaryIO, Self
+from typing import TYPE_CHECKING, BinaryIO, NoReturn, Self
 
 from unihttp.bind_method import bind_method
 from unihttp.clients.base import BaseAsyncClient
-from unihttp.method import BaseMethod, ResponseType
+from unihttp.method import BaseMethod, ResponseType, StreamMethod
 from unihttp.middlewares import AsyncMiddleware
 
 from maxo.bot.client import _file_host_session, default_client
@@ -173,6 +173,17 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
             middleware=[*(middleware or ()), *self.middleware],
         )
         return bind_bot(result, self)
+
+    async def call_method_stream(
+        self,
+        method: StreamMethod,
+        *,
+        middleware: Sequence[AsyncMiddleware] | None = None,
+    ) -> NoReturn:
+        """Не поддерживается: API MAX не стримит ответы. Файлы - `bot.download()`."""
+        # Inherited from `BaseAsyncClient` for mypy, but `Bot` sets up no transport
+        msg = "Bot не стримит ответы API, скачивайте файлы через bot.download()"
+        raise NotImplementedError(msg)
 
     # Bots
     edit_bot_info = bind_method(EditBotInfo)
