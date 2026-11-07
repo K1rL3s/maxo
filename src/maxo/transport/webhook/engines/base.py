@@ -5,7 +5,7 @@ from typing import Any
 
 from adaptix.load_error import LoadError
 
-from maxo import Bot, Dispatcher
+from maxo import Bot, Dispatcher, loggers
 from maxo.bot.methods.base import MaxoMethod
 from maxo.routing.signals import MaxoUpdate
 from maxo.transport.webhook.adapters.base_adapter import BoundRequest, WebAdapter
@@ -67,6 +67,10 @@ class WebhookEngine(ABC):
     async def handle_request(self, bound_request: BoundRequest[Any]) -> Any:
         bot = self._get_bot_from_request(bound_request)
         if bot is None:
+            loggers.webhook.warning(
+                "Вебхук %s: бот для запроса не найден",
+                self.routing.path,
+            )
             return self.web_adapter.create_json_response(
                 status=400,
                 payload={"detail": "Bot not found"},
@@ -76,6 +80,10 @@ class WebhookEngine(ABC):
             bot=bot,
             bound_request=bound_request,
         ):
+            loggers.webhook.warning(
+                "Вебхук %s: запрос отклонён проверкой безопасности",
+                self.routing.path,
+            )
             return self.web_adapter.create_json_response(
                 status=403,
                 payload={"detail": "Forbidden"},
@@ -84,6 +92,10 @@ class WebhookEngine(ABC):
         try:
             raw_update = await bound_request.json()
         except JSONDecodeError:
+            loggers.webhook.warning(
+                "Вебхук %s: тело запроса не является корректным JSON",
+                self.routing.path,
+            )
             return self.web_adapter.create_json_response(
                 status=400,
                 payload={"detail": "Bad request"},
@@ -92,16 +104,35 @@ class WebhookEngine(ABC):
         try:
             update = MaxoUpdate(update=bot.retort.load(raw_update, Updates))
         except LoadError:
+            loggers.webhook.warning(
+                "Вебхук %s: не удалось разобрать обновление",
+                self.routing.path,
+                exc_info=True,
+            )
             return self.web_adapter.create_json_response(
                 status=400,
                 payload={"detail": "Bad request"},
             )
+
+        loggers.webhook.debug("New update: %s", update.update)
 
         if self.handle_in_background:
             return await self._handle_request_background(bot=bot, update=update)
         return await self._handle_request(bot=bot, update=update)
 
     def register(self, app: Any) -> None:
+        loggers.webhook.info(
+            "Регистрация вебхука на пути %s через %s",
+            self.routing.path,
+            type(self.web_adapter).__name__,
+        )
+        if self.security is None:
+            loggers.webhook.warning(
+                "Вебхук на пути %s зарегистрирован без проверки безопасности: "
+                "любой, кто знает путь, может отправлять боту обновления. "
+                "Передайте security=Security(...) в engine",
+                self.routing.path,
+            )
         self.web_adapter.register(
             app=app,
             path=self.routing.path,
