@@ -11,7 +11,13 @@ from maxo.routing.interfaces import NextMiddleware
 from maxo.routing.middlewares.fsm_context import FSMContextMiddleware
 from maxo.routing.routers.simple import Router
 from maxo.routing.sentinels import UNHANDLED
-from maxo.routing.signals import BeforeStartup, MaxoUpdate
+from maxo.routing.signals import (
+    AfterShutdown,
+    AfterStartup,
+    BeforeShutdown,
+    BeforeStartup,
+    MaxoUpdate,
+)
 from maxo.types import ErrorEvent, Message, MessageBody, MessageEdited, Recipient, User
 from maxo.types.message_created import MessageCreated
 from tests.constants import NOW
@@ -421,6 +427,101 @@ async def test_shared_observer_inherits_parent_inner_middleware_once(ctx: Ctx) -
         "dp_inner_pre",
         "child_inner_pre",
         "handler",
+        "child_inner_post",
+        "dp_inner_post",
+    ]
+
+
+async def _restart_cycle(dp: Dispatcher) -> None:
+    await dp.feed_signal(BeforeStartup())
+    await dp.feed_signal(AfterStartup())
+    await dp.feed_signal(BeforeShutdown())
+    await dp.feed_signal(AfterShutdown())
+
+
+async def test_restarting_dispatcher_does_not_duplicate_inherited_inner_middleware(
+    ctx: Ctx,
+) -> None:
+    """Regression test for #347.
+
+    `resolve_middlewares` used to insert the parent's inner middlewares into
+    each child observer in place, on every `BeforeStartup`. A repeated start
+    (`start_polling` after a stop, several starts in tests, a webhook
+    `on_startup` firing again) re-read the already-mutated list as the
+    child's "own" middlewares and prepended the inherited ones again, so the
+    parent middleware ran one extra time per restart.
+    """
+    dp = Dispatcher()
+    child = Router("child")
+    dp.include(child)
+
+    dp_inner = middleware_factory("dp_inner")
+    child_inner = middleware_factory("child_inner")
+    dp.message_created.middleware.inner(dp_inner)
+    child.message_created.middleware.inner(child_inner)
+    child.message_created.handler(handler)
+
+    for _ in range(3):
+        await _restart_cycle(dp)
+
+    assert list(child.message_created.middleware.inner.middlewares) == [
+        dp_inner,
+        child_inner,
+    ]
+
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert ctx["execution_order"] == [
+        "dp_inner_pre",
+        "child_inner_pre",
+        "handler",
+        "child_inner_post",
+        "dp_inner_post",
+    ]
+
+
+async def test_restarting_dispatcher_keeps_middleware_added_after_shutdown(
+    ctx: Ctx,
+) -> None:
+    """A middleware registered between a shutdown and the next start must be
+    inherited exactly once too - observers go back to `Empty` on shutdown and
+    accept new middleware again (see #347, "variant 1")."""
+    dp = Dispatcher()
+    child = Router("child")
+    dp.include(child)
+
+    dp_inner = middleware_factory("dp_inner")
+    child_inner = middleware_factory("child_inner")
+    child_inner_late = middleware_factory("child_inner_late")
+    dp.message_created.middleware.inner(dp_inner)
+    child.message_created.middleware.inner(child_inner)
+    child.message_created.handler(handler)
+
+    await _restart_cycle(dp)
+
+    child.message_created.middleware.inner(child_inner_late)
+
+    await dp.feed_signal(BeforeStartup())
+    await dp.feed_signal(AfterStartup())
+
+    assert list(child.message_created.middleware.inner.middlewares) == [
+        dp_inner,
+        child_inner,
+        child_inner_late,
+    ]
+
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert ctx["execution_order"] == [
+        "dp_inner_pre",
+        "child_inner_pre",
+        "child_inner_late_pre",
+        "handler",
+        "child_inner_late_post",
         "child_inner_post",
         "dp_inner_post",
     ]

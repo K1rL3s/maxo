@@ -28,12 +28,18 @@ def _partial_middleware(
 class MiddlewareManager(Generic[_UpdateT]):
     middlewares: MutableSequence[BaseMiddleware[_UpdateT]]
     state: MiddlewareManagerState
+    inherited_count: int
+    """Сколько мидлварей в начале `middlewares` вставлено родителем при
+    последнем `resolve_middlewares`. Нужно, чтобы повторный `Dispatcher.start`
+    мог убрать унаследованное перед тем, как вставить его снова, а не
+    дублировать - см. `_resolving_inner_middlewares.py`."""
 
-    __slots__ = ("middlewares", "state")
+    __slots__ = ("inherited_count", "middlewares", "state")
 
     def __init__(self) -> None:
         self.middlewares = []
         self.state = EmptyMiddlewareManagerState()
+        self.inherited_count = 0
 
     # Подражание aiogram: возвращаем декоратор, чтобы работал привычный
     # `@router.message_created.outer_middleware()`

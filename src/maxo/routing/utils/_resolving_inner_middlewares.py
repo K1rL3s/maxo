@@ -35,6 +35,17 @@ def _resolving_middlewares(
     own_inners: dict[Observer[Any, Any, Any], tuple[BaseMiddleware[Any], ...]] = {}
     for update_tp, observer in router.observers.items():
         if observer not in own_inners:
-            own_inners[observer] = (*observer.middleware.inner.middlewares,)
-            observer.middleware.inner.middlewares[:0] = middlewares[update_tp]
+            inner = observer.middleware.inner
+            # Повторный Dispatcher.start вызывает этот resolve еще раз.
+            # inherited_count - сколько своих же унаследованных мидлварей
+            # мы вставили в начало на предыдущем старте: их нужно снять,
+            # иначе унаследованное накопится еще раз (#347).
+            if inner.inherited_count:
+                del inner.middlewares[: inner.inherited_count]
+
+            own_inners[observer] = (*inner.middlewares,)
+
+            new_inherited = middlewares[update_tp]
+            inner.middlewares[:0] = new_inherited
+            inner.inherited_count = len(new_inherited)
         middlewares[update_tp].extend(own_inners[observer])
