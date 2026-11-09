@@ -455,16 +455,18 @@ async def test_restarting_dispatcher_does_not_duplicate_inherited_inner_middlewa
     child = Router("child")
     dp.include(child)
 
-    dp.message_created.middleware.inner(middleware_factory("dp_inner"))
-    child.message_created.middleware.inner(middleware_factory("child_inner"))
+    dp_inner = middleware_factory("dp_inner")
+    child_inner = middleware_factory("child_inner")
+    dp.message_created.middleware.inner(dp_inner)
+    child.message_created.middleware.inner(child_inner)
     child.message_created.handler(handler)
 
     for _ in range(3):
         await _restart_cycle(dp)
 
-    assert [repr(m) for m in child.message_created.middleware.inner.middlewares] == [
-        "dp_inner",
-        "child_inner",
+    assert list(child.message_created.middleware.inner.middlewares) == [
+        dp_inner,
+        child_inner,
     ]
 
     ctx["execution_order"] = []
@@ -490,21 +492,24 @@ async def test_restarting_dispatcher_keeps_middleware_added_after_shutdown(
     child = Router("child")
     dp.include(child)
 
-    dp.message_created.middleware.inner(middleware_factory("dp_inner"))
-    child.message_created.middleware.inner(middleware_factory("child_inner"))
+    dp_inner = middleware_factory("dp_inner")
+    child_inner = middleware_factory("child_inner")
+    child_inner_late = middleware_factory("child_inner_late")
+    dp.message_created.middleware.inner(dp_inner)
+    child.message_created.middleware.inner(child_inner)
     child.message_created.handler(handler)
 
     await _restart_cycle(dp)
 
-    child.message_created.middleware.inner(middleware_factory("child_inner_late"))
+    child.message_created.middleware.inner(child_inner_late)
 
     await dp.feed_signal(BeforeStartup())
     await dp.feed_signal(AfterStartup())
 
-    assert [repr(m) for m in child.message_created.middleware.inner.middlewares] == [
-        "dp_inner",
-        "child_inner",
-        "child_inner_late",
+    assert list(child.message_created.middleware.inner.middlewares) == [
+        dp_inner,
+        child_inner,
+        child_inner_late,
     ]
 
     ctx["execution_order"] = []
