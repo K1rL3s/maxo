@@ -1,26 +1,23 @@
 import asyncio
 from asyncio import CancelledError
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, cast
-from unittest.mock import ANY, AsyncMock, MagicMock, call, patch
+from unittest.mock import ANY, DEFAULT, AsyncMock, MagicMock, call, patch
 
 import pytest
 from adaptix.load_error import LoadError
 
 from maxo.backoff import BackoffConfig
-from maxo.bot.api_client import MaxApiClient
 from maxo.bot.bot import Bot
-from maxo.bot.methods import GetUpdates
-from maxo.bot.state import RunningBotState
+from maxo.bot.methods import GetMyInfo, GetUpdates
 from maxo.errors import UnsubscribeError
 from maxo.omit import Omitted
 from maxo.routing.dispatcher import Dispatcher
-from maxo.routing.signals.update import MaxoUpdate
+from maxo.routing.events import MaxoUpdate
 from maxo.transport.long_polling import LongPolling
 from maxo.types import (
-    BotInfo,
     ClearSubscriptionsResult,
     GetSubscriptionsResult,
     MaxoType,
@@ -28,7 +25,7 @@ from maxo.types import (
     UpdateList,
 )
 from maxo.types.updates import Updates
-from tests.factories import make_bot
+from tests.factories import make_bot, make_bot_info
 
 
 @dataclass
@@ -37,23 +34,19 @@ class MockUpdate(MaxoType):
 
 
 @pytest.fixture
-def mock_api_client() -> AsyncMock:
-    return AsyncMock(spec=MaxApiClient)
+def mock_client() -> AsyncMock:
+    client = AsyncMock()
+    # `bot.me()` may fetch the info: answer it with a real `BotInfo`
+    client.call_method.side_effect = lambda method, **_: (
+        make_bot_info() if isinstance(method, GetMyInfo) else DEFAULT
+    )
+    return client
 
 
 @pytest.fixture
-def mock_bot(mock_api_client: AsyncMock) -> Bot:
-    bot = make_bot()
-    bot._state = RunningBotState(
-        info=BotInfo(
-            user_id=123,
-            first_name="test_bot",
-            username="test_bot",
-            is_bot=True,
-            last_activity_time=datetime.fromtimestamp(1234567890, tz=UTC),
-        ),
-        api_client=mock_api_client,
-    )
+def mock_bot(mock_client: AsyncMock) -> Bot:
+    bot = make_bot(client=mock_client)
+    bot._info = make_bot_info()
     return bot
 
 
@@ -78,18 +71,6 @@ def long_polling(mock_dispatcher: Dispatcher) -> LongPolling:
     return LongPolling(dispatcher=mock_dispatcher)
 
 
-@pytest.fixture
-def mock_get_subscriptions() -> Iterator[AsyncMock]:
-    with patch.object(
-        Bot,
-        "get_subscriptions",
-        new=AsyncMock(
-            return_value=GetSubscriptionsResult(subscriptions=[]),
-        ),
-    ) as get_subscriptions:
-        yield get_subscriptions
-
-
 async def anext_coro(generator: AsyncIterator[Any]) -> Any:
     return await anext(generator)
 
@@ -101,19 +82,13 @@ async def run_generator_once(generator: AsyncIterator[Any]) -> None:
     await asyncio.gather(task, return_exceptions=True)
 
 
-async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
-    nothing: tuple[Any, ...] = ()
-    for update in nothing:
-        yield update
-
-
 async def test_handles_load_error_and_skips_update(
     long_polling: LongPolling,
     mock_bot: Bot,
-    mock_api_client: AsyncMock,
+    mock_client: AsyncMock,
 ) -> None:
     initial_marker = 10
-    mock_api_client.call_method.side_effect = [
+    mock_client.call_method.side_effect = [
         LoadError("Test LoadError"),
         UpdateList(
             updates=cast(list[Updates], [MockUpdate(timestamp=100)]),
@@ -141,8 +116,8 @@ async def test_handles_load_error_and_skips_update(
             "Ошибка загрузки апдейта в модель. "
             "Сообщите об этой ошибке в https://github.com/K1rL3s/maxo/issues",
         )
-        assert mock_api_client.call_method.call_count == 2
-        mock_api_client.call_method.assert_has_calls(
+        assert mock_client.call_method.call_count == 2
+        mock_client.call_method.assert_has_calls(
             [
                 call(
                     GetUpdates(
@@ -151,6 +126,7 @@ async def test_handles_load_error_and_skips_update(
                         timeout=30,
                         types=Omitted(),
                     ),
+                    middleware=ANY,
                 ),
                 call(
                     GetUpdates(
@@ -159,6 +135,7 @@ async def test_handles_load_error_and_skips_update(
                         timeout=30,
                         types=Omitted(),
                     ),
+                    middleware=ANY,
                 ),
             ],
         )
@@ -178,9 +155,9 @@ async def test_handles_load_error_and_skips_update(
 async def test_handles_load_error_with_no_marker(
     long_polling: LongPolling,
     mock_bot: Bot,
-    mock_api_client: AsyncMock,
+    mock_client: AsyncMock,
 ) -> None:
-    mock_api_client.call_method.side_effect = [
+    mock_client.call_method.side_effect = [
         LoadError("Test LoadError"),
         CancelledError,
     ]
@@ -202,7 +179,7 @@ async def test_handles_load_error_with_no_marker(
             "Ошибка загрузки апдейта в модель. "
             "Сообщите об этой ошибке в https://github.com/K1rL3s/maxo/issues",
         )
-        assert mock_api_client.call_method.call_count == 2
+        assert mock_client.call_method.call_count == 2
         mock_backoff_next.assert_called_once()
         mock_backoff_sleep.assert_called_once()
 
@@ -210,10 +187,10 @@ async def test_handles_load_error_with_no_marker(
 async def test_handles_general_exception(
     long_polling: LongPolling,
     mock_bot: Bot,
-    mock_api_client: AsyncMock,
+    mock_client: AsyncMock,
     mock_feed_max_update: AsyncMock,
 ) -> None:
-    mock_api_client.call_method.side_effect = ValueError(
+    mock_client.call_method.side_effect = ValueError(
         "Test ValueError",
     )
 
@@ -227,8 +204,14 @@ async def test_handles_general_exception(
             "ValueError",
             ANY,
         )
-        mock_api_client.call_method.assert_called_once()
+        mock_client.call_method.assert_called_once()
         mock_feed_max_update.assert_not_called()
+
+
+async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
+    nothing: tuple[Any, ...] = ()
+    for update in nothing:
+        yield update
 
 
 @pytest.mark.parametrize(
@@ -238,7 +221,6 @@ async def test_handles_general_exception(
 )
 async def test_start_collects_used_updates_when_types_not_given(
     mock_bot: Bot,
-    mock_get_subscriptions: AsyncMock,
     types: Any,
 ) -> None:
     # Пустой список, как и Omitted(), означает "посчитать по роутерам",
@@ -253,14 +235,10 @@ async def test_start_collects_used_updates_when_types_not_given(
     with patch.object(long_polling, "_get_updates", side_effect=empty_updates) as spy:
         await long_polling.start(mock_bot, types=types, auto_close_bot=False)
 
-    mock_get_subscriptions.assert_awaited_once_with()
     assert spy.call_args.kwargs["types"] == ["message_created"]
 
 
-async def test_start_respects_explicit_types(
-    mock_bot: Bot,
-    mock_get_subscriptions: AsyncMock,
-) -> None:
+async def test_start_respects_explicit_types(mock_bot: Bot) -> None:
     dispatcher = Dispatcher()
 
     @dispatcher.message_created()
@@ -275,7 +253,6 @@ async def test_start_respects_explicit_types(
             auto_close_bot=False,
         )
 
-    mock_get_subscriptions.assert_awaited_once_with()
     assert spy.call_args.kwargs["types"] == ["bot_started"]
 
 
@@ -283,7 +260,6 @@ async def test_start_feeds_updates_to_dispatcher(
     long_polling: LongPolling,
     mock_bot: Bot,
     mock_feed_max_update: AsyncMock,
-    mock_get_subscriptions: AsyncMock,
 ) -> None:
     update = MaxoUpdate(update=cast(Updates, MockUpdate(timestamp=1)), marker=1)
 
@@ -293,8 +269,189 @@ async def test_start_feeds_updates_to_dispatcher(
     with patch.object(long_polling, "_get_updates", side_effect=single_update):
         await long_polling.start(mock_bot, auto_close_bot=False)
 
-    mock_get_subscriptions.assert_awaited_once_with()
     mock_feed_max_update.assert_awaited_once_with(update, mock_bot)
+
+
+@pytest.mark.parametrize("auto_close_bot", [True, False])
+async def test_start_closes_bot_only_with_auto_close(
+    long_polling: LongPolling,
+    mock_bot: Bot,
+    auto_close_bot: bool,
+) -> None:
+    with (
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates),
+        patch.object(Bot, "close", new=AsyncMock()) as close,
+    ):
+        await long_polling.start(mock_bot, auto_close_bot=auto_close_bot)
+
+    assert close.await_count == int(auto_close_bot)
+
+
+async def test_start_closes_bot_after_after_shutdown(
+    long_polling: LongPolling,
+    mock_dispatcher: Dispatcher,
+    mock_bot: Bot,
+) -> None:
+    events: list[object] = []
+
+    @mock_dispatcher.after_shutdown()
+    async def _after_shutdown(bot: Bot) -> None:
+        events.append(bot)
+
+    with (
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates),
+        patch.object(
+            Bot,
+            "close",
+            new=AsyncMock(side_effect=lambda: events.append("close")),
+        ),
+    ):
+        await long_polling.start(mock_bot)
+
+    assert events == [mock_bot, "close"]
+
+
+async def test_start_closes_bot_when_startup_fails(
+    long_polling: LongPolling,
+    mock_bot: Bot,
+) -> None:
+    with (
+        patch.object(Bot, "me", new=AsyncMock(side_effect=RuntimeError)),
+        patch.object(Bot, "close", new=AsyncMock()) as close,
+        pytest.raises(RuntimeError),
+    ):
+        await long_polling.start(mock_bot)
+
+    close.assert_awaited_once()
+
+
+async def test_start_polling_delegates_to_long_polling(mock_bot: Bot) -> None:
+    dispatcher = Dispatcher()
+    backoff_config = BackoffConfig(
+        min_delay=0.1,
+        max_delay=1.0,
+        factor=2.0,
+        jitter=0.1,
+    )
+
+    with (
+        patch.object(LongPolling, "__init__", return_value=None) as init,
+        patch.object(LongPolling, "start", new_callable=AsyncMock) as start,
+    ):
+        await dispatcher.start_polling(
+            mock_bot,
+            timeout=5,
+            limit=10,
+            types=["message_created"],
+            auto_close_bot=False,
+            drop_pending_updates=True,
+            clear_subscriptions=True,
+            backoff_config=backoff_config,
+            extra="context",
+        )
+
+    init.assert_called_once_with(dispatcher, backoff_config=backoff_config)
+    start.assert_awaited_once_with(
+        bot=mock_bot,
+        timeout=5,
+        limit=10,
+        marker=Omitted(),
+        types=["message_created"],
+        auto_close_bot=False,
+        drop_pending_updates=True,
+        clear_subscriptions=True,
+        extra="context",
+    )
+
+
+async def test_start_polling_omits_types_by_default(mock_bot: Bot) -> None:
+    dispatcher = Dispatcher()
+
+    with patch.object(LongPolling, "start", new_callable=AsyncMock) as start:
+        await dispatcher.start_polling(mock_bot)
+
+    assert start.await_args is not None
+    assert start.await_args.kwargs["types"] == Omitted()
+    assert start.await_args.kwargs["clear_subscriptions"] is False
+
+
+def test_run_polling_runs_start_polling(mock_bot: Bot) -> None:
+    dispatcher = Dispatcher()
+    backoff_config = BackoffConfig(
+        min_delay=0.1,
+        max_delay=1.0,
+        factor=2.0,
+        jitter=0.1,
+    )
+
+    with (
+        patch.object(LongPolling, "__init__", return_value=None) as init,
+        patch.object(LongPolling, "start", new_callable=AsyncMock) as start,
+    ):
+        dispatcher.run_polling(
+            mock_bot,
+            timeout=7,
+            auto_close_bot=False,
+            clear_subscriptions=True,
+            backoff_config=backoff_config,
+        )
+
+    init.assert_called_once_with(dispatcher, backoff_config=backoff_config)
+    start.assert_awaited_once()
+    assert start.await_args is not None
+    assert start.await_args.kwargs["timeout"] == 7
+    assert start.await_args.kwargs["auto_close_bot"] is False
+    assert start.await_args.kwargs["clear_subscriptions"] is True
+
+
+async def test_start_omits_types_when_there_are_no_update_handlers(
+    mock_bot: Bot,
+) -> None:
+    long_polling = LongPolling(dispatcher=Dispatcher())
+    no_subscriptions = GetSubscriptionsResult(subscriptions=[])
+
+    with (
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates) as spy,
+        patch.object(
+            mock_bot,
+            "get_subscriptions",
+            AsyncMock(return_value=no_subscriptions),
+        ),
+        patch("maxo.transport.long_polling.loggers.long_polling") as logger,
+    ):
+        await long_polling.start(mock_bot, auto_close_bot=False)
+
+    assert spy.call_args.kwargs["types"] == Omitted()
+    # Only the no-handlers warning: subscriptions are empty
+    logger.warning.assert_called_once_with(
+        "Не найдено ни одного обработчика обновлений, "
+        "Long Polling будет получать обновления всех типов",
+    )
+
+
+# Ported from upstream master: WebHook subscriptions on start
+
+
+def test_run_passes_clear_subscriptions_to_start(mock_bot: Bot) -> None:
+    long_polling = LongPolling(dispatcher=Dispatcher())
+
+    with patch.object(long_polling, "start", new=AsyncMock()) as start:
+        long_polling.run(
+            mock_bot,
+            auto_close_bot=False,
+            clear_subscriptions=True,
+        )
+
+    start.assert_awaited_once_with(
+        bot=mock_bot,
+        timeout=30,
+        limit=100,
+        marker=Omitted(),
+        types=Omitted(),
+        auto_close_bot=False,
+        drop_pending_updates=False,
+        clear_subscriptions=True,
+    )
 
 
 async def test_start_clears_subscriptions_when_requested(
@@ -428,7 +585,7 @@ async def test_start_warns_about_subscriptions_when_not_cleared(
         "У бота @%s есть активные WebHook-подписки (%d). "
         "Они не были очищены перед запуском Long Polling. "
         "Передайте clear_subscriptions=True, чтобы удалить их.",
-        "test_bot",
+        (await mock_bot.me()).username,
         1,
     )
 
@@ -477,124 +634,4 @@ async def test_start_continues_when_subscription_check_fails(
         "Не удалось проверить WebHook-подписки перед запуском Long Polling - %s: %s",
         "RuntimeError",
         error,
-    )
-
-
-def test_run_passes_clear_subscriptions_to_start(mock_bot: Bot) -> None:
-    long_polling = LongPolling(dispatcher=Dispatcher())
-
-    with patch.object(long_polling, "start", new=AsyncMock()) as start:
-        long_polling.run(
-            mock_bot,
-            auto_close_bot=False,
-            clear_subscriptions=True,
-        )
-
-    start.assert_awaited_once_with(
-        bot=mock_bot,
-        timeout=30,
-        limit=100,
-        marker=Omitted(),
-        types=Omitted(),
-        auto_close_bot=False,
-        drop_pending_updates=False,
-        clear_subscriptions=True,
-    )
-
-
-async def test_start_polling_delegates_to_long_polling(mock_bot: Bot) -> None:
-    dispatcher = Dispatcher()
-    backoff_config = BackoffConfig(
-        min_delay=0.1,
-        max_delay=1.0,
-        factor=2.0,
-        jitter=0.1,
-    )
-
-    with (
-        patch.object(LongPolling, "__init__", return_value=None) as init,
-        patch.object(LongPolling, "start", new_callable=AsyncMock) as start,
-    ):
-        await dispatcher.start_polling(
-            mock_bot,
-            timeout=5,
-            limit=10,
-            types=["message_created"],
-            auto_close_bot=False,
-            drop_pending_updates=True,
-            clear_subscriptions=True,
-            backoff_config=backoff_config,
-            extra="context",
-        )
-
-    init.assert_called_once_with(dispatcher, backoff_config=backoff_config)
-    start.assert_awaited_once_with(
-        bot=mock_bot,
-        timeout=5,
-        limit=10,
-        marker=Omitted(),
-        types=["message_created"],
-        auto_close_bot=False,
-        drop_pending_updates=True,
-        clear_subscriptions=True,
-        extra="context",
-    )
-
-
-async def test_start_polling_omits_types_by_default(mock_bot: Bot) -> None:
-    dispatcher = Dispatcher()
-
-    with patch.object(LongPolling, "start", new_callable=AsyncMock) as start:
-        await dispatcher.start_polling(mock_bot)
-
-    assert start.await_args is not None
-    assert start.await_args.kwargs["types"] == Omitted()
-    assert start.await_args.kwargs["clear_subscriptions"] is False
-
-
-def test_run_polling_runs_start_polling(mock_bot: Bot) -> None:
-    dispatcher = Dispatcher()
-    backoff_config = BackoffConfig(
-        min_delay=0.1,
-        max_delay=1.0,
-        factor=2.0,
-        jitter=0.1,
-    )
-
-    with (
-        patch.object(LongPolling, "__init__", return_value=None) as init,
-        patch.object(LongPolling, "start", new_callable=AsyncMock) as start,
-    ):
-        dispatcher.run_polling(
-            mock_bot,
-            timeout=7,
-            auto_close_bot=False,
-            clear_subscriptions=True,
-            backoff_config=backoff_config,
-        )
-
-    init.assert_called_once_with(dispatcher, backoff_config=backoff_config)
-    start.assert_awaited_once()
-    assert start.await_args is not None
-    assert start.await_args.kwargs["timeout"] == 7
-    assert start.await_args.kwargs["auto_close_bot"] is False
-    assert start.await_args.kwargs["clear_subscriptions"] is True
-
-
-async def test_start_omits_types_when_there_are_no_update_handlers(
-    mock_bot: Bot,
-    mock_get_subscriptions: AsyncMock,
-) -> None:
-    long_polling = LongPolling(dispatcher=Dispatcher())
-
-    with (
-        patch.object(long_polling, "_get_updates", side_effect=empty_updates) as spy,
-        patch("maxo.transport.long_polling.loggers.long_polling") as logger,
-    ):
-        await long_polling.start(mock_bot, auto_close_bot=False)
-
-    assert spy.call_args.kwargs["types"] == Omitted()
-    logger.warning.assert_called_once_with(
-        "Не найдено ни одного обработчика обновлений, "
-        "Long Polling будет получать обновления всех типов",
     )

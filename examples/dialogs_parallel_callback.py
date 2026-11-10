@@ -13,7 +13,6 @@ ParallelDialog ниже оверрайдит _callback_handler через asynci
 """
 
 import asyncio
-import contextlib
 import dataclasses
 import logging
 import os
@@ -32,7 +31,6 @@ from maxo.dialogs.api.protocols import CancelEventProcessing
 from maxo.dialogs.utils import remove_intent_id
 from maxo.dialogs.widgets.kbd import Button, Row, SwitchTo
 from maxo.dialogs.widgets.text import Const
-from maxo.errors import AttributeIsEmptyError
 from maxo.fsm import State, StatesGroup
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.routing.ctx import Ctx
@@ -54,13 +52,6 @@ class ParallelDialog(Dialog):
 
         cleaned_callback = dataclasses.replace(callback.callback, payload=payload)
         cleaned_event = dataclasses.replace(callback, callback=cleaned_callback)
-
-        with contextlib.suppress(AttributeIsEmptyError):
-            bot = callback.bot
-            cleaned_callback.as_(bot)
-            cleaned_event.as_(bot)
-            if cleaned_event.message:
-                cleaned_event.message.as_(bot)
 
         window = await self._current_window(dialog_manager)
         try:

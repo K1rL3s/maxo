@@ -3,8 +3,8 @@ from typing import Self
 
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
-from maxo.types.base import MaxoType
-from maxo.types.facades.message import MessageMethodsFacade
+from maxo.types.base import FacadeMaxoType
+from maxo.types.facades import MessageMethodsFacade
 from maxo.types.linked_message import LinkedMessage
 from maxo.types.message_body import MessageBody
 from maxo.types.message_stat import MessageStat
@@ -13,7 +13,7 @@ from maxo.types.user import User
 from maxo.utils.link import id_to_message_url
 
 
-class Message(MaxoType, MessageMethodsFacade):
+class Message(FacadeMaxoType, MessageMethodsFacade):
     """
     Содержит общую информацию о сообщении в чате или посте в канале: данные об отправителе и получателе, время создания сообщения, содержимое (текст и вложения), контекст связи с другими сообщениями (ответ или пересылка), а также публичную ссылку и статистику для постов в каналах
 

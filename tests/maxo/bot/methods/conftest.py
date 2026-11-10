@@ -5,7 +5,7 @@ from multidict import CIMultiDict
 from unihttp.http import HTTPResponse
 
 
-def response(data: object, status_code: int = 200) -> HTTPResponse:
+def response(data: object, status_code: int = 200) -> HTTPResponse[object]:
     return HTTPResponse(
         status_code=status_code,
         data=data,

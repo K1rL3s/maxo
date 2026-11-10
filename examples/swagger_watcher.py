@@ -16,7 +16,7 @@ from aiohttp import ClientSession, ClientTimeout
 
 try:
     from maxo import Bot as MaxBot
-    from maxo.types import LinkButton
+    from maxo.types import FacadeMaxoType, LinkButton
     from maxo.types.facades.attachments import AttachmentsFacade
     from maxo.utils.upload_media import BufferedInputFile as MaxBufferedInputFile
 except ModuleNotFoundError:
@@ -256,8 +256,12 @@ async def fetch_openapi(session: ClientSession) -> JsonObject:
 
 
 async def publish_max(token: str, chat_id: int, diff: str, message: str) -> None:
+    # temp
+    class Uploader(FacadeMaxoType, AttachmentsFacade):
+        pass
+
     async with MaxBot(token) as bot:
-        attachments = await AttachmentsFacade(bot).build_attachments(
+        attachments = await Uploader(_bot=bot).build_attachments(
             base=[],
             keyboard=[[LinkButton(text="Документация", url=DOCS_URL)]],
             files=[MaxBufferedInputFile.file(diff.encode(), DIFF_FILE_NAME)],

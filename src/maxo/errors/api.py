@@ -10,16 +10,19 @@ class MaxBotApiError(MaxoError):
     error: str
     message: str
     raw_data: Any = None
+    status_code: int | None = None
 
     def __str__(self) -> str:
         parts: list[str] = []
+        if self.status_code is not None:
+            parts.append(f"status_code={self.status_code}")
         if self.code:
             parts.append(f"code={self.code!r}")
         if self.error:
             parts.append(f"error={self.error!r}")
         if self.message:
             parts.append(f"message={self.message!r}")
-        if self.raw_data and not parts:
+        if self.raw_data and not (self.code or self.error or self.message):
             parts.append(f"raw_data={self.raw_data!r}")
 
         return f"{self.__class__.__name__}({', '.join(parts)})"
@@ -85,34 +88,34 @@ _ERRORS_BY_STATUS: dict[int, type[MaxBotApiError]] = {
 }
 
 
-def raise_api_error(status_code: int, data: object) -> Never:
-    code, error, message = _extract_api_error(data)
+def api_error_type(status_code: int) -> type[MaxBotApiError]:
     error_type = _ERRORS_BY_STATUS.get(status_code)
-    if error_type is None:
-        if status_code in range(400, 500):
-            error_type = MaxBotClientError
-        elif status_code in range(500, 600):
-            error_type = MaxBotServerError
-        else:
-            error_type = MaxBotApiError
-    raise error_type(code, error, message, data)
+    if error_type is not None:
+        return error_type
+    if status_code in range(400, 500):
+        return MaxBotClientError
+    if status_code in range(500, 600):
+        return MaxBotServerError
+    return MaxBotApiError
 
 
-def _extract_api_error(data: object) -> tuple[str, str, str]:
-    if not isinstance(data, dict):
-        return "", "", ""
-
-    code = data.get("code") or data.get("error_code", "")
-    error = data.get("error") or data.get("error_data", "")
-    message = data.get("message", "")
-    return (
-        _error_to_str(code),
-        _error_to_str(error),
-        _error_to_str(message),
+def raise_api_error(status_code: int, data: object) -> Never:
+    if isinstance(data, dict):
+        code = data.get("code") or data.get("error_code")
+        error = data.get("error") or data.get("error_data")
+        message = data.get("message")
+    else:
+        # Non-JSON body, e.g. an nginx error page
+        code = error = None
+        message = data.decode("utf-8", "replace") if isinstance(data, bytes) else data
+    raise api_error_type(status_code)(
+        code=_to_str(code),
+        error=_to_str(error),
+        message=_to_str(message),
+        raw_data=data,
+        status_code=status_code,
     )
 
 
-def _error_to_str(value: object) -> str:
-    if value is None:
-        return ""
-    return str(value)
+def _to_str(value: object) -> str:
+    return "" if value is None else str(value)

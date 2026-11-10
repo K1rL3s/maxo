@@ -1,117 +1,126 @@
-from collections.abc import AsyncIterator
+from http.cookies import SimpleCookie
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
+from multidict import CIMultiDict
+from unihttp.http import HTTPResponse
 
-from maxo.backoff import BackoffConfig
-from maxo.bot.api_client import MaxApiClient
-from maxo.bot.methods import AddMembers, DeleteMessage  # type: ignore[deprecated]
+from maxo.bot.methods import AddMembers  # type: ignore[deprecated]
 from maxo.bot.methods.base import MaxoMethod
-from maxo.bot.upload import UploadConfig
-from maxo.errors import MaxBotBadRequestError
-from maxo.serialization import create_retort
-from maxo.types.modify_members_result import ModifyMembersResult
-from tests.constants import TOKEN
-
-from .conftest import response
-
-
-def test_validate_response_ok() -> None:
-    method: MaxoMethod[object] = MaxoMethod()
-    http_response = response({"success": True})
-
-    method.validate_response(http_response)
-
-    assert http_response.status_code == 200
+from maxo.errors import (
+    MaxBotApiError,
+    MaxBotBadRequestError,
+    MaxBotForbiddenError,
+    MaxBotMethodNotAllowedError,
+    MaxBotNotFoundError,
+    MaxBotServiceUnavailableError,
+    MaxBotTooManyRequestsError,
+    MaxBotUnauthorizedError,
+    MaxBotUnknownServerError,
+    MaxBotUnsupportedMediaTypeError,
+)
 
 
 @pytest.mark.parametrize(
-    "data",
+    ("status_code", "error_class"),
     [
-        {"success": False, "error_code": "some_error"},
-        {"success": False},
-        {"error_code": "some_error"},
+        (400, MaxBotBadRequestError),
+        (401, MaxBotUnauthorizedError),
+        (403, MaxBotForbiddenError),
+        (404, MaxBotNotFoundError),
+        (405, MaxBotMethodNotAllowedError),
+        (415, MaxBotUnsupportedMediaTypeError),
+        (429, MaxBotTooManyRequestsError),
+        (500, MaxBotUnknownServerError),
+        (502, MaxBotApiError),
+        (503, MaxBotServiceUnavailableError),
     ],
 )
-def test_validate_response_error(data: dict[str, object]) -> None:
+def test_on_error(status_code: int, error_class: type[MaxBotApiError]) -> None:
+    response: HTTPResponse[dict[str, Any]] = HTTPResponse(
+        status_code=status_code,
+        data={},
+        headers=CIMultiDict(),
+        cookies=SimpleCookie(),
+        raw_response=AsyncMock(),
+    )
     method: MaxoMethod[object] = MaxoMethod()
-    http_response = response(data)
+    with pytest.raises(error_class):
+        method.on_error(response)
+
+
+def test_on_error_with_non_dict_payload() -> None:
+    response = HTTPResponse(
+        status_code=502,
+        data="plain error",
+        headers=CIMultiDict(),
+        cookies=SimpleCookie(),
+        raw_response=AsyncMock(),
+    )
+    method: MaxoMethod[object] = MaxoMethod()
+
+    with pytest.raises(MaxBotApiError) as exc_info:
+        method.on_error(response)
+
+    assert exc_info.value.raw_data == "plain error"
+
+
+def test_on_error_converts_none_message() -> None:
+    response = HTTPResponse(
+        status_code=400,
+        data={"message": None},
+        headers=CIMultiDict(),
+        cookies=SimpleCookie(),
+        raw_response=AsyncMock(),
+    )
+    method: MaxoMethod[object] = MaxoMethod()
 
     with pytest.raises(MaxBotBadRequestError) as exc_info:
-        method.validate_response(http_response)
+        method.on_error(response)
 
-    assert exc_info.value.raw_data == data
-    assert http_response.status_code == 200
+    assert exc_info.value.message == ""
 
 
-def test_validate_response_ignores_non_dict_body() -> None:
+def test_validate_response_ok() -> None:
+    response = HTTPResponse(
+        status_code=200,
+        data={"success": True},
+        headers=CIMultiDict(),
+        cookies=SimpleCookie(),
+        raw_response=AsyncMock(),
+    )
     method: MaxoMethod[object] = MaxoMethod()
+    method.validate_response(response)
+    assert response.status_code == 200
 
-    method.validate_response(response("plain text"))
 
-
-def test_validate_response_ignores_error_statuses() -> None:
+def test_validate_response_error() -> None:
+    response = HTTPResponse(
+        status_code=200,
+        data={"success": False, "error_code": "some_error"},
+        headers=CIMultiDict(),
+        cookies=SimpleCookie(),
+        raw_response=AsyncMock(),
+    )
     method: MaxoMethod[object] = MaxoMethod()
-
-    method.validate_response(response({"success": False}, status_code=500))
-
-
-def test_add_members_keeps_partial_result() -> None:
-    http_response = response({"success": False, "error_code": "some_error"})
-
-    AddMembers(chat_id=1, user_ids=[2]).validate_response(http_response)
-
-    assert http_response.status_code == 200
-
-
-@pytest.fixture
-async def api_client() -> AsyncIterator[MaxApiClient]:
-    retort = create_retort(warming_up=False)
-    client = MaxApiClient(token=TOKEN, request_dumper=retort, response_loader=retort)
-    yield client
-    await client.close()
-
-
-async def test_call_method_raises_on_success_false(api_client: MaxApiClient) -> None:
-    body = {"success": False, "message": "denied"}
-    api_client.make_request = AsyncMock(return_value=response(body))  # type: ignore[method-assign]
 
     with pytest.raises(MaxBotBadRequestError) as exc_info:
-        await api_client.call_method(DeleteMessage(message_id="m1"))
+        method.validate_response(response)
 
-    assert exc_info.value.raw_data == body
-
-
-async def test_call_method_returns_add_members_partial_result(
-    api_client: MaxApiClient,
-) -> None:
-    body = {"success": False, "message": "partial", "failed_user_ids": [2]}
-    api_client.make_request = AsyncMock(return_value=response(body))  # type: ignore[method-assign]
-
-    result = await api_client.call_method(AddMembers(chat_id=1, user_ids=[2, 3]))
-
-    assert isinstance(result, ModifyMembersResult)
-    assert result.success is False
-    assert result.failed_user_ids == [2]
+    assert exc_info.value.code == "some_error"
+    assert response.status_code == 200
 
 
-async def test_not_ready_error_in_success_false_body_is_retried() -> None:
-    retort = create_retort(warming_up=False)
-    fast_backoff = BackoffConfig(min_delay=0.0, max_delay=0.01, factor=2.0, jitter=0.0)
-    client = MaxApiClient(
-        token=TOKEN,
-        request_dumper=retort,
-        response_loader=retort,
-        upload_config=UploadConfig(not_ready_backoff=fast_backoff),
+def test_validate_response_preserves_add_members_result() -> None:
+    response = HTTPResponse(
+        status_code=200,
+        data={"success": False, "error_code": "some_error"},
+        headers=CIMultiDict(),
+        cookies=SimpleCookie(),
+        raw_response=AsyncMock(),
     )
-    not_ready = {"success": False, "error_code": "attachment.not.ready"}
-    client.make_request = AsyncMock(  # type: ignore[method-assign]
-        side_effect=[response(not_ready), response({"success": True})],
-    )
-    try:
-        result = await client.call_method(DeleteMessage(message_id="m1"))
-    finally:
-        await client.close()
 
-    assert result.success is True
-    assert client.make_request.await_count == 2
+    AddMembers(chat_id=1, user_ids=[2]).validate_response(response)
+
+    assert response.status_code == 200

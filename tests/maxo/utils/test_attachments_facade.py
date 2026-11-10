@@ -19,16 +19,17 @@ from maxo.types import (
     UploadMediaResult,
     VideoAttachmentRequest,
 )
+from maxo.types.base import FacadeMaxoType
 from maxo.types.facades.attachments import AttachmentsFacade, MediaInput
 from maxo.types.facades.message import MessageMethodsFacade
 from maxo.utils.upload_media import BufferedInputFile
 
 
-class DummyFacade(AttachmentsFacade):
+class DummyFacade(FacadeMaxoType, AttachmentsFacade, slots=False):
     pass
 
 
-class DummyMessageFacade(MessageMethodsFacade):
+class DummyMessageFacade(FacadeMaxoType, MessageMethodsFacade, slots=False):
     @property
     def message(self) -> Message:
         return AsyncMock()
@@ -47,12 +48,12 @@ def bot_mock() -> AsyncMock:
 
 @pytest.fixture
 def facade(bot_mock: AsyncMock) -> DummyFacade:
-    return DummyFacade(bot=bot_mock)
+    return DummyFacade(_bot=bot_mock)
 
 
 @pytest.fixture
 def message_facade(bot_mock: AsyncMock) -> DummyMessageFacade:
-    return DummyMessageFacade(bot=bot_mock)
+    return DummyMessageFacade(_bot=bot_mock)
 
 
 async def test_build_media_only_input_files(facade: DummyFacade) -> None:

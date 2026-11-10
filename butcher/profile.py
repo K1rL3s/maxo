@@ -393,13 +393,18 @@ class _Profile:
         is_update = self._is_update(name)
         class_name = self._class_names[name]
 
+        mixins = overrides.CLASS_MIXINS.get(class_name, ())
         base_override = overrides.MODEL_BASE_OVERRIDES.get(class_name)
         replaced = overrides.REPLACED_BASES.get(ir_model.base_model or "")
         if base_override is not None:
             base = base_override
             imports.add(Import(naming.type_module(base), base))
         elif ir_model.base_model is None:
-            base = overrides.ROOT_BASE_CLASS
+            base = (
+                overrides.FACADE_ROOT_BASE_CLASS
+                if mixins
+                else overrides.ROOT_BASE_CLASS
+            )
             imports.add(Import(f"{naming.TYPES_PACKAGE}.base", base))
         elif replaced is not None:
             base = replaced
@@ -408,10 +413,8 @@ class _Profile:
             base = self._class_names[ir_model.base_model]
             imports.add(Import(naming.type_module(base), base))
 
-        mixins = overrides.CLASS_MIXINS.get(class_name, ())
         for mixin in mixins:
-            module = overrides.FACADE_MODULES[mixin]
-            imports.add(Import(f"{overrides.FACADES_MODULE}.{module}", mixin))
+            imports.add(Import(overrides.FACADES_MODULE, mixin))
 
         fields = tuple(
             self._build_model_field(name, ir_field, imports, is_update=is_update)

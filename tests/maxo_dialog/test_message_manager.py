@@ -775,7 +775,7 @@ class TestBuildAttachments:
         ]
 
         with patch(
-            "maxo.dialogs.manager.message_manager.AttachmentsFacade",
+            "maxo.dialogs.manager.message_manager._AttachmentsBuilder",
         ) as facade_cls:
             facade_cls.return_value.build_attachments = AsyncMock(return_value=[])
             await manager._build_attachments(bot, keyboard=None, media=media)

@@ -142,14 +142,8 @@ Resumable-загрузка читает файл по кускам и отпра
 Список доступных фасадов
 ------------------------
 
-Ниже приведен список всех фасадов для различных типов событий. Пакет
-``maxo.types.facades`` не переэкспортирует их напрямую (это привело бы к
-циклическим импортам с типами апдейтов) - импортируйте из конкретного модуля.
-
-.. automodule:: maxo.types.facades.base
-   :members:
-   :undoc-members:
-   :show-inheritance:
+Ниже приведен список всех фасадов для различных типов событий. Все они
+доступны из пакета: ``from maxo.types.facades import ChatMethodsFacade``.
 
 .. automodule:: maxo.types.facades.bot
    :members:

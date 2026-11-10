@@ -1,4 +1,3 @@
-import contextlib
 import dataclasses
 from collections.abc import Awaitable, Callable
 from typing import (
@@ -17,13 +16,11 @@ from maxo.dialogs.api.protocols import (
     DialogProtocol,
 )
 from maxo.enums import ChatType
-from maxo.errors import AttributeIsEmptyError
 from maxo.fsm import State, StatesGroup
 from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces import BaseRouter
-from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
+from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY, UpdateContext
 from maxo.types import MessageCallback, MessageCreated
-from maxo.types.update_context import UpdateContext
 
 from .context.intent_filter import IntentFilter
 from .utils import remove_intent_id
@@ -161,13 +158,6 @@ class Dialog(Router, DialogProtocol):
 
         cleaned_callback = dataclasses.replace(callback.callback, payload=payload)
         cleaned_event = dataclasses.replace(callback, callback=cleaned_callback)
-
-        with contextlib.suppress(AttributeIsEmptyError):
-            bot = callback.bot
-            cleaned_callback.as_(bot)
-            cleaned_event.as_(bot)
-            if cleaned_event.message:
-                cleaned_event.message.as_(bot)
 
         window = await self._current_window(dialog_manager)
         try:

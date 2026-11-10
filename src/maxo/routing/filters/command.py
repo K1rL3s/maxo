@@ -176,7 +176,7 @@ class Command(BaseFilter[MessageCreated]):
         if command.mention and not self.ignore_mention:
             if bot is None:
                 raise CommandException("Mention can't be validated without bot")
-            me = bot.state.info
+            me = await bot.me()
             if me.username and command.mention.lower() != me.username.lower():
                 raise CommandException("Mention did not match")
 

@@ -32,12 +32,7 @@ class DialogUpdateEvent(BaseUpdate):
     intent_id: str | None
     stack_id: str | None
     show_mode: ShowMode | None = None
-    bot: Bot  # type: ignore[override]
-
-    # Для частичной совместимости с `MaxUpdate`
-    @property
-    def event_type(self) -> str:
-        return DIALOG_EVENT_NAME
+    bot: Bot
 
 
 class DialogStartEvent(DialogUpdateEvent):

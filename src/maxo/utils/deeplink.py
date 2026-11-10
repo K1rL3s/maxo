@@ -55,14 +55,14 @@ PAYLOAD_MAX_LENGTHS: dict[Literal["start", "startapp"], int] = {
 }
 
 
-def create_start_link(
+async def create_start_link(
     bot: "Bot",
     payload: str,
     encode: bool = False,
     encoder: Callable[[bytes], bytes] | None = None,
 ) -> str:
     return create_deep_link(
-        username=cast(str, bot.state.info.username),
+        username=cast(str, (await bot.me()).username),
         link_type="start",
         payload=payload,
         encode=encode,
@@ -70,14 +70,14 @@ def create_start_link(
     )
 
 
-def create_startapp_link(
+async def create_startapp_link(
     bot: "Bot",
     payload: str,
     encode: bool = False,
     encoder: Callable[[bytes], bytes] | None = None,
 ) -> str:
     return create_deep_link(
-        username=cast(str, bot.state.info.username),
+        username=cast(str, (await bot.me()).username),
         link_type="startapp",
         payload=payload,
         encode=encode,

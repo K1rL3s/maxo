@@ -44,8 +44,9 @@ from maxo.routing.interfaces import BaseRouter
 from maxo.routing.middlewares.update_context import (
     EVENT_FROM_USER_KEY,
     UPDATE_CONTEXT_KEY,
+    UpdateContext,
 )
-from maxo.types import Callback, CallbackButton, UpdateContext, User
+from maxo.types import Callback, CallbackButton, User
 from maxo.types.message import Message
 from maxo.types.message_body import MessageBody
 from maxo.types.message_callback import MessageCallback

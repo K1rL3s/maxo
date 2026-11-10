@@ -4,9 +4,9 @@ from maxo import loggers
 from maxo.enums import ChatType
 from maxo.omit import is_defined
 from maxo.routing.ctx import Ctx
+from maxo.routing.events import MaxoUpdate
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
-from maxo.routing.signals.update import MaxoUpdate
-from maxo.types import User
+from maxo.types import Chat, MaxoType, User
 from maxo.types.bot_added_to_chat import BotAddedToChat
 from maxo.types.bot_admin_permissions_changed import BotAdminPermissionsChanged
 from maxo.types.bot_removed_from_chat import BotRemovedFromChat
@@ -24,9 +24,29 @@ from maxo.types.message_callback import MessageCallback
 from maxo.types.message_created import MessageCreated
 from maxo.types.message_edited import MessageEdited
 from maxo.types.message_removed import MessageRemoved
-from maxo.types.update_context import UpdateContext
 from maxo.types.user_added_to_chat import UserAddedToChat
 from maxo.types.user_removed_from_chat import UserRemovedFromChat
+
+
+# Самодельный объект
+class UpdateContext(MaxoType):
+    """
+    Контекст апдейта.
+
+    Идентификаторы чата и пользователя, при включённом обогащении -
+    объекты чата и пользователя, полученные через Bot API.
+    """
+
+    chat_id: int | None = None
+    user_id: int | None = None
+    type: ChatType | None = None
+    chat: Chat | None = None
+    user: User | None = None
+
+    @property
+    def chat_type(self) -> ChatType | None:
+        return self.type
+
 
 UPDATE_CONTEXT_KEY: Final = "update_context"
 EVENT_FROM_USER_KEY: Final = "event_from_user"

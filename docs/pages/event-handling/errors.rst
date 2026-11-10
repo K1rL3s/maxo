@@ -7,7 +7,7 @@
 ----------------
 
 ``Dispatcher`` автоматически регистрирует глобальную мидлварь ``ErrorMiddleware``. Она оборачивает процесс обработки каждого события в блок ``try...except``.
-Если в любом из хендлеров или мидлварей возникает необработанное исключение (наследуемое от ``Exception``), оно перехватывается, и создается новое событие типа :class:`~maxo.types.error_event.ErrorEvent`.
+Если в любом из хендлеров или мидлварей возникает необработанное исключение (наследуемое от ``Exception``), оно перехватывается, и создается новое событие типа :class:`~maxo.routing.events.ErrorEvent`.
 
 Это событие затем отправляется в диспетчер, где вы можете поймать его с помощью специальных обработчиков ошибок.
 
@@ -22,7 +22,7 @@
 
     from typing import Any
 
-    from maxo.types import ErrorEvent
+    from maxo.routing.events import ErrorEvent
 
     @router.error()
     async def global_error_handler(event: ErrorEvent[Exception, Any]):
@@ -43,8 +43,9 @@ ExceptionTypeFilter
 
 .. code-block:: python
 
+    from maxo.routing.events import ErrorEvent
     from maxo.routing.filters import ExceptionTypeFilter
-    from maxo.types import ErrorEvent, MessageCreated
+    from maxo.types import MessageCreated
 
     # Перехват ошибок конкретного типа
     @router.error(ExceptionTypeFilter(ValueError))
@@ -62,8 +63,8 @@ ExceptionMessageFilter
 
     from typing import Any
 
+    from maxo.routing.events import ErrorEvent
     from maxo.routing.filters import ExceptionMessageFilter
-    from maxo.types import ErrorEvent
 
     @router.error(ExceptionMessageFilter(r"Access denied"))
     async def access_denied_handler(event: ErrorEvent[Exception, Any]):
@@ -74,7 +75,7 @@ ExceptionMessageFilter
 
 В обработчик ошибки передаются следующие аргументы:
 
-1.  **event**: объект :class:`~maxo.types.error_event.ErrorEvent`. Содержит:
+1.  **event**: объект :class:`~maxo.routing.events.ErrorEvent`. Содержит:
 
     - ``event.exception`` (алиас ``event.error``) - само исключение.
     - ``event.event`` - исходное событие (Update), при обработке которого возникла
@@ -94,9 +95,12 @@ ExceptionMessageFilter
 
     import logging
 
+    from maxo import Bot
     from maxo.routing.ctx import Ctx
+    from maxo.routing.events import ErrorEvent
     from maxo.routing.filters import ExceptionTypeFilter
-    from maxo.types import ErrorEvent, MessageCreated, UpdateContext
+    from maxo.routing.middlewares.update_context import UpdateContext
+    from maxo.types import MessageCreated
 
     class MyCustomError(Exception):
         pass
@@ -110,6 +114,7 @@ ExceptionMessageFilter
     async def error_handler(
         event: ErrorEvent[MyCustomError, MessageCreated],
         update_context: UpdateContext,
+        bot: Bot,
     ):
         # Пытаемся отправить сообщение в тот же чат, где произошла ошибка.
         # chat_id из update_context может быть None - тогда отвечаем через фасад
@@ -119,7 +124,7 @@ ExceptionMessageFilter
             if chat_id is None:
                 await event.event.answer_text(text)
             else:
-                await event.bot.send_message(chat_id=chat_id, text=text)
+                await bot.send_message(chat_id=chat_id, text=text)
         except Exception:
             # Если не удалось отправить сообщение об ошибке, просто логируем
             logging.exception("Не удалось отправить уведомление об ошибке")

@@ -5,8 +5,7 @@ from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
 from maxo.types.base import MaxUpdate
 from maxo.types.callback import Callback
-from maxo.types.facades.callback import CallbackMethodsFacade
-from maxo.types.facades.message import MessageMethodsFacade
+from maxo.types.facades import CallbackMethodsFacade, MessageMethodsFacade
 from maxo.types.message import Message
 from maxo.types.user import User
 

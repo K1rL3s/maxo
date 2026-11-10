@@ -12,7 +12,7 @@ from maxo.errors.api import (
     MaxBotBadRequestError,
     MaxBotForbiddenError,
     MaxBotTooManyRequestsError,
-    _extract_api_error,
+    raise_api_error,
 )
 
 FAST_BACKOFF = BackoffConfig(min_delay=0.0, max_delay=0.01, factor=2.0, jitter=0.0)
@@ -49,10 +49,10 @@ def test_is_attachment_not_ready_from_real_api_payload() -> None:
         "error_data": NOT_READY_CODE,
         "message": "cannot process attachment",
     }
-    code, error, message = _extract_api_error(payload)
-    built = MaxBotBadRequestError(code, error, message, payload)
+    with pytest.raises(MaxBotBadRequestError) as exc_info:
+        raise_api_error(400, payload)
 
-    assert is_attachment_not_ready(built) is True
+    assert is_attachment_not_ready(exc_info.value) is True
 
 
 def test_is_attachment_not_ready_false_for_other() -> None:

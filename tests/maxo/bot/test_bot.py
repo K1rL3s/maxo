@@ -1,23 +1,26 @@
-import io
+import asyncio
 from asyncio import CancelledError
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from aiohttp import web
+from aiohttp.test_utils import TestServer
 
 from maxo.bot.bot import Bot
-from maxo.bot.state import ClosedBotState, EmptyBotState, RunningBotState
+from maxo.bot.middlewares import AuthMiddleware
+from maxo.bot.middlewares.headers import CLIENT_HEADERS
 from maxo.bot.upload import UploadConfig, UploadMethod
 from maxo.errors import MaxBotApiError, UnsubscribeError
 from maxo.types import (
+    AttachmentPayload,
     BotInfo,
     GetSubscriptionsResult,
     SimpleQueryResult,
     Subscription,
 )
-from maxo.types.upload_media_result import UploadMediaResult
-from maxo.utils.upload_media import BufferedInputFile
-from tests.constants import NOW, TOKEN
-from tests.factories import make_bot
+from tests.constants import BOT_ID, NOW, TOKEN
+from tests.factories import make_bot, make_bot_info
 
 
 class MockMaxBotApiError(MaxBotApiError):
@@ -28,13 +31,22 @@ class MockMaxBotApiError(MaxBotApiError):
 
 
 @pytest.fixture
-def bot() -> Bot:
-    return make_bot()
+def mock_client() -> AsyncMock:
+    return AsyncMock()
+
+
+@pytest.fixture
+def mock_bot(mock_client: AsyncMock) -> Bot:
+    return make_bot(client=mock_client)
+
+
+@pytest.fixture
+def bot_info() -> BotInfo:
+    return make_bot_info()
 
 
 async def test_bot_init(bot: Bot) -> None:
     assert bot.token == TOKEN
-    assert isinstance(bot.state, EmptyBotState)
 
 
 def test_default_upload_config_is_not_shared() -> None:
@@ -54,206 +66,126 @@ def test_explicit_upload_config_is_preserved() -> None:
     assert bot.upload_config is config
 
 
-async def test_bot_start_and_close() -> None:
-    bot = make_bot()
-    assert isinstance(bot.state, EmptyBotState)
+async def test_bot_close(mock_bot: Bot, mock_client: AsyncMock) -> None:
+    await mock_bot.close()
 
-    with patch("maxo.bot.bot.MaxApiClient") as mock_api_client_class:
-        mock_api_client = AsyncMock()
-        mock_api_client_class.return_value = mock_api_client
-        mock_api_client.call_method.return_value = BotInfo(
-            user_id=1,
-            is_bot=True,
-            first_name="Test",
-            username="testbot",
-            last_activity_time=NOW,
-        )
-
-        await bot.start()
-        assert isinstance(bot.state, RunningBotState)
-        mock_api_client.call_method.assert_awaited_once()
-
-        await bot.close()
-        assert isinstance(bot.state, ClosedBotState)
-        mock_api_client.close.assert_awaited_once()
+    # Клиент передали снаружи - закрывать его боту нельзя.
+    mock_client.close.assert_not_awaited()
+    assert mock_bot.client is mock_client
 
 
-async def test_bot_context(bot: Bot) -> None:
-    with (
-        patch("maxo.bot.bot.Bot.start", new_callable=AsyncMock) as mock_start,
-        patch("maxo.bot.bot.Bot.close", new_callable=AsyncMock) as mock_close,
-    ):
-        async with bot.context():
-            mock_start.assert_awaited_once()
-        mock_close.assert_awaited_once()
+async def test_closed_own_client_is_recreated(mock_bot: Bot) -> None:
+    """Как в aiogram: после `close()` бот снова рабочий."""
+    mock_bot._owns_client = True
+    first = mock_bot.client
+
+    await mock_bot.close()
+
+    first.close.assert_awaited_once()  # type: ignore[attr-defined]
+    with patch("maxo.bot.bot.default_client", return_value=AsyncMock()) as factory:
+        assert mock_bot.client is factory.return_value
 
 
-async def test_bot_call_method(bot: Bot) -> None:
-    with patch.object(bot, "_state", MagicMock()) as mock_state:
-        mock_state.api_client.call_method = AsyncMock(return_value="test_result")
-        result: object = await bot.call_method(MagicMock())
-        assert result == "test_result"
-        mock_state.api_client.call_method.assert_awaited_once()
-
-
-async def test_bot_silent_call_method(
-    bot: Bot,
-    caplog: pytest.LogCaptureFixture,
+async def test_async_with_resolves_info_and_closes(
+    mock_bot: Bot,
+    mock_client: AsyncMock,
+    bot_info: BotInfo,
 ) -> None:
-    with patch.object(bot, "_state", MagicMock()) as mock_state:
-        mock_state.api_client.call_method = AsyncMock(
-            side_effect=MockMaxBotApiError("test error"),
-        )
-        await bot.silent_call_method(MagicMock())
-        assert "Failed to make answer" in caplog.text
+    mock_bot._owns_client = True
+    mock_client.call_method.return_value = bot_info
+
+    async with mock_bot as bot:
+        assert bot is mock_bot
+        assert (await bot.me()).user_id == BOT_ID
+
+    mock_client.call_method.assert_awaited_once()
+    mock_client.close.assert_awaited_once()
 
 
-async def test_bot_download(bot: Bot) -> None:
-    downloaded = io.BytesIO(b"downloaded")
-    with patch.object(
-        bot,
-        "_state",
-        MagicMock(),
-    ) as mock_state:
-        mock_state.api_client.download = AsyncMock(return_value=downloaded)
-        result = await bot.download("https://example.com/file")
-        assert result is downloaded
-        mock_state.api_client.download.assert_awaited_once()
+async def test_bot_call_method(mock_bot: Bot, mock_client: AsyncMock) -> None:
+    """`call_method` doesn't resolve bot info as a side effect."""
+    mock_client.call_method.return_value = "test_result"
+
+    result: object = await mock_bot.call_method(MagicMock())
+
+    assert result == "test_result"
+    mock_client.call_method.assert_awaited_once()
 
 
-async def test_bot_defaults_and_retort(bot: Bot) -> None:
-    assert bot.retort is not None
-    assert bot.defaults is not None
-
-
-async def test_close_on_empty_state_is_noop(bot: Bot) -> None:
+async def test_close_before_first_request_is_noop(bot: Bot) -> None:
     await bot.close()
 
-    assert isinstance(bot.state, EmptyBotState)
+    assert bot._client is None  # nothing was created, nothing to close
 
 
-async def test_close_twice_is_noop() -> None:
-    bot = make_bot()
-    api_client = AsyncMock()
-    bot._state = RunningBotState(info=MagicMock(), api_client=api_client)
+async def test_close_twice_is_noop(mock_bot: Bot, mock_client: AsyncMock) -> None:
+    mock_bot._owns_client = True
 
-    await bot.close()
-    await bot.close()
+    await mock_bot.close()
+    await mock_bot.close()
 
-    api_client.close.assert_awaited_once()
+    mock_client.close.assert_awaited_once()
 
 
-async def test_bot_async_context_manager() -> None:
-    bot = make_bot()
-
-    with (
-        patch("maxo.bot.bot.Bot.start", new_callable=AsyncMock) as mock_start,
-        patch("maxo.bot.bot.Bot.close", new_callable=AsyncMock) as mock_close,
-    ):
-        async with bot as entered:
-            assert entered is bot
-
-    mock_start.assert_awaited_once()
-    mock_close.assert_awaited_once()
-
-
-async def test_context_without_auto_close(bot: Bot) -> None:
-    with (
-        patch("maxo.bot.bot.Bot.start", new_callable=AsyncMock),
-        patch("maxo.bot.bot.Bot.close", new_callable=AsyncMock) as mock_close,
-    ):
-        async with bot.context(auto_close=False):
-            pass
-
-    mock_close.assert_not_awaited()
-
-
-async def test_bot_upload_media_resumable(bot: Bot) -> None:
-    file = BufferedInputFile.file(b"payload", "f.bin")
-    upload_result = UploadMediaResult(token="upload-token")  # noqa: S106
-
-    with patch.object(bot, "_state", MagicMock()) as mock_state:
-        mock_state.api_client.upload_resumable = AsyncMock(return_value=upload_result)
-        result = await bot.upload_media_resumable("https://example.com/upload", file)
-
-    assert result is upload_result
-    mock_state.api_client.upload_resumable.assert_awaited_once_with(
-        "https://example.com/upload",
-        file,
-        None,
-    )
-
-
-@pytest.mark.parametrize(
-    ("active_urls", "removed_urls"),
-    [
-        (None, ["https://one.example/webhook", "https://two.example/webhook"]),
-        ("https://one.example/webhook", ["https://two.example/webhook"]),
-        (
-            "https://missing.example/webhook",
-            [
-                "https://one.example/webhook",
-                "https://two.example/webhook",
-            ],
-        ),
-        (["https://one.example/webhook"], ["https://two.example/webhook"]),
-        (
-            [
-                "https://one.example/webhook",
-                "https://two.example/webhook",
-            ],
-            [],
-        ),
-    ],
-)
-async def test_clear_subscriptions(
-    bot: Bot,
-    active_urls: str | list[str] | None,
-    removed_urls: list[str],
+async def test_client_access_never_hits_network(
+    mock_bot: Bot,
+    mock_client: AsyncMock,
 ) -> None:
-    subscriptions = GetSubscriptionsResult(
-        subscriptions=[
-            Subscription(time=NOW, url="https://one.example/webhook"),
-            Subscription(time=NOW, url="https://two.example/webhook"),
-        ],
-    )
+    """Accessing `.client` repeatedly must not touch the network at all."""
+    assert mock_bot.client is mock_client
+    assert mock_bot.client is mock_client
 
-    with (
-        patch.object(
-            Bot,
-            "get_subscriptions",
-            new=AsyncMock(return_value=subscriptions),
-        ) as get_subscriptions,
-        patch.object(Bot, "unsubscribe", new=AsyncMock()) as unsubscribe,
-    ):
-        result = await bot.clear_subscriptions(active_urls=active_urls)
-
-    get_subscriptions.assert_awaited_once_with()
-    assert [call.kwargs["url"] for call in unsubscribe.await_args_list] == removed_urls
-    assert [subscription.url for subscription in result.removed] == removed_urls
-    assert [subscription.url for subscription in result.kept] == [
-        subscription.url
-        for subscription in subscriptions.subscriptions
-        if subscription.url not in removed_urls
-    ]
+    mock_client.call_method.assert_not_awaited()
 
 
-async def test_clear_subscriptions_handles_an_empty_list(bot: Bot) -> None:
-    subscriptions = GetSubscriptionsResult(subscriptions=[])
+async def test_get_my_info_retries_after_previous_failure(
+    mock_bot: Bot,
+    mock_client: AsyncMock,
+    bot_info: BotInfo,
+) -> None:
+    mock_client.call_method.side_effect = MockMaxBotApiError("boom")
 
-    with (
-        patch.object(
-            Bot,
-            "get_subscriptions",
-            new=AsyncMock(return_value=subscriptions),
-        ),
-        patch.object(Bot, "unsubscribe", new=AsyncMock()) as unsubscribe,
-    ):
-        result = await bot.clear_subscriptions()
+    with pytest.raises(MaxBotApiError):
+        await mock_bot.get_my_info()
 
-    unsubscribe.assert_not_awaited()
-    assert result.removed == []
-    assert result.kept == []
+    mock_client.call_method.side_effect = None
+    mock_client.call_method.return_value = bot_info
+
+    assert (await mock_bot.me()).user_id == BOT_ID
+    assert mock_client.call_method.await_count == 2
+
+
+async def test_me_fetches_info_once_and_caches_it(
+    mock_bot: Bot,
+    mock_client: AsyncMock,
+    bot_info: BotInfo,
+) -> None:
+    """Без `async with bot` (вебхук, тесты) `me()` сам запрашивает информацию о боте."""
+    mock_client.call_method.return_value = bot_info
+
+    first = await mock_bot.me()
+    second = await mock_bot.me()
+
+    assert first is second
+    assert first.user_id == BOT_ID
+    mock_client.call_method.assert_awaited_once()
+
+
+async def test_concurrent_me_calls_api_once(
+    mock_bot: Bot,
+    mock_client: AsyncMock,
+    bot_info: BotInfo,
+) -> None:
+    async def slow_info(*_: object, **__: object) -> BotInfo:
+        await asyncio.sleep(0)  # let the other tasks reach the lock
+        return bot_info
+
+    mock_client.call_method.side_effect = slow_info
+
+    results = await asyncio.gather(*(mock_bot.me() for _ in range(5)))
+
+    assert all(result is bot_info for result in results)
+    mock_client.call_method.assert_awaited_once()
 
 
 async def test_clear_subscriptions_reports_failed_urls(bot: Bot) -> None:
@@ -391,6 +323,21 @@ async def test_clear_subscriptions_keeps_errors_next_to_cancellation(bot: Bot) -
     assert unsubscribe_error.error is failure
 
 
+async def test_get_my_info_always_hits_network(
+    mock_bot: Bot,
+    mock_client: AsyncMock,
+    bot_info: BotInfo,
+) -> None:
+    """Unlike `start()`, repeated `get_my_info()` calls must not be cached —
+    it's the "give me fresh data now" escape hatch."""
+    mock_client.call_method.return_value = bot_info
+
+    await mock_bot.get_my_info()
+    await mock_bot.get_my_info()
+
+    assert mock_client.call_method.await_count == 2
+
+
 async def test_clear_subscriptions_propagates_get_subscriptions_error(bot: Bot) -> None:
     unsubscribe = AsyncMock()
 
@@ -430,3 +377,117 @@ async def test_deprecated_method_warns_at_caller(
         await getattr(bot, method_name)(**kwargs)
 
     assert record[0].filename == __file__
+
+
+@pytest.mark.parametrize(
+    ("active_urls", "removed_urls"),
+    [
+        (None, ["https://one.example/webhook", "https://two.example/webhook"]),
+        ("https://one.example/webhook", ["https://two.example/webhook"]),
+        (
+            "https://missing.example/webhook",
+            [
+                "https://one.example/webhook",
+                "https://two.example/webhook",
+            ],
+        ),
+        (["https://one.example/webhook"], ["https://two.example/webhook"]),
+        (
+            [
+                "https://one.example/webhook",
+                "https://two.example/webhook",
+            ],
+            [],
+        ),
+    ],
+)
+async def test_clear_subscriptions(
+    bot: Bot,
+    active_urls: str | list[str] | None,
+    removed_urls: list[str],
+) -> None:
+    subscriptions = GetSubscriptionsResult(
+        subscriptions=[
+            Subscription(time=NOW, url="https://one.example/webhook"),
+            Subscription(time=NOW, url="https://two.example/webhook"),
+        ],
+    )
+
+    with (
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(return_value=subscriptions),
+        ) as get_subscriptions,
+        patch.object(Bot, "unsubscribe", new=AsyncMock()) as unsubscribe,
+    ):
+        result = await bot.clear_subscriptions(active_urls=active_urls)
+
+    get_subscriptions.assert_awaited_once_with()
+    assert [call.kwargs["url"] for call in unsubscribe.await_args_list] == removed_urls
+    assert [subscription.url for subscription in result.removed] == removed_urls
+    assert [subscription.url for subscription in result.kept] == [
+        subscription.url
+        for subscription in subscriptions.subscriptions
+        if subscription.url not in removed_urls
+    ]
+
+
+async def test_clear_subscriptions_handles_an_empty_list(bot: Bot) -> None:
+    subscriptions = GetSubscriptionsResult(subscriptions=[])
+
+    with (
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(return_value=subscriptions),
+        ),
+        patch.object(Bot, "unsubscribe", new=AsyncMock()) as unsubscribe,
+    ):
+        result = await bot.clear_subscriptions()
+
+    unsubscribe.assert_not_awaited()
+    assert result.removed == []
+    assert result.kept == []
+
+
+async def test_bot_calls_the_api_client_with_token() -> None:
+    api = AsyncMock()
+    api.call_method.return_value = make_bot_info()
+    bot = make_bot(client=api)
+
+    await bot.get_my_info()
+
+    used = api.call_method.await_args.kwargs["middleware"]
+    assert any(isinstance(m, AuthMiddleware) for m in used)
+
+
+async def test_download_goes_to_file_host_without_token(tmp_path: Path) -> None:
+    seen: dict[str, str] = {}
+
+    async def handler(request: web.Request) -> web.Response:
+        seen.update(request.headers)
+        return web.Response(body=b"payload")
+
+    app = web.Application()
+    app.router.add_get("/file.bin", handler)
+    async with TestServer(app) as server:
+        bot = make_bot()
+        url = str(server.make_url("/file.bin"))
+
+        result = await bot.download(url)
+        await bot.download(url, destination=tmp_path / "file.bin")
+        from_payload = await bot.download(AttachmentPayload(url=url))
+
+    assert result is not None
+    assert result.read() == b"payload"
+    assert from_payload is not None
+    assert from_payload.read() == b"payload"
+    assert (tmp_path / "file.bin").read_bytes() == b"payload"
+    assert "Authorization" not in seen
+    assert seen["X-Max-Client-Name"] == CLIENT_HEADERS["X-Max-Client-Name"]
+
+
+async def test_call_method_stream_is_not_supported() -> None:
+    with pytest.raises(NotImplementedError, match=r"bot\.download"):
+        await make_bot().call_method_stream(MagicMock())

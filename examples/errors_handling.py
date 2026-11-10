@@ -3,8 +3,9 @@ import os
 
 from maxo import Bot, Dispatcher
 from maxo.errors import MaxoError
+from maxo.routing.events import ErrorEvent
 from maxo.routing.filters import Command, ExceptionTypeFilter
-from maxo.types import ErrorEvent, MessageCreated
+from maxo.types import MessageCreated
 
 logger = logging.getLogger(__name__)
 

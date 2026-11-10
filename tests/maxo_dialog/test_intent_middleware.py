@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from maxo import Bot
 from maxo.dialogs.api.entities import (
     DEFAULT_STACK_ID,
     EVENT_CONTEXT_KEY,
@@ -44,6 +45,7 @@ from maxo.routing.middlewares.fsm_context import FSM_STORAGE_KEY
 from maxo.routing.middlewares.update_context import (
     EVENT_FROM_USER_KEY,
     UPDATE_CONTEXT_KEY,
+    UpdateContext,
 )
 from maxo.routing.sentinels import UNHANDLED
 from maxo.types import (
@@ -57,11 +59,11 @@ from maxo.types import (
     MessageBody,
     MessageCallback,
     Recipient,
-    UpdateContext,
     UserAddedToChat,
     UserRemovedFromChat,
 )
 from tests.constants import NOW
+from tests.mocks import MockBot
 
 from .conftest import make_message_created, make_user
 
@@ -72,7 +74,7 @@ class SG(StatesGroup):
 
 def make_ctx(bot: Any = None) -> dict[Any, Any]:
     return {
-        "bot": bot or MagicMock(),
+        "bot": bot or MockBot(),
         FSM_STORAGE_KEY: JsonMemoryStorage(),
         UPDATE_CONTEXT_KEY: UpdateContext(chat_id=10, user_id=1, type=ChatType.DIALOG),
         EVENT_FROM_USER_KEY: make_user(),
@@ -116,7 +118,7 @@ def make_aiogd_event(
     return DialogUpdateEvent(
         user=make_user(),
         recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=10, user_id=1),
-        bot=MagicMock(),
+        bot=cast(Bot, MockBot()),
         action=DialogAction.UPDATE,
         data={},
         intent_id=intent_id,
@@ -462,7 +464,10 @@ class TestIntentMiddlewareFactory:
     async def test_forbidden_stack_unhandled_callback_stops_spinner(self) -> None:
         factory = make_factory()
         factory.access_validator = MagicMock(is_allowed=AsyncMock(return_value=False))
-        bot = MagicMock(answer_on_callback=AsyncMock())
+        bot = MagicMock(
+            answer_on_callback=AsyncMock(),
+            me=AsyncMock(return_value=MockBot().info),  # storage keys need bot id
+        )
         update = make_message_callback("plain").as_(bot)
 
         result = await factory.process_callback(

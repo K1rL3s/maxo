@@ -78,10 +78,22 @@ class TestSimpleEngine:
         self,
         engine: SimpleEngine,
         dispatcher: Dispatcher,
+        bot: MagicMock,
     ) -> None:
-        feed_signal_mock = AsyncMock()
+        calls: list[str] = []
+
+        async def feed_signal(signal: object, *_: object) -> None:
+            calls.append(type(signal).__name__)
+
+        async def me() -> None:
+            calls.append("me")
+
+        feed_signal_mock = AsyncMock(side_effect=feed_signal)
         dispatcher.feed_signal = feed_signal_mock  # type: ignore[method-assign]
+        bot.me = AsyncMock(side_effect=me)
         await engine.on_startup(app=MagicMock())
+        # As in polling and signals.rst: the bot connects between the signals
+        assert calls == ["me", "BeforeStartup", "AfterStartup"]
         assert dispatcher.feed_signal.await_count == 2
         assert isinstance(
             dispatcher.feed_signal.await_args_list[0].args[0],
@@ -98,12 +110,18 @@ class TestSimpleEngine:
         dispatcher: Dispatcher,
         bot: MagicMock,
     ) -> None:
-        feed_signal_mock = AsyncMock()
-        dispatcher.feed_signal = feed_signal_mock  # type: ignore[method-assign]
+        order = MagicMock()
+        dispatcher.feed_signal = AsyncMock()  # type: ignore[method-assign]
         bot.close = AsyncMock()
+        order.attach_mock(dispatcher.feed_signal, "feed_signal")
+        order.attach_mock(bot.close, "close")
         await engine.on_shutdown(app=MagicMock())
-        assert dispatcher.feed_signal.await_count == 2
-        bot.close.assert_awaited_once()
+        # Signal handlers may still call the API, so close goes last
+        assert [name for name, *_ in order.mock_calls] == [
+            "feed_signal",
+            "feed_signal",
+            "close",
+        ]
         assert isinstance(
             dispatcher.feed_signal.await_args_list[0].args[0],
             BeforeShutdown,
@@ -112,3 +130,19 @@ class TestSimpleEngine:
             dispatcher.feed_signal.await_args_list[1].args[0],
             AfterShutdown,
         )
+
+    async def test_on_shutdown_closes_bot_when_signal_fails(
+        self,
+        engine: SimpleEngine,
+        dispatcher: Dispatcher,
+        bot: MagicMock,
+    ) -> None:
+        dispatcher.feed_signal = AsyncMock(  # type: ignore[method-assign]
+            side_effect=ValueError("after_shutdown failed"),
+        )
+        bot.close = AsyncMock()
+
+        with pytest.raises(ValueError, match="after_shutdown failed"):
+            await engine.on_shutdown(app=MagicMock())
+
+        bot.close.assert_awaited_once()

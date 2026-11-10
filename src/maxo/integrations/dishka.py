@@ -8,13 +8,13 @@ from typing import Any, Concatenate, ParamSpec, TypeVar, overload
 
 from dishka import AsyncContainer
 
+from maxo.routing.events import MaxoUpdate
 from maxo.routing.handlers.signal import SignalHandler, SignalHandlerFn
 from maxo.routing.handlers.update import UpdateHandler, UpdateHandlerFn
 from maxo.routing.interfaces import BaseRouter
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
 from maxo.routing.observers import SignalObserver, UpdateObserver
 from maxo.routing.signals.base import BaseSignal
-from maxo.routing.signals.update import MaxoUpdate
 
 try:
     from dishka import Provider, Scope, from_context
@@ -28,8 +28,8 @@ from maxo.fsm.context import FSMContext
 from maxo.fsm.storages.base import BaseStorage, RawState
 from maxo.routing.ctx import Ctx
 from maxo.routing.dispatcher import Dispatcher
+from maxo.routing.middlewares.update_context import UpdateContext
 from maxo.types.base import BaseUpdate
-from maxo.types.update_context import UpdateContext
 
 CONTAINER_NAME = "dishka_container"
 

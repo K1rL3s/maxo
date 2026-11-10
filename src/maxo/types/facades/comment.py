@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
@@ -20,14 +19,9 @@ class CommentMethodsFacade(MessageMethodsFacade):
     __slots__ = ()
 
     if TYPE_CHECKING:
-
+        # Type-only, see `BotMethodsFacade`.
         @property
-        @abstractmethod
-        def message(self) -> "CommentMessage | None":
-            raise NotImplementedError
-
-    else:
-        message: "CommentMessage | None"
+        def message(self) -> "CommentMessage | None": ...
 
     async def delete_message(self) -> SimpleQueryResult:
         comment = self.unsafe_message

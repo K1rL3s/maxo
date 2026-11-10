@@ -9,7 +9,8 @@ from .attachments import (
 )
 from .audio_attachment import AudioAttachment
 from .audio_attachment_request import AudioAttachmentRequest
-from .base import BaseMaxoType, BaseUpdate, MaxUpdate, MaxoType
+from .base import BaseUpdate, FacadeMaxoType, MaxUpdate, MaxoType
+from .binding import bind_bot
 from .bot_added_to_chat import BotAddedToChat
 from .bot_admin_permissions_changed import BotAdminPermissionsChanged
 from .bot_command import BotCommand
@@ -47,7 +48,6 @@ from .dialog_muted import DialogMuted
 from .dialog_removed import DialogRemoved
 from .dialog_unmuted import DialogUnmuted
 from .emphasized_markup import EmphasizedMarkup
-from .error_event import ErrorEvent
 from .failed_user_details import FailedUserDetails
 from .file_attachment import FileAttachment
 from .file_attachment_payload import FileAttachmentPayload
@@ -109,7 +109,6 @@ from .strikethrough_markup import StrikethroughMarkup
 from .strong_markup import StrongMarkup
 from .subscription import Subscription
 from .underline_markup import UnderlineMarkup
-from .update_context import UpdateContext
 from .update_list import UpdateList
 from .updates import Updates
 from .upload_endpoint import UploadEndpoint
@@ -134,7 +133,6 @@ __all__ = (
     "AttachmentsRequests",
     "AudioAttachment",
     "AudioAttachmentRequest",
-    "BaseMaxoType",
     "BaseUpdate",
     "BotAddedToChat",
     "BotAdminPermissionsChanged",
@@ -173,7 +171,7 @@ __all__ = (
     "DialogRemoved",
     "DialogUnmuted",
     "EmphasizedMarkup",
-    "ErrorEvent",
+    "FacadeMaxoType",
     "FailedUserDetails",
     "FileAttachment",
     "FileAttachmentPayload",
@@ -238,7 +236,6 @@ __all__ = (
     "StrongMarkup",
     "Subscription",
     "UnderlineMarkup",
-    "UpdateContext",
     "UpdateList",
     "Updates",
     "UploadEndpoint",
@@ -254,4 +251,5 @@ __all__ = (
     "VideoAttachmentRequest",
     "VideoThumbnail",
     "VideoUrls",
+    "bind_bot",
 )
