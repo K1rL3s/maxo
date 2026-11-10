@@ -5,7 +5,7 @@ from unihttp.http import HTTPRequest
 
 from maxo.bot import Bot
 from maxo.bot.middlewares import AuthMiddleware, UserAgentMiddleware
-from maxo.bot.middlewares.auth import CLIENT_HEADERS, USER_AGENT
+from maxo.bot.middlewares.headers import CLIENT_HEADERS, USER_AGENT
 from tests.constants import TOKEN
 
 

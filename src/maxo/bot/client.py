@@ -26,7 +26,7 @@ def build_ssl_context() -> ssl.SSLContext:
 def _file_host_session(*, limit: int = _DEFAULT_LIMIT) -> "ClientSession":
     from aiohttp import ClientSession, TCPConnector  # noqa: PLC0415
 
-    from maxo.bot.middlewares.auth import CLIENT_HEADERS  # noqa: PLC0415
+    from maxo.bot.middlewares.headers import CLIENT_HEADERS  # noqa: PLC0415
 
     return ClientSession(
         connector=TCPConnector(ssl=build_ssl_context(), limit=limit),

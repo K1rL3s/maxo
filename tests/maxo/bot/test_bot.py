@@ -9,7 +9,7 @@ from aiohttp.test_utils import TestServer
 
 from maxo.bot.bot import Bot
 from maxo.bot.middlewares import AuthMiddleware
-from maxo.bot.middlewares.auth import CLIENT_HEADERS
+from maxo.bot.middlewares.headers import CLIENT_HEADERS
 from maxo.bot.upload import UploadConfig, UploadMethod
 from maxo.errors import MaxBotApiError, UnsubscribeError
 from maxo.types import (
