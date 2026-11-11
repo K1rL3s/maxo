@@ -78,6 +78,7 @@ ExceptionMessageFilter
 1.  **event**: объект :class:`~maxo.routing.events.ErrorEvent`. Содержит:
 
     - ``event.exception`` (алиас ``event.error``) - само исключение.
+    - ``event.bot`` - бот, переданный диспетчеру при обработке события.
     - ``event.event`` - исходное событие (Update), при обработке которого возникла
       ошибка. У него доступны методы фасада, например ``answer_text``.
     - ``event.update`` - обёртка ``MaxoUpdate`` над исходным событием, с маркером

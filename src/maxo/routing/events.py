@@ -1,7 +1,7 @@
 from typing import Generic, TypeVar
 
 from maxo.omit import Omittable, Omitted
-from maxo.types.base import BaseUpdate
+from maxo.types.base import BaseUpdate, FacadeMaxoType
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 _ExceptionT = TypeVar("_ExceptionT", bound=Exception)
@@ -14,7 +14,7 @@ class MaxoUpdate(BaseUpdate, Generic[_UpdateT]):
     marker: Omittable[int | None] = Omitted()
 
 
-class ErrorEvent(BaseUpdate, Generic[_ExceptionT, _UpdateT]):
+class ErrorEvent(BaseUpdate, FacadeMaxoType, Generic[_ExceptionT, _UpdateT]):
     exception: _ExceptionT
     update: MaxoUpdate[_UpdateT]
 
