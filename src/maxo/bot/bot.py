@@ -2,7 +2,8 @@ import asyncio
 import io
 import json
 import pathlib
-from collections.abc import Iterable, Sequence
+from collections.abc import AsyncIterator, Iterable, Sequence
+from contextlib import asynccontextmanager
 from types import TracebackType
 from typing import TYPE_CHECKING, BinaryIO, NoReturn, Self
 
@@ -125,6 +126,15 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
     @property
     def token(self) -> str:
         return self._token
+
+    @asynccontextmanager
+    async def context(self, auto_close: bool = True) -> AsyncIterator[Self]:
+        try:
+            await self.me()
+            yield self
+        finally:
+            if auto_close:
+                await self.close()
 
     async def __aenter__(self) -> Self:
         try:
