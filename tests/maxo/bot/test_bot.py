@@ -501,3 +501,15 @@ def test_none_middleware_preserves_defaults() -> None:
         type(item) for item in default.middleware
     ]
 
+
+async def test_start_returns_cached_bot_info(
+    mock_bot: Bot,
+    mock_client: AsyncMock,
+    bot_info: BotInfo,
+) -> None:
+    mock_client.call_method.return_value = bot_info
+
+    assert await mock_bot.start() is bot_info
+    assert await mock_bot.me() is bot_info
+    assert await mock_bot.start() is bot_info
+    mock_client.call_method.assert_awaited_once()

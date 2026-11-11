@@ -159,6 +159,8 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
                     return await self.get_my_info()
         return self._info
 
+    start = me
+
     async def get_my_info(self) -> BotInfo:
         self._info = await self.call_method(GetMyInfo())
         return self._info
