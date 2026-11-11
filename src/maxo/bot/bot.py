@@ -82,7 +82,7 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         warming_up: bool = True,
         client: BaseAsyncClient | None = None,
         upload_config: UploadConfig | None = None,
-        middleware: Sequence[AsyncMiddleware] = (),
+        middleware: Sequence[AsyncMiddleware] | None = None,
     ) -> None:
         self._defaults = defaults or BotDefaults()
         self._token = token
@@ -91,7 +91,7 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         )
 
         self.middleware: list[AsyncMiddleware] = [
-            *middleware,
+            *(middleware or ()),
             AuthMiddleware(self._token),
             UserAgentMiddleware(),
             AttachmentNotReadyRetryMiddleware(
