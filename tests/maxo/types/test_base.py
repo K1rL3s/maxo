@@ -4,8 +4,9 @@ from typing import Any
 
 import pytest
 
+from maxo.errors import AttributeIsEmptyError
 from maxo.types import base
-from maxo.types.base import MaxoType
+from maxo.types.base import FacadeMaxoType, MaxoType
 
 
 def test_facade_property_cannot_become_field_default() -> None:
@@ -86,3 +87,10 @@ def test_class_cell_is_filled_before_dataclass(
 
     assert wrapped
     assert Child().greet() == "child+base"
+
+
+def test_unbound_facade_error_can_be_formatted() -> None:
+    with pytest.raises(AttributeIsEmptyError) as error:
+        _ = FacadeMaxoType().bot
+
+    assert str(error.value) == "FacadeMaxoType._bot is empty (None)"
