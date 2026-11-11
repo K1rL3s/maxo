@@ -81,7 +81,7 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         warming_up: bool = True,
         client: BaseAsyncClient | None = None,
         upload_config: UploadConfig | None = None,
-        middlewares: Sequence[AsyncMiddleware] = (),
+        middleware: Sequence[AsyncMiddleware] = (),
     ) -> None:
         self._defaults = defaults or BotDefaults()
         self._token = token
@@ -90,7 +90,7 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         )
 
         self.middleware: list[AsyncMiddleware] = [
-            *middlewares,
+            *middleware,
             AuthMiddleware(self._token),
             UserAgentMiddleware(),
             AttachmentNotReadyRetryMiddleware(
@@ -143,7 +143,6 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         await self.close()
 
     async def me(self) -> BotInfo:
-        """Ленивый `get_my_info`: запрос к API только при первом вызове."""
         if self._info is None:
             async with self._me_lock:
                 if self._info is None:
@@ -166,8 +165,6 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         middleware: Sequence[AsyncMiddleware] | None = None,
     ) -> ResponseType:
         method = apply_defaults(method, self._defaults)
-        # Middleware вызова идут первыми: так они получают ошибки maxo,
-        # а не сырые исключения unihttp.
         result = await self.client.call_method(
             method,
             middleware=[*(middleware or ()), *self.middleware],
@@ -180,8 +177,6 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         *,
         middleware: Sequence[AsyncMiddleware] | None = None,
     ) -> NoReturn:
-        """Не поддерживается: API MAX не стримит ответы. Файлы - `bot.download()`."""
-        # Inherited from `BaseAsyncClient` for mypy, but `Bot` sets up no transport
         msg = "Bot не стримит ответы API, скачивайте файлы через bot.download()"
         raise NotImplementedError(msg)
 
