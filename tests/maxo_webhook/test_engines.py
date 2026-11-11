@@ -92,8 +92,7 @@ class TestSimpleEngine:
         dispatcher.feed_signal = feed_signal_mock  # type: ignore[method-assign]
         bot.me = AsyncMock(side_effect=me)
         await engine.on_startup(app=MagicMock())
-        # As in polling and signals.rst: the bot connects between the signals
-        assert calls == ["me", "BeforeStartup", "AfterStartup"]
+        assert calls == ["BeforeStartup", "me", "AfterStartup"]
         assert dispatcher.feed_signal.await_count == 2
         assert isinstance(
             dispatcher.feed_signal.await_args_list[0].args[0],
@@ -146,3 +145,20 @@ class TestSimpleEngine:
             await engine.on_shutdown(app=MagicMock())
 
         bot.close.assert_awaited_once()
+
+    async def test_on_startup_me_failure_stops_after_before_startup(
+        self,
+        engine: SimpleEngine,
+        dispatcher: Dispatcher,
+        bot: MagicMock,
+    ) -> None:
+        dispatcher.feed_signal = AsyncMock()  # type: ignore[method-assign]
+        bot.me = AsyncMock(side_effect=RuntimeError("unavailable"))
+        bot.close = AsyncMock()
+
+        with pytest.raises(RuntimeError, match="unavailable"):
+            await engine.on_startup(app=MagicMock())
+
+        dispatcher.feed_signal.assert_awaited_once()
+        assert isinstance(dispatcher.feed_signal.await_args.args[0], BeforeStartup)
+        bot.close.assert_not_awaited()
