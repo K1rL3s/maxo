@@ -86,8 +86,8 @@ class LongPolling:
             dispatcher.workflow_data.update(bot=bot, **workflow_data)
 
             try:
-                info = await bot.me()
                 await dispatcher.feed_signal(BeforeStartup(), bot)
+                info = await bot.me()
 
                 loggers.dispatcher.info(
                     "Polling started for @%s id=%s",

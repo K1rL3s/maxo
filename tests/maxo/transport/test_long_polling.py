@@ -18,6 +18,7 @@ from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.events import MaxoUpdate
 from maxo.transport.long_polling import LongPolling
 from maxo.types import (
+    BotInfo,
     ClearSubscriptionsResult,
     GetSubscriptionsResult,
     MaxoType,
@@ -635,3 +636,59 @@ async def test_start_continues_when_subscription_check_fails(
         "RuntimeError",
         error,
     )
+
+
+async def test_start_initializes_bot_between_startup_signals(
+    long_polling: LongPolling,
+    mock_dispatcher: Dispatcher,
+    mock_bot: Bot,
+) -> None:
+    calls: list[str] = []
+
+    @mock_dispatcher.before_startup()
+    async def before() -> None:
+        calls.append("before")
+
+    @mock_dispatcher.after_startup()
+    async def after() -> None:
+        calls.append("after")
+
+    async def me() -> BotInfo:
+        calls.append("me")
+        return make_bot_info()
+
+    with (
+        patch.object(Bot, "me", new=AsyncMock(side_effect=me)),
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates),
+    ):
+        await long_polling.start(mock_bot, auto_close_bot=False)
+
+    assert calls == ["before", "me", "after"]
+
+
+@pytest.mark.parametrize("auto_close_bot", [True, False])
+async def test_start_me_failure_occurs_after_before_startup(
+    long_polling: LongPolling,
+    mock_dispatcher: Dispatcher,
+    mock_bot: Bot,
+    auto_close_bot: bool,
+) -> None:
+    calls: list[str] = []
+
+    @mock_dispatcher.before_startup()
+    async def before() -> None:
+        calls.append("before")
+
+    @mock_dispatcher.after_startup()
+    async def after() -> None:
+        calls.append("after")
+
+    with (
+        patch.object(Bot, "me", new=AsyncMock(side_effect=RuntimeError("unavailable"))),
+        patch.object(Bot, "close", new=AsyncMock()) as close,
+        pytest.raises(RuntimeError, match="unavailable"),
+    ):
+        await long_polling.start(mock_bot, auto_close_bot=auto_close_bot)
+
+    assert calls == ["before"]
+    assert close.await_count == int(auto_close_bot)
