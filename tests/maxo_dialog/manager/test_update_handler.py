@@ -61,6 +61,8 @@ async def test_handle_dialog_start_event(mock_dialog_manager: MagicMock) -> None
         access_settings=AccessSettings(user_ids=[1, 2, 3]),
     )
 
+    assert event.event_type == "aiogd_update"
+
     await handle_aiogd_update(event, mock_dialog_manager)
 
     mock_dialog_manager.start.assert_called_once_with(
@@ -130,6 +132,8 @@ async def test_handle_dialog_update_event_with_context(
         stack_id=None,
         bot=MagicMock(),
     )
+
+    assert event.event_type == "aiogd_update"
 
     await handle_aiogd_update(event, mock_dialog_manager)
 
