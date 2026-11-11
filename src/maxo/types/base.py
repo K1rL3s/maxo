@@ -78,7 +78,7 @@ class FacadeMaxoType(MaxoType):
 
         raise AttributeIsEmptyError(
             obj=self,
-            attr="bot",
+            attr="_bot",
         )
 
     def as_(self, bot: "Bot | None") -> Self:
