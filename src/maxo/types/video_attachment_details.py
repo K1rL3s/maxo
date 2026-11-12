@@ -12,7 +12,7 @@ class VideoAttachmentDetails(MaxoType):
         height: Высота видео
         thumbnail: Миниатюра видео
         token: Токен видео-вложения
-        urls: URL-ы для скачивания или воспроизведения видео. Может быть null, если видео недоступно
+        urls: URL для скачивания или воспроизведения видео. Может быть null, если видео недоступно
         width: Ширина видео
     """
 
@@ -28,7 +28,7 @@ class VideoAttachmentDetails(MaxoType):
     thumbnail: Omittable[VideoThumbnail | None] = Omitted()
     """Миниатюра видео"""
     urls: Omittable[VideoUrls | None] = Omitted()
-    """URL-ы для скачивания или воспроизведения видео. Может быть null, если видео недоступно"""
+    """URL для скачивания или воспроизведения видео. Может быть null, если видео недоступно"""
 
     @property
     def unsafe_thumbnail(self) -> VideoThumbnail:
