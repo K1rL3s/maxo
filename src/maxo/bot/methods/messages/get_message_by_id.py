@@ -5,7 +5,7 @@ from maxo.types.message import Message
 
 class GetMessageById(MaxoMethod[Message]):
     """
-    Получение сообщений
+    Получение сообщения
 
     Возвращает сообщение из канала или чата по его ID
 

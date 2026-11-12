@@ -1,23 +1,29 @@
 openapi: 3.0.0
 info:
-  version: 0.0.33
+  version: 0.0.34
   title: Max Bot API
   license:
     name: Apache 2.0
   description: |-
     # About
+
     Bot API allows bots to interact with Max. Methods are called by sending HTTPS requests to [platform-api2.max.ru](https://platform-api2.max.ru) domain.
     Bots are third-party applications that use Max features. A bot can legitimately take part in a conversation. It can be achieved through HTTPS requests to the Max Bot API.
 
     ## Features
+
     Max bots of the current version are able to:
+
     - Communicate with users and respond to requests
     - Recommend users complete actions via programmed buttons
     - Request data from users (name, short reference, phone number)
+
     We'll keep working on expanding bot capabilities in the future.
 
     ## Examples
+
     Bots can be used for the following purposes:
+
     - Providing support, answering frequently asked questions
     - Sending typical information
     - Voting
@@ -26,6 +32,7 @@ info:
     - Forwarding a user to a chat/channel
 
     ## HTTP verbs
+
     `GET` &mdash; getting resources, parameters are transmitted via URL
 
     `POST` &mdash; creation of resources (for example, sending new messages)
@@ -37,6 +44,7 @@ info:
     `PATCH` &mdash; patching resources
 
     ## HTTP response codes
+
     `200` &mdash; successful operation
 
     `400` &mdash; invalid request
@@ -54,30 +62,37 @@ info:
     `503` &mdash; service unavailable
 
     ## Resources format
+
     For content requests (PUT and POST) and responses, the API uses the JSON format.
     All strings are UTF-8 encoded.
     Date/time fields are represented as the number of milliseconds that have elapsed since 00:00 January 1, 1970 in the long format. To get it, you can simply multiply the UNIX timestamp by 1000. All date/time fields have a UTC timezone.
+
     ## Error responses
-    In case of an error, the API returns a response with the corresponding HTTP code and JSON with the following fields:
 
-    `code` - the string with the error key
+    In case of an error, the API returns a response with the corresponding HTTP status code and a JSON object containing the following fields, depending on the method:
 
-    `message` - a string describing the error </br>
+    - `success: false` - a flag indicating that an error has occurred; returned for certain methods
+    - `code` - a string with the error key
+    - `message` - a string describing the error
 
- 
+    Certain methods can return HTTP `200` with `success: false`. For these methods, check the `success` field as well as the HTTP status code. In such responses, the `code` field is optional and may be `null`.
+
     ## Receiving notifications
 
     Max Bot API supports 2 options of receiving notifications on new events for bots:
-    - Push notifications via WebHook (recommended). To receive data via WebHook, you'll have to [add subscription](https://dev.max.ru/docs-api/methods/POST/subscriptions);
-    - Notifications upon request via long polling (/getUpdates) API (not recommended). All data can be received via long polling **by default** after creating the bot.      
 
-      Receiving updates via Long Polling is limited in speed and event retention time — this method is not suitable for production environments. We recommend using Webhook at all stages of work.
+    - Push notifications via WebHook (recommended). To receive data via WebHook, you'll have to [add subscription](https://dev.max.ru/docs-api/methods/POST/subscriptions);
+    - Notifications upon request via long polling (/getUpdates) API (not recommended). All data can be received via long polling **by default** after creating the bot.
+
+      Receiving updates via Long Polling is limited in speed and event retention time - this method is not suitable for production environments. We recommend using Webhook at all stages of work.
 
     Both methods **cannot** be used simultaneously.
     Refer to the response schema of [/updates](https://dev.max.ru/docs-api/methods/GET/updates) method to check all available types of updates.
 
     ### Webhook
+
     There is some notes about how we handle webhook subscription:
+
     1. Sometimes webhook notification cannot be delivered in case when bot server or network is down.
 
       In such case we well retry delivery in exponentially increasing intervals and will do this until get
@@ -85,24 +100,24 @@ info:
 
       We also consider any non `200`-response from server as failed delivery.
 
+    ### Updates
 
-     ### Updates
     1. Minimum polling time - 300ms
 
-
     ## Message buttons
+
     You can program buttons for users answering a bot.
     Max supports the following types of buttons:
 
     `callback` &mdash; sends a notification with payload to a bot (via WebHook or long polling)
-    
+
     `clipboard` &mdash; copies payload data to clipboard
-    
+
     `open_app` &mdash; opens mini app
 
     `link` &mdash; makes a user to follow a link
 
-    `message` &mdash; send a quick reply, command, or template message. 
+    `message` &mdash; send a quick reply, command, or template message.
 
     `request_contact` &mdash; requests the user permission to access contact information (phone number, short link, email)
 
@@ -130,7 +145,9 @@ info:
       ]
     }
     ```
+
     ## Deep linking
+
     Max supports deep linking mechanism for bots. It allows passing additional payload to the bot on startup.
     Deep link can contain any data encoded into string up to **128** characters long. Longer strings will be omitted and **not** passed to the bot.
 
@@ -154,25 +171,26 @@ info:
     ```
 
     Deep linking mechanism is supported for iOS version 2.7.0 and Android 2.9.0 and higher.
-    
+
     ## Text formatting
-    
-    Message text can be improved with basic formatting such as: **strong**, *emphasis*, ~strikethough~, 
+
+    Message text can be improved with basic formatting such as: **strong**, *emphasis*, ~strikethough~,
     <ins>underline</ins>, `code` or link. You can use either markdown-like or HTML formatting.
-    
+
     To enable text formatting set the `format` property of NewMessageBody model.
 
     ### Max flavored Markdown
+
     To enable [Markdown](https://spec.commonmark.org/0.29/) parsing, set the `format` property of NewMessageBody model to `markdown`.
-    
+
     We currently support only the following syntax:
 
     `*empasized*` or `_empasized_` for *italic* text
-    
+
     `**strong**` or `__strong__` for __bold__ text
-    
+
     `~~strikethough~~`  for ~strikethough~ text
-    
+
     `++underline++`  for <ins>underlined</ins> text
 
     ``` `code` ``` or ` ```code``` ` for `monospaced` text
@@ -847,7 +865,7 @@ paths:
       tags:
         - subscriptions
       operationId: unsubscribe
-      description: Unsubscribes bot from receiving updates via WebHook. After calling the method, the bot stops receiving notifications about new events. Notification via the long-poll API becomes available for the bot. Receiving updates via Long Polling is limited in speed and event retention time — this method is not suitable for production environments. We recommend using Webhook at all stages of work
+      description: Unsubscribes bot from receiving updates via WebHook. After calling the method, the bot stops receiving notifications about new events. Notification via the long-poll API becomes available for the bot. Receiving updates via Long Polling is limited in speed and event retention time - this method is not suitable for production environments. We recommend using Webhook at all stages of work
       summary: Unsubscribe
       parameters:
         - name: url
@@ -888,10 +906,10 @@ paths:
 
         This type of an upload has some restrictions: 
 
-        - image — available formats: JPG, JPEG, PNG, GIF, TIFF, BMP, HEIC; maximum size for a single image: up to 50 MB AND no more than 7680 x 7680 px — both criteria must be met. For example, you cannot upload an image that is 55 MB and has dimensions of 7600 x 7600 px.
-        - video — available formats: MP4, MOV, MKV, WEBM; maximum size for a single video: up to 250 MB
-        - audio — available formats: MP3, WAV, M4A, and others, maximum size for a single audio file: up to 256 MB OR duration of no more than 60 minutes — both criteria must be met. For example, you cannot send an audio file that is 250 MB and 70 minutes long.
-        - file — available formats: TXT, DOC, PDF, and other common formats, maximum size for a single file: up to 4 GB
+        - image - available formats: JPG, JPEG, PNG, GIF, TIFF, BMP, HEIC; maximum size for a single image: up to 50 MB AND no more than 7680 x 7680 px - both criteria must be met. For example, you cannot upload an image that is 55 MB and has dimensions of 7600 x 7600 px.
+        - video - available formats: MP4, MOV, MKV, WEBM; maximum size for a single video: up to 250 MB
+        - audio - available formats: MP3, WAV, M4A, and others, maximum size for a single audio file: up to 256 MB OR duration of no more than 60 minutes - both criteria must be met. For example, you cannot send an audio file that is 250 MB and 70 minutes long.
+        - file - available formats: TXT, DOC, PDF, and other common formats, maximum size for a single file: up to 4 GB
         - type=photo parameter is no longer supported. If you used type=photo in previously created integrations, please replace it with type=image
         - Only one mediafile per request can be uploaded
         - No possibility to restart stopped / failed upload
@@ -1480,7 +1498,7 @@ paths:
       tags:
         - subscriptions
       description: |-
-        Receiving updates via Long Polling is limited in speed and event retention time — this method is not suitable for production environments. We recommend using Webhook at all stages of work.
+        Receiving updates via Long Polling is limited in speed and event retention time - this method is not suitable for production environments. We recommend using Webhook at all stages of work.
 
         You can use this method for getting updates in case your bot is not subscribed to WebHook. The method is based on long polling.
 
@@ -3155,6 +3173,11 @@ components:
         message:
           description: Explanatory message if the result is not successful
           type: string
+          readOnly: false
+        code:
+          description: Error code
+          type: string
+          nullable: true
           readOnly: false
       required:
         - success
