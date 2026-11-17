@@ -86,7 +86,6 @@ from maxo.types import (
     VideoAttachmentRequest,
     base,
 )
-from maxo.types.facades import comment, message
 
 _UPDATE_TAGS: Mapping[type, UpdateType] = {
     BotAddedToChat: UpdateType.BOT_ADDED,
@@ -186,8 +185,6 @@ def _load_datetime(time: int) -> datetime:
 
 def create_retort() -> Retort:
     exec_type_checking(base)
-    exec_type_checking(comment)
-    exec_type_checking(message)
 
     extended = DEFAULT_RETORT.extend(
         recipe=[

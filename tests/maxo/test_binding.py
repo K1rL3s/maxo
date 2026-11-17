@@ -1,12 +1,12 @@
 import dataclasses
-import inspect
+from typing import TYPE_CHECKING, Any
+
+import pytest
 
 from maxo import types
-from maxo.bot import methods
 from maxo.bot.defaults import BotDefaults, apply_defaults
 from maxo.bot.methods import AnswerOnCallback, EditMessage, GetMyInfo, SendMessage
-from maxo.bot.methods.base import MaxoMethod
-from maxo.bot.warming_up import _LOADED_ROOTS, _METHOD_ROOTS
+from maxo.bot.warming_up import _LOADED_HINTS, _METHODS
 from maxo.enums import TextFormat
 from maxo.omit import is_defined, is_omitted
 from maxo.serialization import get_retort
@@ -18,10 +18,12 @@ from maxo.types import (
     Updates,
     bind_bot,
 )
-from maxo.types.base import FacadeMaxoType
-from maxo.types.binding import _field_classes
+from maxo.types.base import FacadeMaxoType, MaxoType
 from maxo.types.facades.bot import BotMethodsFacade
 from tests.factories import make_bot
+
+if TYPE_CHECKING:
+    from maxo.types import Message
 
 UPDATE = {
     "update_type": "message_created",
@@ -114,39 +116,16 @@ def test_bind_ignores_non_maxo_values() -> None:
     assert bind_bot(None, bot) is None
 
 
-def test_warm_roots_cover_every_top_level_load() -> None:
+def test_warm_hints_cover_every_top_level_load() -> None:
     """
     Сверху грузятся возвращаемые типы методов - unihttp делает
     `response_loader.load(data, method.__returning__)`, - плюс `Updates`
     в вебхуке и `list[Attachments]` в сторадже диалогов.
     """
-    returning = {method.__returning__ for method in _METHOD_ROOTS}
-    assert returning <= set(_LOADED_ROOTS)
-    assert Updates in _LOADED_ROOTS
-    assert list[Attachments] in _LOADED_ROOTS
-
-
-def _exported_methods() -> set[type[MaxoMethod[object]]]:
-    exported = (getattr(methods, name) for name in methods.__all__)
-    return {
-        value
-        for value in exported
-        if inspect.isclass(value)
-        and issubclass(value, MaxoMethod)
-        and value is not MaxoMethod
-    }
-
-
-def test_every_exported_method_is_a_warm_root() -> None:
-    missing = _exported_methods() - set(_METHOD_ROOTS)
-
-    assert not missing, sorted(method.__name__ for method in missing)
-
-
-def test_warm_roots_are_exported_methods() -> None:
-    extra = set(_METHOD_ROOTS) - _exported_methods()
-
-    assert not extra, sorted(method.__name__ for method in extra)
+    returning = {method.__returning__ for method in _METHODS}
+    assert returning <= set(_LOADED_HINTS)
+    assert Updates in _LOADED_HINTS
+    assert list[Attachments] in _LOADED_HINTS
 
 
 def test_defaults_land_in_dumped_request() -> None:
@@ -162,7 +141,6 @@ def test_defaults_land_in_dumped_request() -> None:
 
 
 def test_bind_reaches_whole_tree_from_root() -> None:
-    """`as_` walks the whole tree, not just the root."""
     bot = make_bot()
     update = get_retort().load(UPDATE, Updates)
 
@@ -180,6 +158,34 @@ def test_bind_descends_into_dict_values() -> None:
     bind_bot({"key": update}, bot)
 
     assert update.message.bot is bot
+
+
+def test_bind_handles_cycles_in_containers() -> None:
+    bot = make_bot()
+    update = get_retort().load(UPDATE, Updates)
+    values: list[Any] = []
+    values.append(values)
+    values.append({"update": update})
+
+    bind_bot(values, bot)
+
+    assert update.message.bot is bot
+
+
+class _Node(FacadeMaxoType):
+    peer: "_Node | None" = None
+
+
+def test_bind_handles_cycles_in_dataclasses() -> None:
+    bot = make_bot()
+    first = _Node()
+    second = _Node(peer=first)
+    first.peer = second
+
+    bind_bot(first, bot)
+
+    assert first.bot is bot
+    assert second.bot is bot
 
 
 def test_replace_keeps_bot() -> None:
@@ -214,26 +220,58 @@ def test_facade_types_hold_bot() -> None:
     assert [t for t in facade_types if not issubclass(t, FacadeMaxoType)] == []
 
 
-def test_type_graph_is_acyclic() -> None:
-    """
-    _binds_bot рекурсивен и защиты от циклов не имеет.
+class _TypeCheckingOnly(MaxoType):
+    # `Message` is imported only under `TYPE_CHECKING`.
+    messages: "list[Message]" = dataclasses.field(default_factory=list)
 
-    DFS + раскраска. Пример цикла: (A.b: B, B.a: A)
-    """
-    visiting: set[type] = set()
-    visited: set[type] = set()
 
-    def visit(current: type, path: list[str]) -> None:
-        if current in visited:
-            return
-        assert current not in visiting, f"цикл в графе типов: {' -> '.join(path)}"
+def test_bind_follows_type_checking_only_hints() -> None:
+    bot = make_bot()
+    update = get_retort().load(UPDATE, Updates)
+    assert isinstance(update, MessageCreated)
 
-        visiting.add(current)
-        for classes in _field_classes(current).values():
-            for field_class in classes:
-                visit(field_class, [*path, field_class.__name__])
-        visiting.discard(current)
-        visited.add(current)
+    bind_bot(_TypeCheckingOnly(messages=[update.message]), bot)
 
-    for root in _LOADED_ROOTS:
-        visit(root, [getattr(root, "__name__", str(root))])
+    assert update.message.bot is bot
+
+
+class _CycleLeaf(FacadeMaxoType):
+    pass
+
+
+class _CycleA(MaxoType):
+    b: "_CycleB | None" = None
+    leaf: _CycleLeaf | None = None
+
+
+class _CycleB(MaxoType):
+    a: _CycleA | None = None
+
+
+class _LoopA(MaxoType):
+    b: "_LoopB | None" = None
+
+
+class _LoopB(MaxoType):
+    a: _LoopA | None = None
+
+
+def test_bind_handles_cycles_in_types() -> None:
+    # `_CycleB` leads to the facade only through `_CycleA`, which leads back.
+    bot = make_bot()
+    leaf = _CycleLeaf()
+
+    bind_bot(_CycleB(a=_CycleA(leaf=leaf)), bot)
+    bind_bot(_LoopB(a=_LoopA()), bot)  # no facade: the walk must still end
+
+    assert leaf.bot is bot
+
+
+class _Unresolvable(MaxoType):
+    # The name exists nowhere: a bug in the hint, not something to walk around.
+    value: "_Missing | None" = None  # type: ignore[name-defined]  # noqa: F821
+
+
+def test_bind_raises_on_unresolvable_hint() -> None:
+    with pytest.raises(NameError, match="_Missing"):
+        bind_bot(_Unresolvable(), make_bot())

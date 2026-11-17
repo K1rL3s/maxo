@@ -1,7 +1,10 @@
 import dataclasses
+import sys
 import typing
 from functools import cache
 from typing import TYPE_CHECKING, Any
+
+from adaptix.type_tools import exec_type_checking
 
 from maxo.types.base import FacadeMaxoType
 
@@ -10,81 +13,78 @@ if TYPE_CHECKING:
 
 
 @cache
-def _field_classes(class_: Any) -> dict[str, tuple[Any, ...]]:
-    """
-    Classes found at any depth of each field's type hint, `_bot` excluded.
-
-    `list[Message] | None` -> `(Message,)`.
-    """
+def _field_classes(class_: type) -> dict[str, tuple[type, ...]]:
     if not dataclasses.is_dataclass(class_):
         return {}
 
-    fields = [field for field in dataclasses.fields(class_) if field.name != "_bot"]
-    hints: dict[str, Any] = {}
-    if any(isinstance(field.type, str) for field in dataclasses.fields(class_)):
-        # `_bot` is hinted as the string "Bot | None"; `types/base.py` imports
-        # `Bot` only under `TYPE_CHECKING`.
-        from maxo.bot.bot import Bot  # noqa: PLC0415
+    try:
+        hints = typing.get_type_hints(class_)
+    except NameError:
+        for module_name in dict.fromkeys(base.__module__ for base in class_.__mro__):
+            if module_name != "builtins":
+                exec_type_checking(sys.modules[module_name])
+        hints = typing.get_type_hints(class_)
 
-        hints = typing.get_type_hints(class_, localns={"Bot": Bot})
-
-    classes: dict[str, tuple[Any, ...]] = {}
-    for field in fields:
-        found: list[Any] = []
-        stack = [hints.get(field.name, field.type)]
+    result: dict[str, tuple[type, ...]] = {}
+    for field in dataclasses.fields(class_):
+        classes: list[type] = []
+        stack = [hints[field.name]]
         while stack:
-            hint = stack.pop()
-            if isinstance(hint, type):
-                found.append(hint)
+            value = stack.pop()
+            if isinstance(value, type):
+                classes.append(value)
             else:
-                stack.extend(typing.get_args(hint))
-        classes[field.name] = tuple(found)
-
-    return classes
+                stack.extend(typing.get_args(value))
+        result[field.name] = tuple(classes)
+    return result
 
 
 @cache
-def _bot_fields(class_: Any) -> tuple[str, ...]:
-    """
-    Fields leading to a `FacadeMaxoType` at any depth.
+def _leads_to_facade(class_: Any) -> bool:
+    stack = [class_]
+    seen: set[Any] = set()
+    while stack:
+        current = stack.pop()
+        if issubclass(current, FacadeMaxoType):
+            return True
+        if current in seen:
+            continue
+        seen.add(current)
+        for classes in _field_classes(current).values():
+            stack.extend(classes)
+    return False
 
-    Terminates because the type graph is acyclic (`test_type_graph_is_acyclic`).
-    """
-    fields = []
-    for name, classes in _field_classes(class_).items():
-        leads_to_bot = any(
-            issubclass(field_class, FacadeMaxoType) or _bot_fields(field_class)
-            for field_class in classes
-        )
-        if leads_to_bot:
-            fields.append(name)
 
-    return tuple(fields)
+@cache
+def _fields_to_bind(class_: Any) -> tuple[str, ...]:
+    return tuple(
+        name
+        for name, classes in _field_classes(class_).items()
+        if any(map(_leads_to_facade, classes))
+    )
 
 
 def bind_bot[T](obj: T, bot: "Bot | None") -> T:
-    """
-    Bind the bot to every `FacadeMaxoType` in the tree under `obj`.
-
-    Iterative DFS without `seen`: loaded data is a tree, nodes aren't shared.
-    """
+    """Set `bot` on every `FacadeMaxoType` under `obj`; `seen` handles cycles."""
     stack: list[Any] = [obj]
+    seen: set[int] = set()
 
     while stack:
         node = stack.pop()
+        if id(node) in seen:
+            continue
+        seen.add(id(node))
 
         if isinstance(node, (list, tuple)):
             stack.extend(node)
-            continue
-        if isinstance(node, dict):  # UploadMediaResult.photos
+        elif isinstance(node, dict):  # UploadMediaResult.photos
             stack.extend(node.values())
-            continue
-        if isinstance(node, FacadeMaxoType):
-            node._bot = bot  # noqa: SLF001
-
-        for name in _bot_fields(node.__class__):
-            child = getattr(node, name)
-            if child is not None:
-                stack.append(child)
+        else:
+            if isinstance(node, FacadeMaxoType):
+                node._bot = bot  # noqa: SLF001
+            for name in _fields_to_bind(node.__class__):
+                child = getattr(node, name)
+                if child is not None:
+                    stack.append(child)
 
     return obj
