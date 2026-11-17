@@ -34,6 +34,10 @@ class DialogUpdateEvent(BaseUpdate):
     show_mode: ShowMode | None = None
     bot: Bot
 
+    @property
+    def event_type(self) -> str:
+        return DIALOG_EVENT_NAME
+
 
 class DialogStartEvent(DialogUpdateEvent):
     new_state: State

@@ -491,3 +491,25 @@ async def test_download_goes_to_file_host_without_token(tmp_path: Path) -> None:
 async def test_call_method_stream_is_not_supported() -> None:
     with pytest.raises(NotImplementedError, match=r"bot\.download"):
         await make_bot().call_method_stream(MagicMock())
+
+
+def test_none_middleware_preserves_defaults() -> None:
+    default = Bot("token", warming_up=False)
+    explicit = Bot("token", middleware=None, warming_up=False)
+
+    assert [type(item) for item in explicit.middleware] == [
+        type(item) for item in default.middleware
+    ]
+
+
+async def test_start_returns_cached_bot_info(
+    mock_bot: Bot,
+    mock_client: AsyncMock,
+    bot_info: BotInfo,
+) -> None:
+    mock_client.call_method.return_value = bot_info
+
+    assert await mock_bot.start() is bot_info
+    assert await mock_bot.me() is bot_info
+    assert await mock_bot.start() is bot_info
+    mock_client.call_method.assert_awaited_once()

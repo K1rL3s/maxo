@@ -66,8 +66,7 @@ class FacadeMaxoType(MaxoType):
     """
     Тип, который хранит бота: апдейты и сообщения.
 
-    `_bot` - поле dataclass, поэтому `dataclasses.replace` и `copy` его
-    сохраняют.
+    `_bot` - поле dataclass, поэтому `dataclasses.replace` и `copy` его сохраняют.
     """
 
     _bot: "Bot | None" = field(default=None, repr=False, compare=False)
@@ -79,7 +78,7 @@ class FacadeMaxoType(MaxoType):
 
         raise AttributeIsEmptyError(
             obj=self,
-            attr="bot",
+            attr="_bot",
         )
 
     def as_(self, bot: "Bot | None") -> Self:

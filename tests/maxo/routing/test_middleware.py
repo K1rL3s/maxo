@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from maxo.enums import ChatType
+from maxo.errors import AttributeIsEmptyError
 from maxo.fsm.context import FSMContext
 from maxo.fsm.storages.memory import MemoryStorage, SimpleEventIsolation
 from maxo.routing.ctx import Ctx
@@ -451,3 +452,27 @@ async def test_fsm_key_uses_bot_id_without_bot_context() -> None:
     bot_id = await middleware(MagicMock(), ctx, next_)
 
     assert bot_id == BOT_ID
+
+
+@pytest.mark.parametrize("with_bot", [True, False])
+async def test_error_event_retains_dispatch_bot(
+    update: MessageCreated,
+    with_bot: bool,
+) -> None:
+    dp = Dispatcher()
+    bot = make_bot(client=AsyncMock()) if with_bot else None
+    events: list[ErrorEvent[Exception, MessageCreated]] = []
+    dp.message_created.handler(failing_handler)
+
+    async def error_handler(event: ErrorEvent[Exception, MessageCreated]) -> None:
+        events.append(event)
+
+    dp.errors.handler(error_handler)
+    await dp.feed_signal(BeforeStartup())
+    await dp.feed_update(MaxoUpdate(update=update), bot)
+
+    if bot is None:
+        with pytest.raises(AttributeIsEmptyError):
+            _ = events[0].bot
+    else:
+        assert events[0].bot is bot
