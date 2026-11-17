@@ -60,7 +60,6 @@ from maxo.bot.middlewares import (
     UserAgentMiddleware,
 )
 from maxo.bot.upload import UploadConfig, resumable_upload
-from maxo.bot.warming_up import warm_up
 from maxo.errors import UnsubscribeError
 from maxo.serialization import get_retort
 from maxo.types import AttachmentPayload, BotInfo, ClearSubscriptionsResult
@@ -78,7 +77,6 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         token: str,
         *,
         defaults: BotDefaults | None = None,
-        warming_up: bool = True,
         client: BaseAsyncClient | None = None,
         upload_config: UploadConfig | None = None,
         middlewares: Sequence[AsyncMiddleware] = (),
@@ -101,9 +99,6 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         ]
         self._client = client
         self._owns_client = client is None
-
-        if warming_up:
-            warm_up()
 
         self._info: BotInfo | None = None
         self._me_lock = asyncio.Lock()

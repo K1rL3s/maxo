@@ -4,6 +4,7 @@ from typing import Any
 
 from maxo import Bot, loggers
 from maxo.backoff import BackoffConfig
+from maxo.bot.warming_up import warm_up
 from maxo.fsm.key_builder import BaseKeyBuilder, DefaultKeyBuilder
 from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
 from maxo.fsm.storages.memory import MemoryStorage, SimpleEventIsolation
@@ -192,6 +193,7 @@ class Dispatcher(Router):
         return result
 
     async def _emit_before_startup_handler(self) -> None:
+        warm_up()
         validate_router_graph(self)
         resolve_middlewares(self)
 

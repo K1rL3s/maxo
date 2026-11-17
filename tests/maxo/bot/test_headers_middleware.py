@@ -74,6 +74,6 @@ async def test_user_agent_is_set_and_explicit_one_kept() -> None:
 
 
 def test_bot_chain_has_auth_and_user_agent() -> None:
-    kinds = [type(m) for m in Bot(TOKEN, warming_up=False).middleware]
+    kinds = [type(m) for m in Bot(TOKEN).middleware]
     assert AuthMiddleware in kinds
     assert UserAgentMiddleware in kinds
