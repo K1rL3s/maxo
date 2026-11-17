@@ -22,7 +22,6 @@ class ErrorMiddleware(BaseMiddleware[Any]):
             exception_event = ErrorEvent(
                 exception=exception,
                 update=update,
-                _bot=ctx.get("bot"),
             )
             new_ctx = Ctx(dict(ctx))
             new_ctx["update"] = exception_event

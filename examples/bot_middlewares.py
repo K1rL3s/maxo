@@ -98,7 +98,7 @@ async def main() -> None:
     bot = Bot(
         token=os.environ["TOKEN"],
         client=client,
-        middleware=[RetryMiddleware(exceptions=[MaxBotNotFoundError])],
+        middlewares=[RetryMiddleware(exceptions=[MaxBotNotFoundError])],
     )
 
     try:
