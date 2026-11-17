@@ -491,3 +491,39 @@ async def test_download_goes_to_file_host_without_token(tmp_path: Path) -> None:
 async def test_call_method_stream_is_not_supported() -> None:
     with pytest.raises(NotImplementedError, match=r"bot\.download"):
         await make_bot().call_method_stream(MagicMock())
+
+
+def test_none_middlewares_preserves_defaults() -> None:
+    default = Bot("token")
+    explicit = Bot("token", middlewares=None)
+
+    assert [type(item) for item in explicit.middleware] == [
+        type(item) for item in default.middleware
+    ]
+
+
+def test_deprecated_middleware_kwarg_still_works() -> None:
+    custom = MagicMock()
+
+    with pytest.warns(DeprecationWarning, match="middlewares"):
+        bot = Bot("token", middleware=[custom])
+
+    assert bot.middleware[0] is custom
+
+
+def test_middleware_and_middlewares_together_are_rejected() -> None:
+    with pytest.raises(TypeError, match="middlewares"):
+        Bot("token", middlewares=[], middleware=[])
+
+
+async def test_deprecated_start_returns_cached_bot_info(
+    mock_bot: Bot,
+    mock_client: AsyncMock,
+    bot_info: BotInfo,
+) -> None:
+    mock_client.call_method.return_value = bot_info
+
+    with pytest.warns(DeprecationWarning, match=r"bot\.me"):
+        assert await mock_bot.start() is bot_info
+    assert await mock_bot.me() is bot_info
+    mock_client.call_method.assert_awaited_once()

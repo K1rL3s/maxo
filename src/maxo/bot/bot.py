@@ -2,10 +2,13 @@ import asyncio
 import io
 import json
 import pathlib
-from collections.abc import Iterable, Sequence
+import warnings
+from collections.abc import AsyncIterator, Iterable, Sequence
+from contextlib import asynccontextmanager
 from types import TracebackType
 from typing import TYPE_CHECKING, BinaryIO, NoReturn, Self
 
+from typing_extensions import deprecated
 from unihttp.bind_method import bind_method
 from unihttp.clients.base import BaseAsyncClient
 from unihttp.method import BaseMethod, ResponseType, StreamMethod
@@ -79,8 +82,20 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         defaults: BotDefaults | None = None,
         client: BaseAsyncClient | None = None,
         upload_config: UploadConfig | None = None,
-        middlewares: Sequence[AsyncMiddleware] = (),
+        middlewares: Sequence[AsyncMiddleware] | None = None,
+        middleware: Sequence[AsyncMiddleware] | None = None,
     ) -> None:
+        if middleware is not None:
+            if middlewares is not None:
+                msg = "Передайте только `middlewares`, без устаревшего `middleware`"
+                raise TypeError(msg)
+            warnings.warn(
+                "Параметр `middleware` устарел, используйте `middlewares`",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            middlewares = middleware
+
         self._defaults = defaults or BotDefaults()
         self._token = token
         self._upload_config = (
@@ -88,7 +103,7 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         )
 
         self.middleware: list[AsyncMiddleware] = [
-            *middlewares,
+            *(middlewares or ()),
             AuthMiddleware(self._token),
             UserAgentMiddleware(),
             AttachmentNotReadyRetryMiddleware(
@@ -121,6 +136,16 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
     def token(self) -> str:
         return self._token
 
+    @deprecated("Используйте `async with bot`", stacklevel=2)
+    @asynccontextmanager
+    async def context(self, auto_close: bool = True) -> AsyncIterator[Self]:
+        try:
+            await self.me()
+            yield self
+        finally:
+            if auto_close:
+                await self.close()
+
     async def __aenter__(self) -> Self:
         try:
             await self.me()
@@ -144,6 +169,10 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
                 if self._info is None:
                     return await self.get_my_info()
         return self._info
+
+    @deprecated("Используйте `await bot.me()`", stacklevel=2)
+    async def start(self) -> BotInfo:
+        return await self.me()
 
     async def get_my_info(self) -> BotInfo:
         self._info = await self.call_method(GetMyInfo())
