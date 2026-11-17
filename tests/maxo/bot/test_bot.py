@@ -524,6 +524,6 @@ async def test_deprecated_start_returns_cached_bot_info(
     mock_client.call_method.return_value = bot_info
 
     with pytest.warns(DeprecationWarning, match=r"bot\.me"):
-        assert await mock_bot.start() is bot_info
+        assert await mock_bot.start() is bot_info  # type: ignore[deprecated]
     assert await mock_bot.me() is bot_info
     mock_client.call_method.assert_awaited_once()

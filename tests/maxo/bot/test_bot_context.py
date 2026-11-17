@@ -37,7 +37,7 @@ async def test_deprecated_context_closes_when_requested(
     monkeypatch.setattr(bot, "me", me)
 
     with pytest.warns(DeprecationWarning, match="async with bot"):
-        context = bot.context(auto_close=auto_close)
+        context = bot.context(auto_close=auto_close)  # type: ignore[deprecated]
 
     expected = pytest.raises(RuntimeError, match=fail_in) if fail_in else nullcontext()
     with expected:

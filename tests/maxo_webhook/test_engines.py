@@ -160,5 +160,7 @@ class TestSimpleEngine:
             await engine.on_startup(app=MagicMock())
 
         dispatcher.feed_signal.assert_awaited_once()
-        assert isinstance(dispatcher.feed_signal.await_args.args[0], BeforeStartup)
+        await_args = dispatcher.feed_signal.await_args
+        assert await_args is not None
+        assert isinstance(await_args.args[0], BeforeStartup)
         bot.close.assert_not_awaited()
