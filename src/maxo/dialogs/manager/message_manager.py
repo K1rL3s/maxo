@@ -48,7 +48,8 @@ _INVALID_QUERY_ID_MSG = (
 )
 
 
-# temp
+# TODO: временная обёртка над AttachmentsFacade, будет удалена в отдельном PR,
+# когда build_attachments станет доступен из Bot
 class _AttachmentsBuilder(FacadeMaxoType, AttachmentsFacade):
     pass
 

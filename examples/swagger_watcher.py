@@ -256,7 +256,8 @@ async def fetch_openapi(session: ClientSession) -> JsonObject:
 
 
 async def publish_max(token: str, chat_id: int, diff: str, message: str) -> None:
-    # temp
+    # TODO: временная обёртка над AttachmentsFacade, будет удалена в отдельном PR,
+    # когда build_attachments станет доступен из Bot
     class Uploader(FacadeMaxoType, AttachmentsFacade):
         pass
 
