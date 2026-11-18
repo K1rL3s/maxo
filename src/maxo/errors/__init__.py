@@ -15,7 +15,11 @@ from maxo.errors.api import (
     RetvalReturnedError,
 )
 from maxo.errors.base import MaxoError
-from maxo.errors.network import MaxBotNetworkError, MaxBotTimeoutError
+from maxo.errors.network import (
+    MaxBotNetworkError,
+    MaxBotRequestError,
+    MaxBotTimeoutError,
+)
 from maxo.errors.payload import InvalidPayloadError
 from maxo.errors.routing import CycleRoutersError, RouterAlreadyIncludedError
 from maxo.errors.subscriptions import UnsubscribeError
@@ -35,6 +39,7 @@ __all__ = (
     "MaxBotMethodNotAllowedError",
     "MaxBotNetworkError",
     "MaxBotNotFoundError",
+    "MaxBotRequestError",
     "MaxBotServerError",
     "MaxBotServiceUnavailableError",
     "MaxBotTimeoutError",

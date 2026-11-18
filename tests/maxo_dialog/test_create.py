@@ -10,8 +10,8 @@ from maxo.dialogs.api.protocols import CancelEventProcessing
 from maxo.dialogs.widgets.text import Format
 from maxo.enums import ChatType
 from maxo.fsm.state import State, StatesGroup
-from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
-from maxo.types import Callback, MessageCallback, UpdateContext, User
+from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY, UpdateContext
+from maxo.types import Callback, MessageCallback, User
 from tests.constants import NOW
 
 

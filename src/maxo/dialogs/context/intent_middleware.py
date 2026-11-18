@@ -31,6 +31,7 @@ from maxo.dialogs.utils import remove_intent_id
 from maxo.enums import ChatType
 from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
 from maxo.routing.ctx import Ctx
+from maxo.routing.events import ErrorEvent
 from maxo.routing.interfaces import BaseMiddleware, NextMiddleware
 from maxo.routing.middlewares.fsm_context import FSM_STORAGE_KEY
 from maxo.routing.middlewares.update_context import (
@@ -44,7 +45,6 @@ from maxo.types import (
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
-    ErrorEvent,
     MaxUpdate,
     MessageCallback,
     MessageCreated,

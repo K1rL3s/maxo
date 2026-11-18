@@ -28,13 +28,13 @@ from maxo.enums import ChatType
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.state import State, StatesGroup
 from maxo.fsm.storages.memory import SimpleEventIsolation
+from maxo.routing.events import MaxoUpdate
 from maxo.routing.middlewares.update_context import (
     EVENT_FROM_USER_KEY,
     UPDATE_CONTEXT_KEY,
     UpdateContextMiddleware,
 )
 from maxo.routing.signals import AfterStartup, BeforeStartup
-from maxo.routing.signals.update import MaxoUpdate
 from maxo.types import MessageCreated, Recipient, User
 from tests.constants import NOW
 

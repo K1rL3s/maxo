@@ -229,7 +229,7 @@
      - :class:`~maxo.types.dialog_muted.DialogMuted` / :class:`~maxo.types.dialog_unmuted.DialogUnmuted`
      - Уведомления в диалоге отключены или включены.
    * - ``@router.error``
-     - :class:`~maxo.types.error_event.ErrorEvent`
+     - :class:`~maxo.routing.events.ErrorEvent`
      - Произошла ошибка при обработке другого события.
 
 Сигналы жизненного цикла

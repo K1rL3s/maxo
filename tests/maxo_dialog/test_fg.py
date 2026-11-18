@@ -24,9 +24,9 @@ from maxo.dialogs.widgets.kbd import Button
 from maxo.dialogs.widgets.text import Const, Format
 from maxo.enums import ChatType
 from maxo.fsm.state import State, StatesGroup
+from maxo.routing.events import ErrorEvent
 from maxo.routing.filters import CommandStart
 from maxo.routing.signals import AfterStartup, BeforeStartup
-from maxo.types import ErrorEvent
 from tests.constants import NOW
 
 from .conftest import wait_for_messages

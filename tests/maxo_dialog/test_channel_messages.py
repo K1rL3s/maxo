@@ -20,6 +20,7 @@ from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.routing.middlewares.update_context import (
     EVENT_FROM_USER_KEY,
     UPDATE_CONTEXT_KEY,
+    UpdateContext,
 )
 from maxo.routing.signals import AfterStartup, BeforeStartup
 from maxo.types import (
@@ -29,7 +30,6 @@ from maxo.types import (
     MessageCreated,
     Recipient,
 )
-from maxo.types.update_context import UpdateContext
 
 from .conftest import wait_for_messages
 

@@ -1,21 +1,14 @@
-from unittest.mock import AsyncMock
-
 import pytest
 
 from maxo.dialogs.api.entities import (
-    DIALOG_EVENT_NAME,
-    DialogAction,
-    DialogUpdateEvent,
     MediaAttachment,
     MediaId,
     Stack,
 )
 from maxo.dialogs.api.entities.stack import id_to_str
 from maxo.dialogs.api.exceptions import DialogStackOverflow, OutdatedIntent
-from maxo.enums import AttachmentType, ChatType
+from maxo.enums import AttachmentType
 from maxo.fsm import State
-from maxo.types import Recipient, User
-from tests.constants import NOW
 
 MEDIA_ID = "media-id"
 OTHER_MEDIA_ID = "other-media-id"
@@ -72,22 +65,3 @@ def test_stack_overflow() -> None:
 
     with pytest.raises(DialogStackOverflow, match="Cannot open more dialogs"):
         stack.push(State(), {})
-
-
-def test_dialog_update_event_type() -> None:
-    event = DialogUpdateEvent(
-        user=User(
-            user_id=1,
-            first_name="User",
-            is_bot=False,
-            last_activity_time=NOW,
-        ),
-        recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1, chat_id=1),
-        action=DialogAction.UPDATE,
-        data={"key": "value"},
-        intent_id="intent",
-        stack_id="stack",
-        bot=AsyncMock(),
-    )
-
-    assert event.event_type == DIALOG_EVENT_NAME

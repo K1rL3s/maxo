@@ -4,9 +4,9 @@ import pytest
 
 from maxo import Ctx
 from maxo.enums import ChatType
+from maxo.routing.events import ErrorEvent, MaxoUpdate
 from maxo.routing.filters.exception import ExceptionMessageFilter, ExceptionTypeFilter
-from maxo.routing.signals import MaxoUpdate
-from maxo.types import ErrorEvent, Message, MessageBody, MessageCreated, Recipient
+from maxo.types import Message, MessageBody, MessageCreated, Recipient
 from tests.constants import NOW
 
 

@@ -1,3 +1,5 @@
+from typing import Any
+
 from typing_extensions import deprecated
 from unihttp.http import HTTPResponse
 
@@ -43,5 +45,6 @@ class AddMembers(MaxoMethod[ModifyMembersResult]):
     user_ids: Body[list[int]]
     """Массив ID пользователей, которых вы хотите добавить в групповой чат. В одном запросе можно передать максимум 100 идентификаторов"""
 
-    def validate_response(self, response: HTTPResponse) -> None:
-        return None
+    def validate_response(self, response: HTTPResponse[Any]) -> None:
+        # AddMembers возвращает частичный результат при success=false.
+        pass

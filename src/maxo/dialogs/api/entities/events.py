@@ -3,6 +3,7 @@ from typing import Any
 
 from maxo import Bot
 from maxo.enums import ChatType
+from maxo.routing.events import ErrorEvent
 from maxo.types import (
     BotAddedToChat,
     BotAdminPermissionsChanged,
@@ -10,7 +11,6 @@ from maxo.types import (
     BotStarted,
     BotStopped,
     Chat,
-    ErrorEvent,
     MessageCallback,
     MessageCreated,
     User,

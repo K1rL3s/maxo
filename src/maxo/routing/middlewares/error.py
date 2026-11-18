@@ -1,10 +1,10 @@
 from typing import Any
 
 from maxo.routing.ctx import Ctx
+from maxo.routing.events import ErrorEvent
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
 from maxo.routing.interfaces.router import BaseRouter
 from maxo.routing.sentinels import UNHANDLED, CancelHandler, SkipHandler
-from maxo.types.error_event import ErrorEvent
 
 
 class ErrorMiddleware(BaseMiddleware[Any]):
@@ -22,7 +22,7 @@ class ErrorMiddleware(BaseMiddleware[Any]):
             exception_event = ErrorEvent(
                 exception=exception,
                 update=update,
-            ).as_(ctx.get("bot"))
+            )
             new_ctx = Ctx(dict(ctx))
             new_ctx["update"] = exception_event
             result = await self._router.trigger(new_ctx)

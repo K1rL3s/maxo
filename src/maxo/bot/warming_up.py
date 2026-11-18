@@ -1,124 +1,33 @@
-from enum import Enum
-from typing import Any, TypeVar, assert_never
+from typing import Any
 
-from adaptix import Retort
-
-from maxo.bot.methods import (  # type: ignore[deprecated]
-    AddMembers,
-    AnswerOnCallback,
-    DeleteAdmins,
-    DeleteChat,
-    DeleteComment,
-    DeleteMessage,
-    EditBotInfo,
-    EditChat,
-    EditComment,
-    EditMessage,
-    EditMyCommands,
-    GetAdmins,
-    GetChat,
-    GetChatByLink,
-    GetChats,
-    GetCommentById,
-    GetComments,
-    GetMembers,
-    GetMembership,
-    GetMessageById,
-    GetMessages,
-    GetMyInfo,
-    GetPinnedMessage,
-    GetSubscriptions,
-    GetUpdates,
-    GetUploadUrl,
-    GetVideoAttachmentDetails,
-    LeaveChat,
-    PinMessage,
-    PostAdmins,
-    RemoveMember,
-    SendAction,
-    SendComment,
-    SendMessage,
-    Subscribe,
-    UnpinMessage,
-    Unsubscribe,
-    UploadMedia,
-)
+from maxo.bot import methods
 from maxo.bot.methods.base import MaxoMethod
-from maxo.types import Updates
+from maxo.types import Attachments, Updates
 
-
-class WarmingUpType(Enum):
-    METHOD = "method"
-    TYPES = "types"
-
-
-_METHOD_ROOTS: tuple[type[MaxoMethod[Any]], ...] = (
-    AddMembers,
-    AnswerOnCallback,
-    DeleteAdmins,
-    DeleteChat,
-    DeleteComment,
-    DeleteMessage,
-    EditBotInfo,
-    EditChat,
-    EditComment,
-    EditMessage,
-    EditMyCommands,
-    GetAdmins,
-    GetChat,
-    GetChatByLink,
-    GetChats,
-    GetCommentById,
-    GetComments,
-    GetMembers,
-    GetMembership,
-    GetMessageById,
-    GetMessages,
-    GetMyInfo,
-    GetPinnedMessage,
-    GetSubscriptions,
-    GetUpdates,
-    GetUploadUrl,
-    GetVideoAttachmentDetails,
-    LeaveChat,
-    PinMessage,
-    PostAdmins,
-    RemoveMember,
-    SendAction,
-    SendComment,
-    SendMessage,
-    Subscribe,
-    UnpinMessage,
-    Unsubscribe,
-    UploadMedia,
+_METHODS: tuple[type[MaxoMethod[Any]], ...] = tuple(
+    dict.fromkeys(
+        value
+        for value in vars(methods).values()
+        if isinstance(value, type)
+        and issubclass(value, MaxoMethod)
+        and value is not MaxoMethod
+    ),
 )
 
-_LOADED_ROOTS: tuple[Any, ...] = (
+_DUMPED_HINTS: tuple[Any, ...] = (*_METHODS, list[Attachments])
+
+_LOADED_HINTS: tuple[Any, ...] = (
     Updates,
-    *dict.fromkeys(method.__returning__ for method in _METHOD_ROOTS),
+    list[Attachments],
+    *dict.fromkeys(method.__returning__ for method in _METHODS),
 )
 
-_RetortT = TypeVar("_RetortT", bound=Retort)
 
+def warm_up() -> None:
+    from maxo.serialization import get_retort  # noqa: PLC0415 - avoids import cycle
 
-def warming_up_retort(
-    retort: _RetortT,
-    warming_up: WarmingUpType | None = None,
-) -> _RetortT:
-    if warming_up is None:
-        return retort
-
-    roots: tuple[Any, ...]
-    if warming_up is WarmingUpType.METHOD:
-        roots = _METHOD_ROOTS
-        retort_method = retort.get_dumper
-    elif warming_up is WarmingUpType.TYPES:
-        roots = _LOADED_ROOTS
-        retort_method = retort.get_loader
-    else:
-        assert_never(warming_up)
-
-    for root in roots:
-        retort_method(root)
-
-    return retort
+    retort = get_retort()
+    for hint in _LOADED_HINTS:
+        retort.get_loader(hint)
+    for hint in _DUMPED_HINTS:
+        retort.get_dumper(hint)

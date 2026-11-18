@@ -109,7 +109,7 @@ Updates
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: maxo.types.ErrorEvent
+.. autoclass:: maxo.routing.events.ErrorEvent
    :members:
    :undoc-members:
    :show-inheritance:

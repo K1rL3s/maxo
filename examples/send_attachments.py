@@ -4,7 +4,8 @@ from typing import cast
 
 from maxo import Bot, Dispatcher
 from maxo.omit import Omitted
-from maxo.types import MessageCreated, UpdateContext
+from maxo.routing.middlewares.update_context import UpdateContext
+from maxo.types import MessageCreated
 from maxo.types.attachments import Attachments, AttachmentsRequests
 from maxo.utils.upload_media import FSInputFile
 

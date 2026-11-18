@@ -44,8 +44,9 @@ from maxo.routing.interfaces import BaseRouter
 from maxo.routing.middlewares.update_context import (
     EVENT_FROM_USER_KEY,
     UPDATE_CONTEXT_KEY,
+    UpdateContext,
 )
-from maxo.types import Callback, CallbackButton, UpdateContext, User
+from maxo.types import Callback, CallbackButton, User
 from maxo.types.message import Message
 from maxo.types.message_body import MessageBody
 from maxo.types.message_callback import MessageCallback
@@ -90,7 +91,7 @@ class FakeManager(DialogManager):
                 last_activity_time=FAKE_TIME,
             ),
             recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
-            bot=Bot("", warming_up=False),
+            bot=Bot(""),
             action=DialogAction.UPDATE,
             data={},
             intent_id=None,

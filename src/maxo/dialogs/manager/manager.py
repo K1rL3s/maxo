@@ -50,10 +50,10 @@ from maxo.dialogs.context.storage import StorageProxy
 from maxo.dialogs.manager.bg_manager import BgManager
 from maxo.enums import ChatStatus, ChatType
 from maxo.fsm import State
+from maxo.routing.events import ErrorEvent
 from maxo.routing.interfaces import BaseRouter
 from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
 from maxo.types import (
-    ErrorEvent,
     Message,
     MessageButton,
     MessageCallback,

@@ -1,30 +1,31 @@
-from abc import abstractmethod
+from __future__ import annotations
+
 from collections.abc import Sequence
 from datetime import datetime
 from typing import TYPE_CHECKING, cast
 
 from maxo.enums import TextFormat
 from maxo.omit import Omittable, Omitted
-from maxo.types.attachments import Attachments, AttachmentsRequests
-from maxo.types.buttons import InlineButtons
-from maxo.types.chat_members_list import ChatMembersList
 from maxo.types.facades.attachments import AttachmentsFacade, MediaInput
-from maxo.types.new_message_link import NewMessageLink
-from maxo.types.simple_query_result import SimpleQueryResult
 
 if TYPE_CHECKING:
+    from maxo.types.attachments import Attachments, AttachmentsRequests
+    from maxo.types.buttons import InlineButtons
     from maxo.types.chat import Chat
+    from maxo.types.chat_members_list import ChatMembersList
     from maxo.types.message import Message
     from maxo.types.message_list import MessageList
+    from maxo.types.new_message_link import NewMessageLink
+    from maxo.types.simple_query_result import SimpleQueryResult
 
 
 class ChatMethodsFacade(AttachmentsFacade):
     __slots__ = ()
 
-    @property
-    @abstractmethod
-    def chat_id(self) -> int:
-        raise NotImplementedError
+    if TYPE_CHECKING:
+        # Type-only, see `BotMethodsFacade`.
+        @property
+        def chat_id(self) -> int: ...
 
     async def send_message(
         self,
@@ -36,7 +37,7 @@ class ChatMethodsFacade(AttachmentsFacade):
         keyboard: Sequence[Sequence[InlineButtons]] | None = None,
         media: Sequence[MediaInput] | None = None,
         attachments: Sequence[AttachmentsRequests] | None = None,
-    ) -> "Message":
+    ) -> Message:
         prepared_attachments = await self.build_attachments(
             base=attachments or [],
             keyboard=keyboard,
@@ -47,7 +48,7 @@ class ChatMethodsFacade(AttachmentsFacade):
             chat_id=self.chat_id,
             text=text,
             attachments=cast(
-                list[AttachmentsRequests | Attachments],
+                "list[AttachmentsRequests | Attachments]",
                 prepared_attachments,
             ),
             link=link,
@@ -57,7 +58,7 @@ class ChatMethodsFacade(AttachmentsFacade):
         )
         return result.message
 
-    async def get_chat(self) -> "Chat":
+    async def get_chat(self) -> Chat:
         return await self.bot.get_chat(chat_id=self.chat_id)
 
     async def get_members(
@@ -84,7 +85,7 @@ class ChatMethodsFacade(AttachmentsFacade):
         to: Omittable[datetime] = Omitted(),
         after: Omittable[datetime] = Omitted(),
         before: Omittable[datetime] = Omitted(),
-    ) -> "MessageList":
+    ) -> MessageList:
         return await self.bot.get_messages(
             after=after,
             before=before,

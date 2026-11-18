@@ -18,3 +18,12 @@ def to_network_error(error: Exception) -> MaxBotNetworkError:
     if isinstance(error, TimeoutError):
         return MaxBotTimeoutError(message)
     return MaxBotNetworkError(message)
+
+
+class MaxBotRequestError(MaxoError):
+    """Запрос не отправить: кривой URL, цикл редиректов и т.п. Повтор не поможет."""
+
+    message: str
+
+    def __str__(self) -> str:
+        return self.message

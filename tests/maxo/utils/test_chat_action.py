@@ -10,7 +10,7 @@ from maxo.enums import ChatType, SenderAction
 from maxo.routing.ctx import Ctx
 from maxo.routing.flags import HANDLER_KEY, flags
 from maxo.routing.handlers.update import UpdateHandler
-from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
+from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY, UpdateContext
 from maxo.types import (
     Callback,
     Message,
@@ -18,7 +18,6 @@ from maxo.types import (
     MessageCallback,
     MessageCreated,
     Recipient,
-    UpdateContext,
     User,
 )
 from maxo.utils.chat_action import (

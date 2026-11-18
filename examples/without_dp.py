@@ -15,8 +15,7 @@ async def main() -> None:
     if chat_id is None:
         raise ValueError("CHAT_ID environment variable is not set")
 
-    bot = Bot(token=token)
-    async with bot.context():
+    async with Bot(token=token) as bot:
         await bot.send_message(chat_id=int(chat_id), text=message)
 
 

@@ -6,12 +6,13 @@ import pytest
 from maxo.enums import ChatType
 from maxo.routing.ctx import Ctx
 from maxo.routing.dispatcher import Dispatcher
+from maxo.routing.events import MaxoUpdate
 from maxo.routing.filters import BaseFilter, Command
 from maxo.routing.flags import HANDLER_KEY, extract_flags, flags, get_flag
 from maxo.routing.interfaces.middleware import NextMiddleware
 from maxo.routing.observers.base import bind_handler
 from maxo.routing.routers.simple import Router
-from maxo.routing.signals import BeforeStartup, MaxoUpdate
+from maxo.routing.signals import BeforeStartup
 from maxo.types import Message, MessageBody, MessageCreated, Recipient, User
 from tests.constants import NOW
 from tests.factories import make_bot, make_flagged_handler

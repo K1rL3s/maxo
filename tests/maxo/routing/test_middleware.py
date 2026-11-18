@@ -1,20 +1,29 @@
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from maxo.enums import ChatType
+from maxo.fsm.context import FSMContext
+from maxo.fsm.storages.memory import MemoryStorage, SimpleEventIsolation
 from maxo.routing.ctx import Ctx
 from maxo.routing.dispatcher import Dispatcher
+from maxo.routing.events import ErrorEvent, MaxoUpdate
 from maxo.routing.filters import AlwaysFalseFilter, AlwaysTrueFilter, BaseFilter
 from maxo.routing.interfaces import NextMiddleware
-from maxo.routing.middlewares.fsm_context import FSMContextMiddleware
+from maxo.routing.middlewares.fsm_context import (
+    FSM_CONTEXT_KEY,
+    FSMContextMiddleware,
+)
+from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY, UpdateContext
 from maxo.routing.routers.simple import Router
 from maxo.routing.sentinels import UNHANDLED
-from maxo.routing.signals import BeforeStartup, MaxoUpdate
-from maxo.types import ErrorEvent, Message, MessageBody, MessageEdited, Recipient, User
+from maxo.routing.signals import BeforeStartup
+from maxo.types import Message, MessageBody, MessageEdited, Recipient, User
 from maxo.types.message_created import MessageCreated
-from tests.constants import NOW
+from tests.constants import BOT_ID, NOW
+from tests.factories import make_bot, make_bot_info
 
 
 @pytest.fixture
@@ -424,3 +433,21 @@ async def test_shared_observer_inherits_parent_inner_middleware_once(ctx: Ctx) -
         "child_inner_post",
         "dp_inner_post",
     ]
+
+
+async def test_fsm_key_uses_bot_id_without_bot_context() -> None:
+    """Вебхук не входит в `async with bot`: FSM сам запрашивает id бота."""
+    client = AsyncMock()
+    client.call_method.return_value = make_bot_info()
+    bot = make_bot(client=client)  # info ещё не запрошена
+    middleware = FSMContextMiddleware(MemoryStorage(), SimpleEventIsolation())
+    ctx = Ctx({"bot": bot, UPDATE_CONTEXT_KEY: UpdateContext(chat_id=1, user_id=2)})
+
+    async def read_bot_id(inner: Ctx) -> int:
+        fsm_context: FSMContext = inner[FSM_CONTEXT_KEY]
+        return fsm_context.key.bot_id
+
+    next_ = cast(NextMiddleware[MaxoUpdate[Any]], read_bot_id)
+    bot_id = await middleware(MagicMock(), ctx, next_)
+
+    assert bot_id == BOT_ID

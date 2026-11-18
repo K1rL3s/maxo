@@ -4,6 +4,7 @@ from maxo.fsm.context import FSMContext
 from maxo.fsm.key_builder import StorageKey
 from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
 from maxo.routing.ctx import Ctx
+from maxo.routing.events import MaxoUpdate
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
 from maxo.routing.middlewares.fsm_context import (
     FSM_CONTEXT_KEY,
@@ -11,7 +12,6 @@ from maxo.routing.middlewares.fsm_context import (
     FSM_STORAGE_KEY,
     RAW_STATE_KEY,
 )
-from maxo.routing.signals.update import MaxoUpdate
 
 from ..user_repo import DbUser
 

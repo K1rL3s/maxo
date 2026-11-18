@@ -90,7 +90,7 @@ async def start(message: MessageCreated, dialog_manager: DialogManager) -> None:
 
 
 async def main() -> None:
-    bot = Bot(os.environ["TOKEN"], warming_up=not __debug__)
+    bot = Bot(os.environ["TOKEN"])
 
     key_builder = DefaultKeyBuilder(with_destiny=True)
     events_isolation = SimpleEventIsolation(key_builder=key_builder)

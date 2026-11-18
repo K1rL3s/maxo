@@ -13,7 +13,7 @@ from maxo.enums import UploadType
 from maxo.errors import MaxBotApiError
 from maxo.errors.api import raise_api_error
 from maxo.errors.network import to_network_error
-from maxo.types import BaseMaxoType
+from maxo.types.base import MaxoType
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import InputFile
 
@@ -46,7 +46,7 @@ class UploadMethod(StrEnum):
     RESUMABLE = "resumable"
 
 
-class UploadConfig(BaseMaxoType):
+class UploadConfig(MaxoType):
     """Настройки загрузки медиа для `Bot(upload_config=...)`."""
 
     method: UploadMethod = UploadMethod.AUTO

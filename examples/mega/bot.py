@@ -23,8 +23,9 @@ from maxo.errors import MaxBotApiError
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.storages.memory import MemoryStorage
 from maxo.integrations.magic_filter import MagicFilter
+from maxo.routing.events import ErrorEvent
 from maxo.routing.filters import ExceptionTypeFilter
-from maxo.types import ErrorEvent, MessageCallback, MessageCreated
+from maxo.types import MessageCallback, MessageCreated
 
 logger = logging.getLogger(__name__)
 

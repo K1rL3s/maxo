@@ -4,9 +4,9 @@ import pytest
 
 from maxo import Bot, Router
 from maxo.enums import ChatType
-from maxo.errors import AttributeIsEmptyError
 from maxo.routing.ctx import Ctx
 from maxo.routing.dispatcher import Dispatcher
+from maxo.routing.events import ErrorEvent, MaxoUpdate
 from maxo.routing.filters import BaseFilter
 from maxo.routing.middlewares.state import (
     EmptyMiddlewareManagerState,
@@ -19,10 +19,8 @@ from maxo.routing.signals import (
     AfterStartup,
     BeforeShutdown,
     BeforeStartup,
-    MaxoUpdate,
 )
 from maxo.types import Message, MessageBody, Recipient, User
-from maxo.types.error_event import ErrorEvent
 from maxo.types.message_created import MessageCreated
 from tests.constants import NOW
 
@@ -315,7 +313,10 @@ async def test_observer_filter_multiple_filters_combined_as_and() -> None:
     assert order == ["first_filter", "second_filter"]
 
 
-async def test_feed_update_does_not_bind_bot(update: MessageCreated, bot: Bot) -> None:
+async def test_feed_update_binds_bot_to_inner_update(
+    update: MessageCreated,
+    bot: Bot,
+) -> None:
     dp = Dispatcher()
     handled = []
 
@@ -328,10 +329,29 @@ async def test_feed_update_does_not_bind_bot(update: MessageCreated, bot: Bot) -
     await dp.feed_update(maxo_update, bot)
 
     assert handled == [update]
-    with pytest.raises(AttributeIsEmptyError):
-        _ = maxo_update.bot
-    with pytest.raises(AttributeIsEmptyError):
-        _ = update.bot
+    # The update holds the bot, not the `MaxoUpdate` wrapper.
+    assert not hasattr(maxo_update, "bot")
+    assert update.bot is bot
+
+
+async def test_feed_update_skips_already_bound_update(
+    update: MessageCreated,
+    bot: Bot,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Polling updates are bound in `Bot.call_method`: no second walk."""
+    dp = Dispatcher()
+    await dp.feed_signal(BeforeStartup())
+    update.as_(bot)
+
+    calls: list[object] = []
+    monkeypatch.setattr(
+        "maxo.routing.dispatcher.bind_bot",
+        lambda obj, _bot: calls.append(obj),
+    )
+    await dp.feed_update(MaxoUpdate(update=update), bot)
+
+    assert calls == []
 
 
 async def test_signal_skip_handler_runs_next_handlers() -> None:

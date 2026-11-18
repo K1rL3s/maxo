@@ -9,7 +9,7 @@ from tests.constants import BOT_ID, NOW, TOKEN
 
 
 def make_bot(token: str = TOKEN, **kwargs: Any) -> Bot:
-    return Bot(token=token, warming_up=False, **kwargs)
+    return Bot(token=token, **kwargs)
 
 
 def make_bot_info(

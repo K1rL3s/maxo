@@ -5,7 +5,7 @@ from typing import Any
 
 from maxo import Bot, Dispatcher
 from maxo.dialogs.api.entities import DialogUpdateEvent
-from maxo.routing.signals import MaxoUpdate
+from maxo.routing.events import MaxoUpdate
 
 
 class Updater:

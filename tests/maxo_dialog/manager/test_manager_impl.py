@@ -30,19 +30,17 @@ from maxo.dialogs.manager.bg_manager import BgManager
 from maxo.dialogs.manager.manager import ManagerImpl
 from maxo.enums import AttachmentType, ChatType
 from maxo.fsm import State, StatesGroup
-from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
-from maxo.routing.signals import MaxoUpdate
+from maxo.routing.events import ErrorEvent, MaxoUpdate
+from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY, UpdateContext
 from maxo.types import (
     Callback,
     CallbackButton,
-    ErrorEvent,
     Message,
     MessageBody,
     MessageButton,
     MessageCallback,
     MessageCreated,
     Recipient,
-    UpdateContext,
 )
 from tests.constants import NOW
 from tests.maxo_dialog.conftest import make_message_created, make_user

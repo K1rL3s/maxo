@@ -4,6 +4,7 @@ from typing import Any
 
 from maxo.errors.routing import RouterAlreadyIncludedError
 from maxo.routing.ctx import Ctx
+from maxo.routing.events import ErrorEvent
 from maxo.routing.interfaces import BaseRouter, Observer
 from maxo.routing.interfaces.router import RouterState
 from maxo.routing.middlewares.state import (
@@ -38,7 +39,6 @@ from maxo.types import (
     UserAddedToChat,
     UserRemovedFromChat,
 )
-from maxo.types.error_event import ErrorEvent
 
 
 class Router(BaseRouter):

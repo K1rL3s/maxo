@@ -38,8 +38,8 @@ from maxo.enums.sender_action import SenderAction
 from maxo.routing.ctx import Ctx
 from maxo.routing.flags import get_flag
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
-from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
-from maxo.types import MessageCallback, MessageCreated, MessageEdited, UpdateContext
+from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY, UpdateContext
+from maxo.types import MessageCallback, MessageCreated, MessageEdited
 from maxo.types.base import BaseUpdate
 
 DEFAULT_INTERVAL: Final = 5.0
