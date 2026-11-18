@@ -82,19 +82,8 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         defaults: BotDefaults | None = None,
         client: BaseAsyncClient | None = None,
         upload_config: UploadConfig | None = None,
-        middlewares: Sequence[AsyncMiddleware] | None = None,
         middleware: Sequence[AsyncMiddleware] | None = None,
     ) -> None:
-        if middleware is not None:
-            if middlewares is not None:
-                msg = "Передайте только `middlewares`, без устаревшего `middleware`"
-                raise TypeError(msg)
-            warnings.warn(
-                "Параметр `middleware` устарел, используйте `middlewares`",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            middlewares = middleware
 
         self._defaults = defaults or BotDefaults()
         self._token = token
@@ -103,7 +92,7 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         )
 
         self.middleware: list[AsyncMiddleware] = [
-            *(middlewares or ()),
+            *(middleware or ()),
             AuthMiddleware(self._token),
             UserAgentMiddleware(),
             AttachmentNotReadyRetryMiddleware(
