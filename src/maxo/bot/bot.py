@@ -2,7 +2,6 @@ import asyncio
 import io
 import json
 import pathlib
-import warnings
 from collections.abc import AsyncIterator, Iterable, Sequence
 from contextlib import asynccontextmanager
 from types import TracebackType

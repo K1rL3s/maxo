@@ -495,25 +495,11 @@ async def test_call_method_stream_is_not_supported() -> None:
 
 def test_none_middlewares_preserves_defaults() -> None:
     default = Bot("token")
-    explicit = Bot("token", middlewares=None)
+    explicit = Bot("token", middleware=None)
 
     assert [type(item) for item in explicit.middleware] == [
         type(item) for item in default.middleware
     ]
-
-
-def test_deprecated_middleware_kwarg_still_works() -> None:
-    custom = MagicMock()
-
-    with pytest.warns(DeprecationWarning, match="middlewares"):
-        bot = Bot("token", middleware=[custom])
-
-    assert bot.middleware[0] is custom
-
-
-def test_middleware_and_middlewares_together_are_rejected() -> None:
-    with pytest.raises(TypeError, match="middlewares"):
-        Bot("token", middlewares=[], middleware=[])
 
 
 async def test_deprecated_start_returns_cached_bot_info(
