@@ -15,8 +15,8 @@ class SendMessage(MaxoMethod[SendMessageResult]):
 
     Кроме текста сообщения или посты могут содержать вложения следующих типов:
     - `image` - изображение (JPG, JPEG, PNG, GIF, TIFF, BMP, HEIC)
-    - `video` - видео (MP4, MOV, MKV, WEBM, MATROSKA)
-    - `audio` - аудио (MP3, M4A и другие)
+    - `video` - видеофайлы (MP4, MOV, MKV, WEBM, MATROSKA)
+    - `audio` - аудиосообщения и аудиофайлы (MP3, M4A и другие)
     - `file` - файл (TXT, DOC и другие)
     - `sticker` - стикер
     - `contact` - контакт (данные контакта из телефонного справочника)

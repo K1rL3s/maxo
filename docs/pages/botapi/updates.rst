@@ -64,6 +64,11 @@ Updates
    :undoc-members:
    :show-inheritance:
 
+С ноября 2026 года MAX присылает событие ``bot_added`` без поля ``user``.
+Для старых событий поле доступно как ``Omittable[User]``. Если поле
+отсутствует, контекст события содержит ``chat_id`` и тип чата, а ``user_id``
+равен ``None``.
+
 .. autoclass:: maxo.types.BotRemovedFromChat
    :members:
    :undoc-members:

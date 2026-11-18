@@ -158,8 +158,8 @@ class UpdateContextMiddleware(BaseMiddleware[MaxoUpdate[Any]]):
                 ChatTitleChanged,
             ),
         ):
-            user = update.user
-            user_id = user.id
+            user = update.user if is_defined(update.user) else None
+            user_id = user.id if user is not None else None
             chat_id = update.chat_id
             if hasattr(update, "is_channel"):
                 chat_type = ChatType.CHANNEL if update.is_channel else ChatType.CHAT

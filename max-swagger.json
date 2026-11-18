@@ -133,7 +133,7 @@
                 ],
                 "summary": "Добавление, изменение и удаление команд бота",
                 "operationId": "editMyCommands",
-                "description": "Метод добавляет, изменяет или удаляет команды бота, отображаемые пользователю в качестве подсказок в диалогах и групповых чатах: <br/>• При вводе «/» - на платформах iOS, Android, десктоп<br/>• При нажатии кнопки с символом « / » в правом нижнем углу диалога с ботом - на платформе iOS \n\n Отображение команд **в каналах не поддерживается**. Функциональность доступна на платформах: <br/>• **Для диалогов** с ботом - iOS, Android, десктоп<br/>• **Для групповых чатов** с ботом - iOS, Android \n\nЧтобы удалить все команды, передайте пустой массив `commands`\n\nПодробнее о работе метода - [в разделе «Команды для чат-бота»](/docs-api/use-cases/chatbot-commands) \n\n#### Пример запроса:\n```bash\ncurl -X PATCH \"https://platform-api2.max.ru/me/commands\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n        \"commands\": [\n          {\n            \"name\": \"string\",\n            \"description\": \"string\"\n          },\n          {\n            \"name\": \"string\",\n            \"description\": \"string\"\n          }\n        ]\n      }'\n```",
+                "description": "Метод добавляет, изменяет или удаляет команды бота, отображаемые пользователю в качестве подсказок в диалогах и групповых чатах: <br/>• При вводе «/» - на платформах iOS, Android, десктоп<br/>• При нажатии кнопки с символом «/» в правом нижнем углу диалога с ботом - на платформе iOS \n\n Отображение команд **в каналах не поддерживается**. Функциональность доступна на платформах: <br/>• **Для диалогов** с ботом - iOS, Android, десктоп<br/>• **Для групповых чатов** с ботом - iOS, Android \n\nЧтобы удалить все команды, передайте пустой массив `commands`\n\nПодробнее о работе метода - [в разделе «Команды для чат-бота»](/docs-api/use-cases/chatbot-commands) \n\n#### Пример запроса:\n```bash\ncurl -X PATCH \"https://platform-api2.max.ru/me/commands\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n        \"commands\": [\n          {\n            \"name\": \"string\",\n            \"description\": \"string\"\n          },\n          {\n            \"name\": \"string\",\n            \"description\": \"string\"\n          }\n        ]\n      }'\n```",
                 "requestBody": {
                     "description": "Команды бота на выбор",
                     "required": true,
@@ -1142,7 +1142,7 @@
                     "messages"
                 ],
                 "operationId": "sendMessage",
-                "description": "Отправляет сообщение в диалог, групповой чат или канал\n\nКроме текста сообщения или посты могут содержать вложения следующих типов:\n\n- `image` - изображение (JPG, JPEG, PNG, GIF, TIFF, BMP, HEIC)\n- `video` - видео (MP4, MOV, MKV, WEBM, MATROSKA)\n- `audio` - аудио (MP3, M4A и другие)\n- `file` - файл (TXT, DOC и другие)\n- `sticker` - стикер\n- `contact` - контакт (данные контакта из телефонного справочника)\n- `inline_keyboard` - сообщение или пост с кнопкой\n- `share` - контент, прикреплённый по внешнему URL\n- `location` - локация\n\n#### Ограничения\n\nМожно отправлять не более двух сообщений в секунду в один диалог, групповой чат или канал. При превышении этого лимита сообщения следует ставить в очередь или делать задержку перед отправкой\n\n#### Пример запроса с одной кнопкой-ссылкой\n\nБольше примеров запросов с кнопками - [в разделе «Клавиатура»](/docs-api/use-cases/sending-messages/keyboard#Как%20добавить%20кнопки)\n\n```bash\ncurl -X POST \"https://platform-api2.max.ru/messages?user_id={user_id}\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"text\": \"Это сообщение с кнопкой-ссылкой\",\n  \"attachments\": [\n    {\n      \"type\": \"inline_keyboard\",\n      \"payload\": {\n        \"buttons\": [\n          [\n            {\n              \"type\": \"link\",\n              \"text\": \"Откройте сайт\",\n              \"url\": \"https://example.com\"\n            }\n          ]\n        ]\n      }\n    }\n  ]\n }'\n```",
+                "description": "Отправляет сообщение в диалог, групповой чат или канал\n\nКроме текста сообщения или посты могут содержать вложения следующих типов:\n\n- `image` - изображение (JPG, JPEG, PNG, GIF, TIFF, BMP, HEIC)\n- `video` - видеофайлы (MP4, MOV, MKV, WEBM, MATROSKA)\n- `audio` - аудиосообщения и аудиофайлы (MP3, M4A и другие)\n- `file` - файл (TXT, DOC и другие)\n- `sticker` - стикер\n- `contact` - контакт (данные контакта из телефонного справочника)\n- `inline_keyboard` - сообщение или пост с кнопкой\n- `share` - контент, прикреплённый по внешнему URL\n- `location` - локация\n\n#### Ограничения\n\nМожно отправлять не более двух сообщений в секунду в один диалог, групповой чат или канал. При превышении этого лимита сообщения следует ставить в очередь или делать задержку перед отправкой\n\n#### Пример запроса с одной кнопкой-ссылкой\n\nБольше примеров запросов с кнопками - [в разделе «Клавиатура»](/docs-api/use-cases/sending-messages/keyboard#Как%20добавить%20кнопки)\n\n```bash\ncurl -X POST \"https://platform-api2.max.ru/messages?user_id={user_id}\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"text\": \"Это сообщение с кнопкой-ссылкой\",\n  \"attachments\": [\n    {\n      \"type\": \"inline_keyboard\",\n      \"payload\": {\n        \"buttons\": [\n          [\n            {\n              \"type\": \"link\",\n              \"text\": \"Откройте сайт\",\n              \"url\": \"https://example.com\"\n            }\n          ]\n        ]\n      }\n    }\n  ]\n }'\n```",
                 "summary": "Отправка сообщений",
                 "parameters": [
                     {
@@ -1947,7 +1947,7 @@
                         "nullable": true
                     },
                     "username": {
-                        "description": "Никнейм бота или уникальное публичное имя пользователя. В случае с пользователем может быть `null`, если тот недоступен или имя не задано",
+                        "description": "Никнейм бота. Для пользователей это поле не возвращается",
                         "type": "string",
                         "nullable": true
                     },
@@ -1956,7 +1956,7 @@
                         "type": "boolean"
                     },
                     "last_activity_time": {
-                        "description": "Время последней активности пользователя или бота в MAX (Unix timestamp в миллисекундах). Если пользователь отключил в настройках профиля мессенджера MAX возможность видеть, что он в сети онлайн, поле может не возвращаться",
+                        "description": "Время последней активности пользователя или бота в MAX (Unix timestamp в миллисекундах). Если пользователь отключил в настройках профиля мессенджера MAX возможность видеть, что он в сети, поле может не возвращаться",
                         "type": "integer",
                         "format": "int64"
                     },
@@ -3289,7 +3289,8 @@
                                     {
                                         "$ref": "#/components/schemas/MediaAttachmentPayload"
                                     }
-                                ]
+                                ],
+                                "description": "Результат загрузки аудиосообщения или аудиофайла. В ответах на запросы о сообщениях аудиосообщения имеют тип `audio`"
                             },
                             "transcription": {
                                 "description": "Аудио транскрипция",
@@ -3430,7 +3431,7 @@
                         "type": "string"
                     },
                     "hash": {
-                        "description": "Хеш информации о пользователе в формате VCF. Используется для проверки того, что пользователь поделился номером телефона, привязанным к его аккаунту в MAX<br/> Подробнее - [в разделе «Типы кнопок»](/docs-api/use-cases/sending-messages/keyboard#Типы%20кнопок)",
+                        "description": "Хеш информации о пользователе в формате VCF. Используется для проверки того, что пользователь поделился номером телефона, привязанным к его профилю в MAX<br/> Подробнее - [в разделе «Типы кнопок»](/docs-api/use-cases/sending-messages/keyboard#Типы%20кнопок)",
                         "nullable": true,
                         "readOnly": false,
                         "type": "string"
@@ -4899,7 +4900,7 @@
                                 "format": "int64"
                             },
                             "user": {
-                                "description": "Пользователь, добавивший бота в чат",
+                                "description": "Пользователь, добавивший бота в чат. С ноября 2026 года поле встречается только в старых событиях",
                                 "allOf": [
                                     {
                                         "$ref": "#/components/schemas/User"
@@ -4913,7 +4914,6 @@
                         },
                         "required": [
                             "chat_id",
-                            "user",
                             "is_channel"
                         ]
                     }
