@@ -87,8 +87,7 @@ async def bot_stopped_handler(bot_stopped: BotStopped) -> None:
 @dp.bot_added_to_chat()
 async def bot_added_to_chat_handler(bot_added: BotAddedToChat) -> None:
     await bot_added.send_message(
-        f"Всем привет! Я новый бот в чате (ID: {bot_added.chat_id}), "
-        f"меня добавил пользователь (ID: {bot_added.user.user_id})",
+        f"Всем привет! Я новый бот в чате (ID: {bot_added.chat_id})",
     )
     members = await bot_added.get_members()
     await bot_added.send_message(f"Я вижу здесь {len(members.members)} участников")

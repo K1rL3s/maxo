@@ -12,15 +12,14 @@ class SendComment(MaxoMethod[SendCommentResult]):
 
     Отправляет комментарий к посту в канале
 
-     Для этого:
+    Для этого:
+    - В настройках канала должны быть [включены комментарии](https://dev.max.ru/docs/channels/manage#Как%20включить%20комментарии%20в%20канале)
+    - Бот, чей токен `access_token` используется для авторизации, должен быть администратором этого канала c правами `read_all_messages` и `write`
 
-    • В настройках канала должны быть [включены комментарии](https://dev.max.ru/docs/channels/manage#Как%20включить%20комментарии%20в%20канале)
-    • Бот, чей токен `access_token` используется для авторизации, должен быть администратором этого канала c правами `read_all_messages` и `write`
-
-
-     Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах - в описании [`GET /chats/{chatId}/members/admins`](https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора)
+    Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах - в описании [`GET /chats/{chatId}/members/admins`](https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора)
 
     **Пример запроса**:
+
     ```bash
     curl -X POST "https://platform-api2.max.ru/messages/{messageId}/comments" \
       -H "Authorization: {access_token}" \

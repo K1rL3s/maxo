@@ -30,6 +30,7 @@ from maxo.dialogs.context.storage import StorageProxy
 from maxo.dialogs.utils import remove_intent_id
 from maxo.enums import ChatType
 from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
+from maxo.omit import is_defined
 from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces import BaseMiddleware, NextMiddleware
 from maxo.routing.middlewares.fsm_context import FSM_STORAGE_KEY
@@ -110,10 +111,11 @@ def event_context_from_user_added_to_chat(
     event: UserAddedToChat | UserRemovedFromChat | BotAddedToChat | BotRemovedFromChat,
     ctx: Ctx,
 ) -> EventContext:
+    user = event.user if is_defined(event.user) else None
     return EventContext(
         bot=ctx["bot"],
-        user=event.user,
-        user_id=event.user.user_id,
+        user=user,
+        user_id=user.user_id if user is not None else None,
         chat_id=event.chat_id,
         chat_type=ChatType.CHANNEL if event.is_channel else ChatType.CHAT,
         chat=None,

@@ -8,11 +8,11 @@ class GetSubscriptions(MaxoMethod[GetSubscriptionsResult]):
 
     Если ваш бот получает данные через Webhook, этот метод возвращает список всех подписок
 
-    > !
-    > - Для повышения безопасности **с 25 мая** прекращается поддержка получения вебхуков по HTTP, а также самоподписных сертификатов. Рекомендуем заранее перейти на HTTPS и сертификаты от доверенных центров, в том числе сертификаты Минцифры. Чтобы обновить подписку на события, используйте [POST /subscriptions](https://dev.max.ru/docs-api/methods/POST/subscriptions)
+    > - Для повышения безопасности **с 25 мая 2026** прекращена поддержка получения вебхуков по HTTP, а также самоподписных сертификатов. Рекомендуем использовать HTTPS и сертификаты от доверенных центров, в том числе сертификаты Минцифры. Чтобы обновить подписку на события, используйте [POST /subscriptions](https://dev.max.ru/docs-api/methods/POST/subscriptions)
     > - Получение обновлений с помощью [Long Polling](https://dev.max.ru/docs-api/methods/GET/updates) ограничено по скорости и сроку хранения событий - этот способ не подходит для production-окружения. Рекомендуем на всех этапах работы использовать [Webhook](https://dev.max.ru/docs-api/methods/POST/subscriptions)
 
     #### Пример запроса:
+
     ```bash
     curl -X GET "https://platform-api2.max.ru/subscriptions" \
       -H "Authorization: {access_token}"

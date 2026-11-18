@@ -601,3 +601,31 @@ def test_datetime_dump_restores_loaded_milliseconds(timestamp: int) -> None:
     moment = retort.load(timestamp, datetime)
 
     assert retort.dump(moment, datetime) == timestamp
+
+
+@pytest.mark.parametrize("model", [types.SimpleQueryResult, types.ModifyMembersResult])
+@pytest.mark.parametrize("code", ["invalid.request", None])
+def test_simple_query_result_code(
+    model: type[types.SimpleQueryResult],
+    code: str | None,
+) -> None:
+    retort = create_retort(warming_up=False)
+    result = retort.load({"success": False, "code": code}, model)
+
+    assert result.code == code
+    if code is None:
+        with pytest.raises(AttributeIsEmptyError):
+            _ = result.unsafe_code
+    else:
+        assert result.unsafe_code == code
+    assert retort.dump(result)["code"] == code
+
+
+def test_simple_query_result_code_omitted() -> None:
+    retort = create_retort(warming_up=False)
+    result = retort.load({"success": True}, types.SimpleQueryResult)
+
+    assert is_omitted(result.code)
+    assert "code" not in retort.dump(result)
+    with pytest.raises(AttributeIsEmptyError):
+        _ = result.unsafe_code
