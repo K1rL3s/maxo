@@ -28,6 +28,6 @@ def validate_router_graph(
 
     for children_router in router.children_routers:
         if children_router in visited_routers:
-            raise CycleRoutersError(visited_routers)
+            raise CycleRoutersError([*visited_routers, children_router])
 
         validate_router_graph(children_router, copy(visited_routers))
