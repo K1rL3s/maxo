@@ -62,7 +62,7 @@ def test_validate_router_graph_rejects_self_reference() -> None:
     with pytest.raises(CycleRoutersError) as exc_info:
         validate_router_graph(router)
 
-    assert exc_info.value.routers == [router]
+    assert exc_info.value.routers == [router, router]
     assert "Cycle routers detected" in str(exc_info.value)
 
 
@@ -78,7 +78,28 @@ def test_validate_router_graph_rejects_deep_cycle() -> None:
     with pytest.raises(CycleRoutersError) as exc_info:
         validate_router_graph(router)
 
-    assert exc_info.value.routers == [router, child, grandchild]
+    assert exc_info.value.routers == [router, child, grandchild, router]
+
+
+def test_validate_router_graph_cycle_includes_closing_router() -> None:
+    """CycleRoutersError should include the router that closes the cycle.
+
+    Regression test for #291: without the closing router appended, the
+    rendered diagram's arrow never closes on the node that actually forms
+    the cycle, and `.routers` silently drops the router the caller most
+    needs to see.
+    """
+    router = Router("root")
+    child = Router("child")
+
+    router.include(child)
+    child.include(router)
+
+    with pytest.raises(CycleRoutersError) as exc_info:
+        validate_router_graph(router)
+
+    assert exc_info.value.routers == [router, child, router]
+    assert exc_info.value.routers[0] is exc_info.value.routers[-1]
 
 
 async def test_dispatcher_validates_router_graph_on_startup() -> None:
