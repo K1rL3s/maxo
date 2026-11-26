@@ -6,7 +6,7 @@ from maxo.types.simple_query_result import SimpleQueryResult
 
 class PinMessage(MaxoMethod[SimpleQueryResult]):
     """
-    Закрепление сообщения в групповом чате или канале
+    Закрепление сообщения в групповом чате или поста в канале
 
     Закрепляет сообщение в групповом чате или пост в канале
 

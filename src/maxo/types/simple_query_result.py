@@ -8,6 +8,7 @@ class SimpleQueryResult(MaxoType):
     Простой ответ на запрос
 
     Args:
+        code: Код ошибки. Подробнее об ошибках API MAX - [на странице «Общее описание»](https://dev.max.ru/docs-api/#Тело%20ответа)
         message: Сообщение об ошибке
         success: `true`, если запрос был успешным, `false` - в противном случае
     """
@@ -15,8 +16,20 @@ class SimpleQueryResult(MaxoType):
     success: bool
     """`true`, если запрос был успешным, `false` - в противном случае"""
 
+    code: Omittable[str | None] = Omitted()
+    """Код ошибки. Подробнее об ошибках API MAX - [на странице «Общее описание»](https://dev.max.ru/docs-api/#Тело%20ответа)"""
     message: Omittable[str] = Omitted()
     """Сообщение об ошибке"""
+
+    @property
+    def unsafe_code(self) -> str:
+        if is_defined(self.code):
+            return self.code
+
+        raise AttributeIsEmptyError(
+            obj=self,
+            attr="code",
+        )
 
     @property
     def unsafe_message(self) -> str:

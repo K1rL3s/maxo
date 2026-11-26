@@ -22,6 +22,8 @@ class GetUpdates(MaxoMethod[UpdateList], slots=False):
 
      Если параметр `marker` **не передан** или передано значение `null`, вы получите только последнее обновление
 
+    > Нельзя подключить несколько Long Polling для одного бота или использовать его вместе с [Webhook](https://dev.max.ru/docs-api/methods/POST/subscriptions)
+
     #### Пример запроса:
     ```bash
     curl -X GET "https://platform-api2.max.ru/updates" \

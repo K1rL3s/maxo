@@ -5,7 +5,7 @@ from maxo.types.get_pinned_message_result import GetPinnedMessageResult
 
 class GetPinnedMessage(MaxoMethod[GetPinnedMessageResult]):
     """
-    Получение закреплённого сообщения в групповом чате или канале
+    Получение закреплённого сообщения в групповом чате или поста в канале
 
     Возвращает закреплённое сообщение в групповом чате или пост в канале
 

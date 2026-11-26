@@ -8,7 +8,7 @@ from maxo.types.user_with_photo import UserWithPhoto
 
 class ChatMember(UserWithPhoto):
     """
-    Объект включает общую информацию о пользователе или боте, URL аватара и описание (при наличии). Является наследником [схемы UserWithPhoto](https://dev.max.ru/docs-api/objects/UserWithPhoto). Дополнительно к ней содержит данные для пользователей-участников чата или канала. Возвращается только при вызове некоторых методов группы `/chats`, например [`GET /chats/{chatId}/members`](https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members)
+    Объект включает общую информацию о пользователе или боте, URL аватара и описание (при наличии). Является наследником [схемы UserWithPhoto](https://dev.max.ru/docs-api/objects/UserWithPhoto). Дополнительно содержит данные для пользователей-участников чата или канала. Возвращается только при вызове некоторых методов группы `/chats`, например [`GET /chats/{chatId}/members`](https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members)
 
     Args:
         alias: Описание роли, которое будет отображаться на клиентском устройстве в настройках чата или канала рядом с именем пользователя

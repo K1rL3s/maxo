@@ -11,7 +11,7 @@ from maxo.types.media_attachment_payload import MediaAttachmentPayload
 class AudioAttachment(Attachment):
     """
     Args:
-        payload:
+        payload: Результат загрузки аудиосообщения или аудиофайла. В ответах на запросы о сообщениях аудиосообщение приходит как вложение с типом `audio`
         transcription: Аудио транскрипция
         type:
     """
@@ -19,6 +19,7 @@ class AudioAttachment(Attachment):
     type: AttachmentType = AttachmentType.AUDIO
 
     payload: MediaAttachmentPayload
+    """Результат загрузки аудиосообщения или аудиофайла. В ответах на запросы о сообщениях аудиосообщение приходит как вложение с типом `audio`"""
 
     transcription: Omittable[str | None] = Omitted()
     """Аудио транскрипция"""

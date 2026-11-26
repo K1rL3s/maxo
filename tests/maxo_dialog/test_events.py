@@ -17,9 +17,10 @@ from maxo.enums import ChatAdminPermission, ChatType
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.state import State, StatesGroup
 from maxo.fsm.storages.memory import SimpleEventIsolation
+from maxo.omit import is_omitted
 from maxo.routing.filters import CommandStart
-from maxo.routing.signals import AfterStartup, BeforeStartup
-from maxo.types import BotAdminPermissionsChanged
+from maxo.routing.signals import AfterStartup, BeforeStartup, MaxoUpdate
+from maxo.types import BotAddedToChat, BotAdminPermissionsChanged, UpdateList
 
 
 class MainSG(StatesGroup):
@@ -141,3 +142,33 @@ async def test_bot_admin_permissions_changed_flags(
     assert events[0].is_admin is False
     assert events[1].is_admin is True
     assert events[1].chat_id == -20
+
+
+async def test_bot_added_without_user(
+    dp: Dispatcher,
+    client: BotClient,
+    message_manager: MockMessageManager,
+) -> None:
+    dp.bot_added_to_chat.handler(start)
+    await dp.feed_signal(BeforeStartup(), client.bot)
+    await dp.feed_signal(AfterStartup(), client.bot)
+
+    updates = client.bot.retort.load(
+        {
+            "updates": [
+                {
+                    "update_type": "bot_added",
+                    "timestamp": 1234567890,
+                    "chat_id": client.chat.chat_id,
+                    "is_channel": False,
+                },
+            ],
+        },
+        UpdateList,
+    )
+    update = updates.updates[0]
+    assert isinstance(update, BotAddedToChat)
+    assert is_omitted(update.user)
+    await dp.feed_update(MaxoUpdate(update=update), client.bot)
+
+    assert message_manager.one_message().body.text == "stub"
