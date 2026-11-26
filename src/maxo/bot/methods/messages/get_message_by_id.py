@@ -5,11 +5,12 @@ from maxo.types.message import Message
 
 class GetMessageById(MaxoMethod[Message]):
     """
-    Получение сообщения
+    Получение сообщения или поста
 
-    Возвращает сообщение из канала или чата по его ID
+    Возвращает сообщение из группового чата, диалога или пост из канала по его ID
 
     #### Пример запроса:
+
     ```bash
     curl -X GET "https://platform-api2.max.ru/messages/{messageId}" \
       -H "Authorization: {access_token}"

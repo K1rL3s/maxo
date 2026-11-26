@@ -5,7 +5,7 @@ from maxo.types.simple_query_result import SimpleQueryResult
 
 class Unsubscribe(MaxoMethod[SimpleQueryResult]):
     """
-    Отписка от обновлений о новых событиях через Webhook
+    Отписка от обновлений о событиях, получаемых через Webhook
 
     Отписывает бота от получения обновлений о новых событиях через Webhook. После вызова этого метода бот перестаёт получать уведомления о новых событиях на адрес обработчика (Webhook-endpoint), и становится доступна доставка уведомлений через Long Polling
 

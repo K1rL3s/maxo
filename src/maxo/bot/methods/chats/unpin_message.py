@@ -5,7 +5,7 @@ from maxo.types.simple_query_result import SimpleQueryResult
 
 class UnpinMessage(MaxoMethod[SimpleQueryResult]):
     """
-    Открепление сообщения в групповом чате или канале
+    Открепление сообщения в групповом чате или поста в канале
 
     Открепляет сообщение в групповом чате или пост в канале
 

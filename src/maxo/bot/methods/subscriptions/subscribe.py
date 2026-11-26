@@ -6,7 +6,7 @@ from maxo.types.simple_query_result import SimpleQueryResult
 
 class Subscribe(MaxoMethod[SimpleQueryResult]):
     """
-    Подписка на обновления о новых событиях через Webhook
+    Подписка на обновления о событиях, получаемых через Webhook
 
     Метод настраивает доставку событий бота через Webhook  - основной механизм получения событий в продуктовых интеграциях. При активной подписке Long Polling не работает
 
@@ -28,6 +28,9 @@ class Subscribe(MaxoMethod[SimpleQueryResult]):
     7. Инициируются вызовы MAX API
 
     ## Требования к Webhook-endpoint
+
+    > - Один Webhook-endpoint нельзя подключить сразу к нескольким ботам
+    > - Нельзя одновременно использовать Webhook и [Long Polling](https://dev.max.ru/docs-api/methods/GET/updates) для одного бота
 
     ### URL и порт
 

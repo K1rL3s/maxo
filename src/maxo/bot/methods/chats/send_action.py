@@ -6,7 +6,7 @@ from maxo.types.simple_query_result import SimpleQueryResult
 
 class SendAction(MaxoMethod[SimpleQueryResult]):
     """
-    Отправка действия бота в групповой чат
+    Отправка действия бота в групповой чат или диалог
 
     Демонстрирует участникам чата, какие действия выполняет бот, например: «набор текста» или «отправка фото»
 

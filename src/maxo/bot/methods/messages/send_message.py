@@ -9,14 +9,14 @@ from maxo.types.send_message_result import SendMessageResult
 
 class SendMessage(MaxoMethod[SendMessageResult]):
     """
-    Отправка сообщений
+    Отправка сообщений и постов
 
     Отправляет сообщение в диалог, групповой чат или канал
 
-    Кроме текста сообщения или посты могут содержать вложения следующих типов:
+    Кроме текста сообщения или посты могут содержать следующие типы вложений:
     - `image` - изображение (JPG, JPEG, PNG, GIF, TIFF, BMP, HEIC)
-    - `video` - видеофайлы (MP4, MOV, MKV, WEBM, MATROSKA)
-    - `audio` - аудиосообщения и аудиофайлы (MP3, M4A и другие)
+    - `video` - видео (MP4, MOV, MKV, WEBM, MATROSKA)
+    - `audio` - аудио (MP3, M4A и другие)
     - `file` - файл (TXT, DOC и другие)
     - `sticker` - стикер
     - `contact` - контакт (данные контакта из телефонного справочника)

@@ -7,7 +7,7 @@ from maxo.types.simple_query_result import SimpleQueryResult
 
 class PostAdmins(MaxoMethod[SimpleQueryResult]):
     """
-    Назначить администратора группового чата или канала
+    Назначение администратора группового чата или канала
 
     Назначает права администратора участникам чата или подписчикам канала - пользователям и ботам
 
